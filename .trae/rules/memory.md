@@ -105,3 +105,15 @@ BrowserTransport 自动检测运行环境：
 - `packages/rpc-core/src/transports/browser.ts` - Browser Transport（含 IPC/WebSocket 自动切换）
 - `packages/rpc-core/src/transports/ws-server.ts` - WebSocket 服务端
 - `packages/rpc-core/src/middleware/auth.ts` - 鉴权中间件
+
+## 2026-04-22 日志规范
+
+### ESLint 规则
+- `console.log` 是 error 级别
+- `console.warn` 和 `console.error` 允许
+- 详见 `.trae/rules/logging.md`
+
+### 日志工具
+- 推荐使用 **pino**（高性能 JSON 日志）
+- 同时输出到终端和文件
+- 详细指南见 `.trae/rules/logging.md`
