@@ -3,9 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "private": true,
-  "workspaces": [
-    "packages/*"
-  ],
+  "workspaces": [],
   "scripts": {
     "server": "bun run src/server.ts",
     "desktop": "electrobun dev",

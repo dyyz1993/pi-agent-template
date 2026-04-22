@@ -1,4 +1,4 @@
-import { TypedRPCServer, GatewayTransport, AuthMiddleware } from '../packages/rpc-core/src/index';
+import { TypedRPCServer, GatewayTransport, AuthMiddleware } from '@chat-agent/rpc-core';
 import type { PiAgentMethods, PiAgentEvents } from './schema';
 import { logger } from './logger';
 

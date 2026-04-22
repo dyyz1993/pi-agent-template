@@ -1,5 +1,5 @@
 import { BrowserWindow, BrowserView } from "electrobun/bun";
-import { TypedRPCServer, ElectrobunTransport, WSServerTransport, CompositeTransport, LocalAuthMiddleware } from '../../packages/rpc-core/src/index';
+import { TypedRPCServer, ElectrobunTransport, WSServerTransport, CompositeTransport, LocalAuthMiddleware } from '@chat-agent/rpc-core';
 import type { PiAgentMethods, PiAgentEvents, FileEntry } from '../schema';
 import { logger } from '../logger';
 import { readdir, stat, readFile } from 'node:fs/promises';

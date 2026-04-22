@@ -59,7 +59,7 @@ function copyAndReplace(srcDir: string, destDir: string): void {
       content = content.replace(/Pi Agent/g, pascalName);
       content = content.replace(/com\.piagent\.template/g, identifier);
       content = content.replace(/com\.piagent/g, `com.${projectName.replace(/-/g, '')}`);
-      content = content.replace(/@pi-agent\//g, `@${projectName}/`);
+      content = content.replace(/@pi-agent\//g, `@chat-agent/`);
 
       writeFileSync(destPath, content);
     }

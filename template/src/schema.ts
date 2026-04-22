@@ -1,4 +1,4 @@
-import type { RPCMethods, RPCEvents } from '../packages/rpc-core/src/index';
+import type { RPCMethods, RPCEvents } from '@chat-agent/rpc-core';
 
 export interface FileEntry {
   name: string;

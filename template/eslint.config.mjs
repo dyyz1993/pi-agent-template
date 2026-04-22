@@ -56,12 +56,12 @@ export default tseslint.config(
           ],
           paths: [
             {
-              name: '../packages/rpc-core/src/server',
-              message: '请使用 TypedRPCServer 替代 RPCServer，以获得类型推导。import { TypedRPCServer } from "../packages/rpc-core/src/index"',
+              name: '@chat-agent/rpc-core',
+              message: '请使用 TypedRPCServer 替代 RPCServer，以获得类型推导。import { TypedRPCServer } from "@chat-agent/rpc-core"',
             },
             {
-              name: '../packages/rpc-core/src/client',
-              message: '请使用 TypedRPCClient 替代 RPCClient，以获得类型推导。import { TypedRPCClient } from "../packages/rpc-core/src/index"',
+              name: '@chat-agent/rpc-core',
+              message: '请使用 TypedRPCClient 替代 RPCClient，以获得类型推导。import { TypedRPCClient } from "@chat-agent/rpc-core"',
             },
           ],
         },
