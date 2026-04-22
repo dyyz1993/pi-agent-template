@@ -1,1 +1,6 @@
-bun run lint-staged
+#!/bin/sh
+# Root level lint
+bun run lint
+
+# Template lint
+cd template && bun run lint
