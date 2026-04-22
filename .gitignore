@@ -6,4 +6,4 @@ dist/
 bun.lockb
 .DS_Store
 *.log
-.pnpm-debug.log
+pnpm-debug.log
