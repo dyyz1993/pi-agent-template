@@ -1,12 +1,24 @@
+import type { ElectrobunConfig } from "electrobun";
+
 export default {
-  app: {
-    name: "pi-agent-template",
-    identifier: "com.piagent.template",
-    version: "1.0.0",
-  },
-  build: {
-    copy: {
-      "src/dist": "views",
-    },
-  },
-};
+	app: {
+		name: "pi-agent-template",
+		identifier: "com.piagent.template",
+		version: "1.0.0",
+	},
+	build: {
+		copy: {
+			"dist/index.html": "views/mainview/index.html",
+			"dist/assets": "views/mainview/assets",
+		},
+		mac: {
+			bundleCEF: false,
+		},
+		linux: {
+			bundleCEF: false,
+		},
+		win: {
+			bundleCEF: false,
+		},
+	},
+} satisfies ElectrobunConfig;
