@@ -1,25 +1,14 @@
-import { BrowserWindow, BrowserView } from "electrobun/bun";
-import { TypedRPCServer, ElectrobunTransport, WSServerTransport, CompositeTransport, LocalAuthMiddleware } from '@chat-agent/rpc-core';
-import type { PiAgentMethods, PiAgentEvents, FileEntry } from '../schema';
+import { BrowserWindow, Updater, Utils, ApplicationMenu, BrowserView } from "electrobun/bun";
+import { TypedRPCServer, ElectrobunTransport, CompositeTransport, LocalAuthMiddleware } from '@chat-agent/rpc-core';
+import type { PiAgentMethods, PiAgentEvents } from '../schema';
 import { logger } from '../logger';
-import { readdir, stat, readFile } from 'node:fs/promises';
-import { join, resolve, sep } from 'node:path';
 
-const WS_PORT = 3000;
-const WORKSPACE_ROOT = '/Users/xuyingzhou/Project/study-desktop/my-react-tailwind-vite-app2/templates/pi-agent-template';
-
-function isWithinWorkspace(filePath: string): boolean {
-  const resolved = resolve(filePath);
-  return resolved.startsWith(WORKSPACE_ROOT);
-}
-
-const compositeTransport = new CompositeTransport();
+const DEV_SERVER_PORT = 5175;
+const DEV_SERVER_URL = `http://localhost:${DEV_SERVER_PORT}`;
 
 const ipcTransport = new ElectrobunTransport();
-const wsTransport = new WSServerTransport({ port: WS_PORT });
-
+const compositeTransport = new CompositeTransport();
 compositeTransport.addTransport('ipc', ipcTransport);
-compositeTransport.addTransport('ws', wsTransport);
 
 const localAuth = new LocalAuthMiddleware({ userId: 'local-user', role: 'admin' });
 
@@ -28,86 +17,10 @@ const server = new TypedRPCServer<PiAgentMethods, PiAgentEvents>(compositeTransp
   methods: {
     hello: async (params, context) => {
       const name = params?.name || 'World';
-      logger.info({ method: 'hello', userId: context?.userId, source: context?.source }, 'RPC call');
+      logger.info({ method: 'hello', userId: context?.userId }, 'RPC call');
       return { message: `Hello ${name}!`, timestamp: Date.now() };
     },
-    echo: async (params) => params,
-    ping: async (context) => ({ pong: true, timestamp: Date.now(), platform: context?.source || 'unknown' }),
-    listDir: async (params, context) => {
-      let dirPath: string;
-      if (params.path === '.' || !params.path) {
-        dirPath = WORKSPACE_ROOT;
-      } else {
-        dirPath = resolve(params.path);
-        if (!isWithinWorkspace(dirPath)) {
-          dirPath = WORKSPACE_ROOT;
-        }
-      }
-      logger.info({ method: 'listDir', path: dirPath, userId: context?.userId }, 'File operation');
-      const entries = await readdir(dirPath, { withFileTypes: true });
-      const result: FileEntry[] = [];
-      for (const entry of entries) {
-        if (entry.name.startsWith('.') && entry.name !== '.trae') continue;
-        const fullPath = join(dirPath, entry.name);
-        try {
-          const s = await stat(fullPath);
-          result.push({
-            name: entry.name,
-            path: fullPath.replace(WORKSPACE_ROOT + sep, ''),
-            type: entry.isDirectory() ? 'directory' : 'file',
-            size: s.size,
-            modified: s.mtimeMs,
-          });
-        } catch {
-          result.push({
-            name: entry.name,
-            path: fullPath.replace(WORKSPACE_ROOT + sep, ''),
-            type: entry.isDirectory() ? 'directory' : 'file',
-          });
-        }
-      }
-      result.sort((a, b) => {
-        if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
-        return a.name.localeCompare(b.name);
-      });
-      return { entries: result, basePath: dirPath };
-    },
-    readFile: async (params, context) => {
-      const rawPath = params.path;
-      let filePath: string;
-      if (rawPath.startsWith('/')) {
-        filePath = resolve(rawPath);
-        if (!isWithinWorkspace(filePath)) {
-          filePath = join(WORKSPACE_ROOT, rawPath);
-        }
-      } else {
-        filePath = join(WORKSPACE_ROOT, rawPath);
-      }
-      logger.info({ method: 'readFile', path: filePath, userId: context?.userId }, 'File operation');
-      const s = await stat(filePath);
-      const relativePath = filePath.replace(WORKSPACE_ROOT + sep, '');
-      const LARGE_FILE_THRESHOLD = 100 * 1024;
-      if (s.size > LARGE_FILE_THRESHOLD) {
-        return {
-          type: 'large' as const,
-          path: relativePath,
-          size: s.size,
-          url: `/files/${encodeURIComponent(relativePath)}`,
-        };
-      }
-      const ext = filePath.split('.').pop()?.toLowerCase() || '';
-      const binaryExts = new Set(['png', 'jpg', 'jpeg', 'gif', 'ico', 'woff', 'woff2', 'ttf', 'eot', 'dylib', 'so', 'dll']);
-      if (binaryExts.has(ext)) {
-        return {
-          type: 'binary' as const,
-          path: relativePath,
-          size: s.size,
-          url: `/files/${encodeURIComponent(relativePath)}`,
-        };
-      }
-      const content = await readFile(filePath, 'utf-8');
-      return { type: 'text' as const, content, path: relativePath, size: s.size };
-    },
+    ping: async (context) => ({ pong: true, timestamp: Date.now(), platform: context?.source || 'desktop' }),
   },
   events: {
     heartbeat: { payload: { serverTime: 0 }, metadata: { server: '', platform: '' } },
@@ -119,8 +32,13 @@ const rpc = BrowserView.defineRPC({
   handlers: {
     requests: {},
     messages: {
-      'rpc-message': (data: unknown) => {
-        ipcTransport.handleMessage(data);
+      'rpc-message': (data: string) => {
+        try {
+          const message = JSON.parse(data);
+          ipcTransport.handleMessage(message);
+        } catch (error) {
+          logger.error({ err: error }, 'Failed to parse RPC message');
+        }
       }
     }
   }
@@ -128,9 +46,63 @@ const rpc = BrowserView.defineRPC({
 
 ipcTransport.setWebView(rpc);
 
+async function getMainViewUrl(): Promise<string> {
+  const channel = await Updater.localInfo.channel();
+  if (channel === "dev") {
+    try {
+      await fetch(DEV_SERVER_URL, { method: "HEAD" });
+      logger.info({ url: DEV_SERVER_URL }, 'HMR enabled: Using Vite dev server');
+      return DEV_SERVER_URL;
+    } catch {
+      logger.info('Vite dev server not running. Run \'bun run dev:ui\' for HMR support.');
+    }
+  }
+  return "views://mainview/index.html";
+}
+
+ApplicationMenu.setApplicationMenu([
+  {
+    label: "Pi Agent",
+    submenu: [
+      { role: "about" },
+      { type: "separator" },
+      { role: "hide" },
+      { role: "hideOthers" },
+      { role: "showAll" },
+      { type: "separator" },
+      { role: "quit" },
+    ],
+  },
+  {
+    label: "Edit",
+    submenu: [
+      { role: "undo" },
+      { role: "redo" },
+      { type: "separator" },
+      { role: "cut" },
+      { role: "copy" },
+      { role: "paste" },
+      { role: "pasteAndMatchStyle" },
+      { role: "delete" },
+      { type: "separator" },
+      { role: "selectAll" },
+    ],
+  },
+  {
+    label: "View",
+    submenu: [{ role: "toggleFullScreen" }],
+  },
+  {
+    label: "Window",
+    submenu: [{ role: "minimize" }, { role: "zoom" }],
+  },
+]);
+
+const url = await getMainViewUrl();
+
 const mainWindow = new BrowserWindow({
   title: "Pi Agent",
-  url: "views://mainview/index.html",
+  url,
   frame: {
     width: 1200,
     height: 800,
@@ -141,13 +113,13 @@ const mainWindow = new BrowserWindow({
 });
 
 mainWindow.on("close", () => {
-  logger.info({ event: 'window_closed' }, 'Desktop window closed');
+  Utils.quit();
 });
+
+logger.info('Pi Agent desktop app started with RPC architecture!');
 
 setInterval(() => {
   server.emitEvent('heartbeat', { serverTime: Date.now() }, { server: 'pi-agent', platform: 'desktop' });
 }, 5000);
-
-logger.info({ wsPort: WS_PORT, workspace: WORKSPACE_ROOT }, 'Desktop window created');
 
 export { rpc };
