@@ -19,7 +19,21 @@ export default tseslint.config(
   {
     files: ['src/**/*.ts'],
     rules: {
-      'no-console': ['error', { allow: ['warn', 'error'] }],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.type='MemberExpression'][callee.object.name='console'][callee.property.name='log']",
+          message: '禁止使用 console.log，请使用 pino Logger。参见 .trae/rules/logging.md',
+        },
+        {
+          selector: "CallExpression[callee.type='MemberExpression'][callee.object.name='console'][callee.property.name='info']",
+          message: '禁止使用 console.info，请使用 pino Logger。参见 .trae/rules/logging.md',
+        },
+        {
+          selector: "CallExpression[callee.type='MemberExpression'][callee.object.name='console'][callee.property.name='debug']",
+          message: '禁止使用 console.debug，请使用 pino Logger。参见 .trae/rules/logging.md',
+        },
+      ],
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
