@@ -44,13 +44,6 @@
     "vite-plugin-solid": "^2.11.12"
   },
   "lint-staged": {
-    "packages/rpc-core/src/**/*.ts": [
-      "eslint --fix",
-      "bun test"
-    ],
-    "src/mainview/**/*.{ts,tsx}": [
-      "eslint --fix"
-    ],
     "src/**/*.{ts,tsx}": [
       "eslint --fix"
     ]
