@@ -1,3 +1,6 @@
+---
+alwaysApply: false
+---
 # 日志工具指南
 
 ## 为什么不用 console.log？
