@@ -1,12 +1,7 @@
 {
   "name": "pi-agent-template",
   "version": "1.0.0",
-  "type": "module",
   "private": true,
-  "workspaces": [
-    "packages/*",
-    "template"
-  ],
   "scripts": {
     "create": "bun run scripts/create.ts"
   }

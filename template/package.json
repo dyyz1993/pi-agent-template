@@ -9,7 +9,7 @@
     "desktop": "electrobun dev",
     "start": "bun run src/server.ts",
     "ui": "bun run src/ui.ts",
-    "build:browser": "bun build packages/rpc-core/src/browser-bundle.ts --outfile src/rpc-browser.js --target browser --format=iife",
+    "build:browser": "bun build ../packages/rpc-core/src/browser-bundle.ts --outfile src/rpc-browser.js --target browser --format=iife",
     "build:ui": "cd src/mainview && npx vite build && cp ../../src/rpc-browser.js ../../src/dist/rpc-browser.js",
     "build:desktop": "bun run build:browser && bun run build:ui && PROJECT_ROOT=$(pwd) electrobun build",
     "dev": "bun run build:desktop && PROJECT_ROOT=$(pwd) electrobun dev",
