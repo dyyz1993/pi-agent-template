@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pi Agent</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+    
+    .topbar { display: flex; align-items: center; padding: 10px 20px; background: #0f1629; border-bottom: 1px solid #1a2a4a; }
+    .topbar h1 { color: #00d4ff; font-size: 18px; margin-right: 12px; }
+    .transport-badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; }
+    .transport-badge.ipc { background: #2ed57333; color: #2ed573; }
+    .transport-badge.ws { background: #00d4ff33; color: #00d4ff; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff4757; margin-right: 6px; }
+    .status-dot.ok { background: #2ed573; }
+    .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+    .user-name { color: #2ed573; font-size: 12px; }
+    .logout-btn { background: none; border: 1px solid #ff4757; color: #ff4757; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+    .logout-btn:hover { background: #ff4757; color: #fff; }
+
+    .main { display: flex; flex: 1; overflow: hidden; }
+
+    .sidebar { width: 260px; min-width: 260px; background: #0f1629; border-right: 1px solid #1a2a4a; display: flex; flex-direction: column; }
+    .sidebar-header { padding: 10px 14px; border-bottom: 1px solid #1a2a4a; display: flex; align-items: center; justify-content: space-between; }
+    .sidebar-header h2 { color: #8888ff; font-size: 13px; }
+    .sidebar-header .btn-icon { background: none; border: none; color: #888; cursor: pointer; font-size: 16px; padding: 2px 6px; border-radius: 4px; }
+    .sidebar-header .btn-icon:hover { background: #1a2a4a; color: #fff; }
+    .file-tree { flex: 1; overflow-y: auto; padding: 4px 0; }
+    .tree-item { display: flex; align-items: center; padding: 4px 8px 4px calc(8px + var(--depth, 0) * 16px); cursor: pointer; font-size: 12px; color: #ccc; border-radius: 4px; margin: 0 4px; }
+    .tree-item:hover { background: #1a2a4a; }
+    .tree-item.active { background: #00d4ff22; color: #00d4ff; }
+    .tree-item .icon { margin-right: 6px; font-size: 14px; }
+    .tree-item .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tree-item .size { color: #666; font-size: 10px; margin-left: 4px; }
+
+    .content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    
+    .tabs { display: flex; background: #0f1629; border-bottom: 1px solid #1a2a4a; overflow-x: auto; }
+    .tab { padding: 8px 16px; font-size: 12px; color: #888; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
+    .tab:hover { color: #ccc; }
+    .tab.active { color: #00d4ff; border-bottom-color: #00d4ff; }
+    .tab .close-tab { margin-left: 8px; color: #555; font-size: 10px; }
+    .tab .close-tab:hover { color: #ff4757; }
+
+    .tab-content { flex: 1; overflow: hidden; display: none; }
+    .tab-content.active { display: flex; flex-direction: column; }
+
+    .rpc-panel { padding: 16px; overflow-y: auto; }
+    .rpc-panel h3 { color: #00d4ff; font-size: 14px; margin-bottom: 10px; }
+    .row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+    .row label { min-width: 50px; color: #aaa; font-size: 12px; }
+    input, select, textarea { flex: 1; padding: 6px 10px; background: #0f3460; border: 1px solid #1a4a7a; border-radius: 6px; color: #fff; font-size: 12px; font-family: inherit; }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #00d4ff; }
+    textarea { min-height: 50px; resize: vertical; }
+    .btn { background: #00d4ff; color: #1a1a2e; border: none; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 12px; }
+    .btn:hover { background: #00b8e6; }
+    .btn:disabled { background: #555; cursor: not-allowed; }
+    .btn.danger { background: #ff4757; }
+    .btn.success { background: #2ed573; }
+    .methods { display: flex; gap: 6px; flex-wrap: wrap; }
+    .method-btn { background: #0f3460; border: 1px solid #1a4a7a; color: #00d4ff; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+    .method-btn:hover { border-color: #00d4ff; }
+    .method-btn.active { background: #00d4ff; color: #1a1a2e; }
+    .events-list { max-height: 100px; overflow-y: auto; }
+    .event-item { display: flex; align-items: center; gap: 6px; padding: 4px 8px; background: #0f3460; border-radius: 4px; margin-bottom: 3px; font-size: 11px; }
+    .event-item .name { color: #ffa502; }
+    .log { background: #0a0a1a; border-radius: 6px; padding: 10px; flex: 1; min-height: 120px; overflow-y: auto; font-family: 'Monaco','Menlo',monospace; font-size: 11px; }
+    .log-entry { margin-bottom: 4px; padding: 4px 6px; border-radius: 3px; }
+    .log-entry.sent { background: #1a3a5c; border-left: 2px solid #00d4ff; }
+    .log-entry.recv { background: #1a4a3c; border-left: 2px solid #2ed573; }
+    .log-entry.err { background: #4a1a2c; border-left: 2px solid #ff4757; }
+    .log-entry.event { background: #3a2a1a; border-left: 2px solid #ffa502; }
+    .log-entry.info { background: #1a2a4a; border-left: 2px solid #8888ff; }
+    .log-entry .time { color: #666; margin-right: 6px; }
+    .tag { display: inline-block; padding: 1px 4px; border-radius: 3px; font-size: 10px; margin-right: 4px; }
+    .tag.sent { background: #00d4ff33; color: #00d4ff; }
+    .tag.recv { background: #2ed57333; color: #2ed573; }
+    .tag.err { background: #ff475733; color: #ff4757; }
+    .tag.event { background: #ffa50233; color: #ffa502; }
+    .tag.info { background: #8888ff33; color: #8888ff; }
+    pre { white-space: pre-wrap; word-break: break-all; margin: 0; }
+
+    .file-viewer { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .file-toolbar { padding: 6px 14px; background: #0f1629; border-bottom: 1px solid #1a2a4a; display: flex; align-items: center; gap: 8px; }
+    .file-toolbar .file-path { color: #8888ff; font-size: 12px; font-family: 'Monaco','Menlo',monospace; }
+    .file-toolbar .file-size { color: #666; font-size: 11px; margin-left: auto; }
+    .file-content { flex: 1; overflow: auto; padding: 14px; background: #0a0a1a; margin: 0; font-family: 'Monaco','Menlo',monospace; font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; color: #ccc; }
+    .file-content .line-num { color: #444; display: inline-block; width: 40px; text-align: right; margin-right: 12px; user-select: none; }
+
+    .login-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .login-box { background: #16213e; border-radius: 16px; padding: 40px; width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+    .login-box h2 { color: #00d4ff; margin-bottom: 8px; font-size: 22px; text-align: center; }
+    .login-box .desc { color: #888; font-size: 13px; text-align: center; margin-bottom: 24px; }
+    .login-box input { width: 100%; padding: 12px 16px; font-size: 15px; margin-bottom: 16px; }
+    .login-box .btn { width: 100%; padding: 12px; font-size: 15px; }
+    .login-box .error-msg { color: #ff4757; font-size: 13px; text-align: center; margin-top: 12px; min-height: 20px; }
+    .login-box .local-hint { color: #2ed573; font-size: 12px; text-align: center; margin-top: 12px; }
+
+    .empty-state { flex: 1; display: flex; align-items: center; justify-content: center; color: #444; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div id="loginOverlay" class="login-overlay" style="display:none;">
+    <div class="login-box">
+      <h2>🔐 Pi Agent</h2>
+      <p class="desc">Enter your access key to connect</p>
+      <input type="password" id="tokenInput" placeholder="Access Key" value="test-secret-token" autocomplete="off" />
+      <button class="btn" id="loginBtn" onclick="handleLogin()">Connect</button>
+      <div class="error-msg" id="loginError"></div>
+      <div class="local-hint" id="localHint" style="display:none;">✅ Desktop - auto authenticated</div>
+    </div>
+  </div>
+
+  <div class="topbar">
+    <h1>🖥️ Pi Agent</h1>
+    <span class="transport-badge" id="transportBadge">...</span>
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText" style="font-size:12px;color:#888;">Connecting...</span>
+    <div class="topbar-right">
+      <span class="user-name" id="userName"></span>
+      <button class="logout-btn" id="logoutBtn" onclick="handleLogout()" style="display:none;">Logout</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h2>📁 Files</h2>
+        <button class="btn-icon" onclick="refreshFileTree()" title="Refresh">🔄</button>
+      </div>
+      <div class="file-tree" id="fileTree"></div>
+    </div>
+
+    <div class="content">
+      <div class="tabs" id="tabs">
+        <div class="tab active" data-tab="rpc" onclick="switchTab('rpc')">⚡ RPC</div>
+      </div>
+
+      <div class="tab-content active" id="tab-rpc">
+        <div class="rpc-panel">
+          <h3>RPC Call</h3>
+          <div class="row">
+            <label>Method</label>
+            <div class="methods" id="methodBtns">
+              <button class="method-btn active" onclick="selectMethod(this,'hello')">hello</button>
+              <button class="method-btn" onclick="selectMethod(this,'echo')">echo</button>
+              <button class="method-btn" onclick="selectMethod(this,'ping')">ping</button>
+              <button class="method-btn" onclick="selectMethod(this,'listDir')">listDir</button>
+              <button class="method-btn" onclick="selectMethod(this,'readFile')">readFile</button>
+            </div>
+          </div>
+          <div class="row">
+            <label>Params</label>
+            <textarea id="params">{"name": "World"}</textarea>
+          </div>
+          <div class="row">
+            <label></label>
+            <button class="btn" id="callBtn" onclick="callRPC()" disabled>🚀 Call</button>
+          </div>
+
+          <h3>Subscribe</h3>
+          <div class="row">
+            <label>Event</label>
+            <input type="text" id="eventType" value="heartbeat" />
+            <button class="btn success" id="subBtn" onclick="toggleSub()" disabled>Subscribe</button>
+          </div>
+          <div class="events-list" id="eventsList"></div>
+
+          <h3 style="margin-top:12px;">Log</h3>
+          <div class="log" id="log"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="rpc-browser.js"></script>
+  <script>
+    var client = null;
+    var transport = null;
+    var currentMethod = 'hello';
+    var subscribed = false;
+    var currentSubId = null;
+    var isDesktop = false;
+    var openFiles = {};
+    var activeFileTab = null;
+    var expandedDirs = {};
+    var TOKEN_KEY = 'pi_agent_token';
+
+    function getToken() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; } }
+    function saveToken(t) { try { localStorage.setItem(TOKEN_KEY, t); } catch {} }
+    function clearToken() { try { localStorage.removeItem(TOKEN_KEY); } catch {} }
+
+    function addLog(msg, type) {
+      var el = document.getElementById('log');
+      var t = new Date().toLocaleTimeString();
+      var div = document.createElement('div');
+      div.className = 'log-entry ' + type;
+      var text = typeof msg === 'string' ? msg : JSON.stringify(msg, null, 2);
+      div.innerHTML = '<span class="time">' + t + '</span><span class="tag ' + type + '">' + type.toUpperCase() + '</span><pre>' + escapeHtml(text) + '</pre>';
+      el.appendChild(div);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function escapeHtml(s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    function formatSize(bytes) {
+      if (!bytes) return '';
+      if (bytes < 1024) return bytes + 'B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'K';
+      return (bytes / (1024 * 1024)).toFixed(1) + 'M';
+    }
+
+    function selectMethod(btn, method) {
+      document.querySelectorAll('.method-btn').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      currentMethod = method;
+      var defaults = {
+        hello: '{"name": "World"}',
+        echo: '{"message": "Hello RPC!"}',
+        ping: '',
+        listDir: '{"path": "."}',
+        readFile: '{"path": "package.json"}'
+      };
+      document.getElementById('params').value = defaults[method] || '';
+    }
+
+    function updateUI() {
+      var connected = client && client.isConnected();
+      var mode = transport ? transport.mode : 'websocket';
+      document.getElementById('statusDot').className = 'status-dot' + (connected ? ' ok' : '');
+      document.getElementById('statusText').textContent = connected ? 'Connected' : 'Disconnected';
+      document.getElementById('callBtn').disabled = !connected;
+      document.getElementById('subBtn').disabled = !connected;
+      document.getElementById('subBtn').textContent = subscribed ? 'Unsubscribe' : 'Subscribe';
+      document.getElementById('subBtn').className = subscribed ? 'btn danger' : 'btn success';
+      var badge = document.getElementById('transportBadge');
+      if (mode === 'ipc') { badge.textContent = 'IPC'; badge.className = 'transport-badge ipc'; }
+      else { badge.textContent = 'WebSocket'; badge.className = 'transport-badge ws'; }
+    }
+
+    function callRPC() {
+      if (!client || !client.isConnected()) return;
+      var params;
+      try { var s = document.getElementById('params').value; params = s ? JSON.parse(s) : undefined; }
+      catch (e) { addLog('Invalid JSON', 'err'); return; }
+      addLog({ method: currentMethod, params: params }, 'sent');
+      client.call(currentMethod, params).then(function(result) {
+        addLog(result, 'recv');
+      }).catch(function(err) { addLog(err.message, 'err'); });
+    }
+
+    function toggleSub() {
+      if (!client || !client.isConnected()) return;
+      if (subscribed && currentSubId) {
+        client.unsubscribe(currentSubId); subscribed = false; currentSubId = null;
+        addLog('Unsubscribed', 'info');
+      } else {
+        var et = document.getElementById('eventType').value;
+        currentSubId = client.subscribe(et, {}, function(event) {
+          addLog(event, 'event');
+          var list = document.getElementById('eventsList');
+          var item = document.createElement('div');
+          item.className = 'event-item';
+          item.innerHTML = '<span class="name">' + event.eventType + '</span><span>' + JSON.stringify(event.payload) + '</span>';
+          list.insertBefore(item, list.firstChild);
+        });
+        subscribed = true;
+        addLog('Subscribed: ' + et, 'info');
+      }
+      updateUI();
+    }
+
+    // File tree
+    async function loadDir(path, depth) {
+      if (!client || !client.isConnected()) return [];
+      try {
+        var result = await client.call('listDir', { path: path });
+        return result.entries || [];
+      } catch (e) { addLog('listDir error: ' + e.message, 'err'); return []; }
+    }
+
+    async function openFile(path) {
+      if (!client || !client.isConnected()) return;
+      if (openFiles[path]) { switchTab('file-' + path); return; }
+      try {
+        var result = await client.call('readFile', { path: path });
+        openFiles[path] = result;
+        addFileTab(path, result);
+      } catch (e) { addLog('readFile error: ' + e.message, 'err'); }
+    }
+
+    function addFileTab(path, fileData) {
+      var tabs = document.getElementById('tabs');
+      var tab = document.createElement('div');
+      tab.className = 'tab';
+      tab.dataset.tab = 'file-' + path;
+      var name = path.split('/').pop();
+      tab.innerHTML = name + '<span class="close-tab" onclick="event.stopPropagation();closeFileTab(\'' + path + '\')">✕</span>';
+      tab.onclick = function() { switchTab('file-' + path); };
+      tabs.appendChild(tab);
+
+      var content = document.querySelector('.content');
+      var view = document.createElement('div');
+      view.className = 'tab-content';
+      view.id = 'tab-file-' + path;
+      view.innerHTML =
+        '<div class="file-viewer">' +
+          '<div class="file-toolbar">' +
+            '<span class="file-path">' + escapeHtml(path) + '</span>' +
+            '<span class="file-size">' + formatSize(fileData.size) + '</span>' +
+          '</div>' +
+          '<div class="file-content">' + renderFileContent(fileData.content) + '</div>' +
+        '</div>';
+      content.appendChild(view);
+      switchTab('file-' + path);
+    }
+
+    function renderFileContent(content) {
+      var lines = content.split('\n');
+      return lines.map(function(line, i) {
+        return '<span class="line-num">' + (i + 1) + '</span>' + escapeHtml(line);
+      }).join('\n');
+    }
+
+    function closeFileTab(path) {
+      delete openFiles[path];
+      var tab = document.querySelector('[data-tab="file-' + path + '"]');
+      if (tab) tab.remove();
+      var view = document.getElementById('tab-file-' + path);
+      if (view) view.remove();
+      if (activeFileTab === 'file-' + path) switchTab('rpc');
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
+      var tab = document.querySelector('[data-tab="' + tabId + '"]');
+      if (tab) tab.classList.add('active');
+      var content = document.getElementById('tab-' + tabId);
+      if (content) content.classList.add('active');
+      activeFileTab = tabId;
+    }
+
+    async function refreshFileTree() {
+      var tree = document.getElementById('fileTree');
+      tree.innerHTML = '<div style="padding:10px;color:#666;font-size:12px;">Loading...</div>';
+      var entries = await loadDir('.', 0);
+      tree.innerHTML = '';
+      renderTreeItems(tree, entries, 0);
+    }
+
+    function renderTreeItems(container, entries, depth) {
+      entries.forEach(function(entry) {
+        var item = document.createElement('div');
+        item.className = 'tree-item';
+        item.style.setProperty('--depth', depth);
+        var icon = entry.type === 'directory' ? '📁' : getFileIcon(entry.name);
+        item.innerHTML = '<span class="icon">' + icon + '</span><span class="name">' + escapeHtml(entry.name) + '</span>' +
+          (entry.size ? '<span class="size">' + formatSize(entry.size) + '</span>' : '');
+        item.onclick = function(e) {
+          e.stopPropagation();
+          if (entry.type === 'directory') {
+            toggleDir(item, entry.path, depth + 1);
+          } else {
+            document.querySelectorAll('.tree-item').forEach(function(t) { t.classList.remove('active'); });
+            item.classList.add('active');
+            openFile(entry.path);
+          }
+        };
+        container.appendChild(item);
+      });
+    }
+
+    async function toggleDir(item, path, depth) {
+      var next = item.nextElementSibling;
+      if (expandedDirs[path]) {
+        while (next && next.style.getPropertyValue('--depth') > item.style.getPropertyValue('--depth')) {
+          var toRemove = next;
+          next = next.nextElementSibling;
+          toRemove.remove();
+        }
+        delete expandedDirs[path];
+        item.querySelector('.icon').textContent = '📁';
+      } else {
+        expandedDirs[path] = true;
+        item.querySelector('.icon').textContent = '📂';
+        var entries = await loadDir(path, depth);
+        var frag = document.createDocumentFragment();
+        renderTreeItems(frag, entries, depth);
+        if (item.nextSibling) {
+          item.parentNode.insertBefore(frag, item.nextSibling);
+        } else {
+          item.parentNode.appendChild(frag);
+        }
+      }
+    }
+
+    function getFileIcon(name) {
+      var ext = name.split('.').pop().toLowerCase();
+      var icons = { ts: '🟦', tsx: '🟦', js: '🟨', jsx: '🟨', json: '📋', md: '📝', html: '🌐', css: '🎨', py: '🐍', rs: '🦀', go: '🔵', toml: '⚙️', lock: '🔒', gitignore: '🙈', env: '🔐', yml: '⚙️', yaml: '⚙️', sh: '📜', sql: '🗃️', png: '🖼️', jpg: '🖼️', svg: '🖼️' };
+      return icons[ext] || '📄';
+    }
+
+    // Auth
+    function showLogin(errorMsg) {
+      document.getElementById('loginOverlay').style.display = 'flex';
+      document.getElementById('loginError').textContent = errorMsg || '';
+      if (isDesktop) {
+        document.getElementById('localHint').style.display = 'block';
+        document.getElementById('tokenInput').style.display = 'none';
+        document.getElementById('loginBtn').textContent = 'Connect (Desktop)';
+      } else {
+        document.getElementById('localHint').style.display = 'none';
+        document.getElementById('tokenInput').style.display = 'block';
+        document.getElementById('loginBtn').textContent = 'Connect';
+        setTimeout(function() { document.getElementById('tokenInput').focus(); }, 100);
+      }
+    }
+
+    function hideLogin() { document.getElementById('loginOverlay').style.display = 'none'; }
+
+    function handleLogin() {
+      var token;
+      if (isDesktop) { token = 'local'; }
+      else {
+        token = document.getElementById('tokenInput').value.trim();
+        if (!token) { document.getElementById('loginError').textContent = 'Please enter access key'; return; }
+      }
+      saveToken(token); hideLogin(); connectWithToken(token);
+    }
+
+    function handleLogout() {
+      clearToken();
+      if (client) { client.close(); client = null; }
+      if (transport) { transport.close(); transport = null; }
+      subscribed = false; currentSubId = null;
+      document.getElementById('logoutBtn').style.display = 'none';
+      document.getElementById('userName').textContent = '';
+      showLogin();
+    }
+
+    function connectWithToken(token) {
+      try {
+        addLog('Connecting...', 'info');
+        var wsUrl = 'ws://' + window.location.host;
+        if (window.location.port === '8080' || window.location.port === '') wsUrl = 'ws://localhost:3000';
+
+        transport = new PiRPC.BrowserTransport({ wsUrl: wsUrl, token: token });
+        transport.onMessage(function(msg) {
+          if (msg && msg.type === 'auth-error') {
+            addLog('Auth failed: ' + (msg.reason || 'Invalid token'), 'err');
+            clearToken(); showLogin('Authentication failed');
+          }
+        });
+
+        client = new PiRPC.RPCClient({
+          transport: transport, timeout: 30000,
+          onError: function(err, ctx) {
+            addLog('Error in ' + ctx + ': ' + err.message, 'err');
+            if (err.message.indexOf('Authentication') !== -1 || err.message.indexOf('401') !== -1) {
+              clearToken(); showLogin('Session expired');
+            }
+          }
+        });
+
+        addLog('Connected (mode: ' + transport.mode + ')', 'info');
+        if (isDesktop) { document.getElementById('userName').textContent = '👤 Desktop'; }
+        else { document.getElementById('userName').textContent = '👤 ' + token.substring(0, 8) + '...'; }
+        document.getElementById('logoutBtn').style.display = 'inline-block';
+        updateUI();
+        refreshFileTree();
+        setInterval(function() { updateUI(); }, 1000);
+      } catch (e) { addLog('Init error: ' + e.message, 'err'); showLogin('Connection failed'); }
+    }
+
+    document.getElementById('tokenInput').addEventListener('keydown', function(e) { if (e.key === 'Enter') handleLogin(); });
+
+    // Init
+    (function init() {
+      isDesktop = typeof window !== 'undefined' && !!window.__electrobunBunBridge;
+      addLog('Environment: ' + (isDesktop ? 'Desktop (IPC)' : 'Browser (WebSocket)'), 'info');
+      if (isDesktop) { connectWithToken('local'); }
+      else { var saved = getToken(); if (saved) { connectWithToken(saved); } else { showLogin(); } }
+    })();
+  </script>
+</body>
+</html>

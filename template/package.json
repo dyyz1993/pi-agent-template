@@ -1,0 +1,60 @@
+{
+  "name": "pi-agent-template",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "server": "bun run src/server.ts",
+    "desktop": "electrobun dev",
+    "start": "bun run src/server.ts",
+    "ui": "bun run src/ui.ts",
+    "build:browser": "bun build packages/rpc-core/src/browser-bundle.ts --outfile src/rpc-browser.js --target browser --format=iife",
+    "build:ui": "cd src/mainview && npx vite build && cp ../../src/rpc-browser.js ../../src/dist/rpc-browser.js",
+    "build:desktop": "bun run build:browser && bun run build:ui && PROJECT_ROOT=$(pwd) electrobun build",
+    "dev": "bun run build:desktop && PROJECT_ROOT=$(pwd) electrobun dev",
+    "dev:ui": "cd src/mainview && npx vite",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "bun test",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "diff": "^9.0.0",
+    "pino": "^10.3.1",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "solid-js": "^1.9.12",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "@types/bun": "latest",
+    "@types/diff": "^8.0.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/ws": "^8.5.10",
+    "@vitejs/plugin-react": "^6.0.1",
+    "electrobun": "^1.16.0",
+    "eslint": "^9.0.0",
+    "husky": "^9.0.0",
+    "lint-staged": "^15.0.0",
+    "typescript-eslint": "^8.0.0",
+    "vite": "^8.0.9",
+    "vite-plugin-solid": "^2.11.12"
+  },
+  "lint-staged": {
+    "packages/rpc-core/src/**/*.ts": [
+      "eslint --fix",
+      "bun test"
+    ],
+    "src/mainview/**/*.{ts,tsx}": [
+      "eslint --fix"
+    ],
+    "src/**/*.{ts,tsx}": [
+      "eslint --fix"
+    ]
+  }
+}

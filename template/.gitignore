@@ -1,0 +1,15 @@
+node_modules/
+build/
+dist/
+.bun/
+*.lock
+bun.lockb
+.DS_Store
+*.log
+src/rpc-browser.js
+src/dist/
+.vscode/
+.idea/
+*.iml
+.husky/_/
+.trae/rules/*.md
