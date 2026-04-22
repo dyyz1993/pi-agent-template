@@ -1,5 +1,9 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export default tseslint.config(
   js.configs.recommended,
@@ -17,7 +21,13 @@ export default tseslint.config(
     ],
   },
   {
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.ts', 'src/**/*.tsx'],
+    languageOptions: {
+      parserOptions: {
+        tsconfigRootDir: __dirname,
+        project: './tsconfig.json',
+      },
+    },
     rules: {
       'no-restricted-syntax': [
         'error',
@@ -41,15 +51,30 @@ export default tseslint.config(
           varsIgnorePattern: '^_',
         },
       ],
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      '@typescript-eslint/no-extraneous-class': 'off',
+      '@typescript-eslint/no-unnecessary-condition': 'off',
+      '@typescript-eslint/prefer-includes': 'error',
+      '@typescript-eslint/prefer-string-starts-ends-with': 'error',
       'prefer-const': 'error',
       'no-var': 'error',
     },
   },
   {
     files: ['src/mainview/**/*.ts', 'src/mainview/**/*.tsx'],
+    languageOptions: {
+      parserOptions: {
+        tsconfigRootDir: __dirname,
+        project: './tsconfig.json',
+      },
+    },
     rules: {
       'no-console': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/explicit-module-boundary-types': 'off',
+      '@typescript-eslint/no-extraneous-class': 'off',
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
