@@ -1,0 +1,9 @@
+node_modules/
+build/
+dist/
+.bun/
+*.lock
+bun.lockb
+.DS_Store
+*.log
+.pnpm-debug.log
