@@ -7,3 +7,4 @@ bun.lockb
 .DS_Store
 *.log
 pnpm-debug.log
+template/package-lock.json
