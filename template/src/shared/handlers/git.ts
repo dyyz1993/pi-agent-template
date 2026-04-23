@@ -132,4 +132,49 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 
     return { commits };
   });
+
+  r("git.commitFiles", async (params) => {
+    const repoRoot = getRepoRoot(params.repoPath);
+    const output = execGit([
+      "diff-tree", "--no-commit-id", "--name-status", "-r", params.hash,
+    ], repoRoot);
+
+    const statusMap: Record<string, GitFileChange["status"]> = {
+      M: "modified", A: "added", D: "deleted", R: "renamed", C: "copied",
+    };
+
+    const files: GitFileChange[] = output.split("\n").filter(Boolean).map((line) => {
+      const [status, ...pathParts] = line.split("\t");
+      const path = pathParts.join("\t"); // handle paths with tabs (renames: old\tnew)
+      return { path: status === "R" ? path.split("\t").pop()! : path, status: statusMap[status] || "modified" };
+    });
+
+    return { files };
+  });
+
+  r("git.commitFileDiff", async (params) => {
+    const repoRoot = getRepoRoot(params.repoPath);
+    const { hash, filePath } = params;
+
+    // Get the diff for this file in this commit
+    const diff = execGit(["diff", `${hash}^..${hash}`, "--", filePath], repoRoot, true);
+
+    // Get old content (parent commit version)
+    let oldContent = "";
+    try {
+      oldContent = execGit(["show", `${hash}^:${filePath}`], repoRoot);
+    } catch {
+      // File was added in this commit — no old content
+    }
+
+    // Get new content (this commit version)
+    let newContent = "";
+    try {
+      newContent = execGit(["show", `${hash}:${filePath}`], repoRoot);
+    } catch {
+      // File was deleted in this commit — no new content
+    }
+
+    return { filePath, diff, oldContent, newContent };
+  });
 }

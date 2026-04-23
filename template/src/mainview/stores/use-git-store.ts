@@ -26,14 +26,19 @@ interface GitState {
   loadingCommits: boolean;
   currentDiff: { filePath: string; diff: string; oldContent: string; newContent: string } | null;
   loadingDiff: boolean;
+  expandedCommits: Set<string>;
+  commitFiles: Record<string, GitFileChange[]>;
+  loadingCommitFiles: Set<string>;
 
   fetchStatus: (repoPath: string) => Promise<void>;
   fetchDiff: (repoPath: string, filePath: string, staged?: boolean) => Promise<void>;
   fetchLog: (repoPath: string) => Promise<void>;
   clearDiff: () => void;
+  toggleCommitExpand: (repoPath: string, hash: string) => Promise<void>;
+  fetchCommitFileDiff: (repoPath: string, hash: string, filePath: string) => Promise<void>;
 }
 
-export const useGitStore = create<GitState>((set) => ({
+export const useGitStore = create<GitState>((set, get) => ({
   branch: "",
   ahead: 0,
   behind: 0,
@@ -44,6 +49,9 @@ export const useGitStore = create<GitState>((set) => ({
   loadingCommits: false,
   currentDiff: null,
   loadingDiff: false,
+  expandedCommits: new Set(),
+  commitFiles: {},
+  loadingCommitFiles: new Set(),
 
   fetchStatus: async (repoPath) => {
     const addLog = useAppStore.getState().addLog;
@@ -89,4 +97,50 @@ export const useGitStore = create<GitState>((set) => ({
   },
 
   clearDiff: () => set({ currentDiff: null }),
+
+  toggleCommitExpand: async (repoPath, hash) => {
+    const { expandedCommits, commitFiles } = get();
+    const next = new Set(expandedCommits);
+
+    if (next.has(hash)) {
+      next.delete(hash);
+      set({ expandedCommits: next });
+      return;
+    }
+
+    next.add(hash);
+    set({ expandedCommits: next });
+
+    // Load files if not cached
+    if (!commitFiles[hash]) {
+      const loading = new Set(get().loadingCommitFiles);
+      loading.add(hash);
+      set({ loadingCommitFiles: loading });
+
+      try {
+        const res = await apiClient.call("git.commitFiles", { repoPath, hash });
+        set({ commitFiles: { ...get().commitFiles, [hash]: res.files } });
+      } catch (err) {
+        const addLog = useAppStore.getState().addLog;
+        addLog(`Git commitFiles error: ${err instanceof Error ? err.message : String(err)}`);
+      } finally {
+        const loading = new Set(get().loadingCommitFiles);
+        loading.delete(hash);
+        set({ loadingCommitFiles: loading });
+      }
+    }
+  },
+
+  fetchCommitFileDiff: async (repoPath, hash, filePath) => {
+    const addLog = useAppStore.getState().addLog;
+    addLog(`Git commit diff: ${hash.slice(0, 7)} ${filePath}`);
+    set({ loadingDiff: true });
+    try {
+      const res = await apiClient.call("git.commitFileDiff", { repoPath, hash, filePath });
+      set({ currentDiff: res, loadingDiff: false });
+    } catch (err) {
+      addLog(`Git commitFileDiff error: ${err instanceof Error ? err.message : String(err)}`);
+      set({ loadingDiff: false });
+    }
+  },
 }));

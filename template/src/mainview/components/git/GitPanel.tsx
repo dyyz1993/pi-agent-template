@@ -1,7 +1,8 @@
 import { memo, useEffect, useCallback, useState } from "react";
-import { GitBranch, GitCommitHorizontal, RefreshCw, FileQuestion, Plus, Minus, Pencil, ChevronRight, ChevronDown } from "lucide-react";
+import { GitBranch, RefreshCw, FileQuestion, Plus, Minus, Pencil, ChevronRight, ChevronDown, Eye, FileText, Copy } from "lucide-react";
 import { useGitStore, type GitFileChange, type GitCommit } from "../../stores/use-git-store";
 import { useExplorerStore } from "../../stores/use-explorer-store";
+import { ContextMenu, type MenuItem } from "../explorer/ContextMenu";
 
 function statusIcon(status: GitFileChange["status"]) {
   switch (status) {
@@ -43,9 +44,10 @@ interface FileItemProps {
   isSelected: boolean;
   isStaged?: boolean;
   onClick: (filePath: string, staged?: boolean) => void;
+  onContextMenu: (e: React.MouseEvent, filePath: string, isStaged?: boolean) => void;
 }
 
-const FileItem = memo(function FileItem({ path, status, isSelected, isStaged, onClick }: FileItemProps) {
+const FileItem = memo(function FileItem({ path, status, isSelected, isStaged, onClick, onContextMenu }: FileItemProps) {
   return (
     <div
       className={`flex items-center gap-1.5 px-2 py-0.5 text-xs rounded cursor-pointer transition-colors ${
@@ -54,6 +56,7 @@ const FileItem = memo(function FileItem({ path, status, isSelected, isStaged, on
           : "hover:bg-gray-700 text-gray-300"
       }`}
       onClick={() => onClick(path, isStaged)}
+      onContextMenu={(e) => { e.preventDefault(); onContextMenu(e, path, isStaged); }}
     >
       {statusIcon(status)}
       <span className="truncate flex-1">{path.split("/").pop()}</span>
@@ -67,15 +70,17 @@ interface UntrackedItemProps {
   path: string;
   isSelected: boolean;
   onClick: (filePath: string) => void;
+  onContextMenu: (e: React.MouseEvent, filePath: string) => void;
 }
 
-const UntrackedItem = memo(function UntrackedItem({ path, isSelected, onClick }: UntrackedItemProps) {
+const UntrackedItem = memo(function UntrackedItem({ path, isSelected, onClick, onContextMenu }: UntrackedItemProps) {
   return (
     <div
       className={`flex items-center gap-1.5 px-2 py-0.5 text-xs rounded cursor-pointer transition-colors ${
         isSelected ? "bg-indigo-600/30 text-white" : "hover:bg-gray-700 text-gray-400"
       }`}
       onClick={() => onClick(path)}
+      onContextMenu={(e) => { e.preventDefault(); onContextMenu(e, path); }}
     >
       <FileQuestion className="w-3 h-3 text-gray-500" />
       <span className="truncate">{path.split("/").pop()}</span>
@@ -84,23 +89,83 @@ const UntrackedItem = memo(function UntrackedItem({ path, isSelected, onClick }:
   );
 });
 
-/* Commit item */
-interface CommitItemProps {
-  commit: GitCommit;
+/* Commit file item (inside expanded commit) */
+interface CommitFileItemProps {
+  path: string;
+  status: GitFileChange["status"];
+  isSelected: boolean;
+  onClick: () => void;
 }
 
-const CommitItem = memo(function CommitItem({ commit }: CommitItemProps) {
+const CommitFileItem = memo(function CommitFileItem({ path, status, isSelected, onClick }: CommitFileItemProps) {
   return (
-    <div className="flex items-start gap-1.5 px-2 py-1 text-xs hover:bg-gray-700/50 rounded">
-      <GitCommitHorizontal className="w-3 h-3 text-gray-500 mt-0.5 shrink-0" />
-      <div className="flex-1 min-w-0">
-        <div className="text-gray-300 truncate">{commit.message}</div>
-        <div className="text-gray-500 text-[10px] flex items-center gap-1.5 mt-0.5">
-          <span className="text-indigo-400 font-mono">{commit.shortHash}</span>
-          <span>{commit.author}</span>
-          <span>{relativeTime(commit.date)}</span>
+    <div
+      className={`flex items-center gap-1.5 pl-7 pr-2 py-0.5 text-xs rounded cursor-pointer transition-colors ${
+        isSelected ? "bg-indigo-600/30 text-white" : "hover:bg-gray-700 text-gray-400"
+      }`}
+      onClick={onClick}
+    >
+      {statusIcon(status)}
+      <span className="truncate flex-1">{path.split("/").pop()}</span>
+      <span className="text-gray-600 text-[10px]">{statusLabel(status)}</span>
+    </div>
+  );
+});
+
+/* Commit item — expandable */
+interface CommitItemProps {
+  commit: GitCommit;
+  expanded: boolean;
+  files: GitFileChange[] | undefined;
+  loading: boolean;
+  selectedFilePath: string | null;
+  onToggle: () => void;
+  onFileClick: (filePath: string) => void;
+  onContextMenu: (e: React.MouseEvent, commit: GitCommit) => void;
+}
+
+const CommitItem = memo(function CommitItem({
+  commit, expanded, files, loading, selectedFilePath, onToggle, onFileClick, onContextMenu,
+}: CommitItemProps) {
+  return (
+    <div>
+      <div
+        className="flex items-start gap-1.5 px-2 py-1 text-xs hover:bg-gray-700/50 rounded cursor-pointer"
+        onClick={onToggle}
+        onContextMenu={(e) => { e.preventDefault(); onContextMenu(e, commit); }}
+      >
+        {expanded
+          ? <ChevronDown className="w-3 h-3 text-gray-500 mt-0.5 shrink-0" />
+          : <ChevronRight className="w-3 h-3 text-gray-500 mt-0.5 shrink-0" />
+        }
+        <div className="flex-1 min-w-0">
+          <div className="text-gray-300 truncate">{commit.message}</div>
+          <div className="text-gray-500 text-[10px] flex items-center gap-1.5 mt-0.5">
+            <span className="text-indigo-400 font-mono">{commit.shortHash}</span>
+            <span>{commit.author}</span>
+            <span>{relativeTime(commit.date)}</span>
+          </div>
         </div>
       </div>
+      {expanded && (
+        <div className="ml-1">
+          {loading ? (
+            <div className="text-gray-600 text-[10px] pl-7 py-1">Loading files...</div>
+          ) : files && files.length > 0 ? (
+            files.map((f) => (
+              <CommitFileItem
+                key={f.path}
+                path={f.path}
+                status={f.status}
+                isSelected={selectedFilePath === f.path}
+                onClick={() => onFileClick(f.path)}
+              />
+            ))
+          ) : (
+            <div className="text-gray-600 text-[10px] pl-7 py-1">No files</div>
+          )}
+        </div>
+      )}
     </div>
   );
 });
@@ -115,13 +180,21 @@ export function GitPanel() {
   const commits = useGitStore((s) => s.commits);
   const loadingCommits = useGitStore((s) => s.loadingCommits);
   const currentDiff = useGitStore((s) => s.currentDiff);
+  const expandedCommits = useGitStore((s) => s.expandedCommits);
+  const commitFiles = useGitStore((s) => s.commitFiles);
+  const loadingCommitFiles = useGitStore((s) => s.loadingCommitFiles);
   const fetchStatus = useGitStore((s) => s.fetchStatus);
   const fetchDiff = useGitStore((s) => s.fetchDiff);
   const fetchLog = useGitStore((s) => s.fetchLog);
+  const toggleCommitExpand = useGitStore((s) => s.toggleCommitExpand);
+  const fetchCommitFileDiff = useGitStore((s) => s.fetchCommitFileDiff);
 
   const currentPath = useExplorerStore((s) => s.currentPath);
+  const openFile = useExplorerStore((s) => s.openFile);
 
   const [commitsExpanded, setCommitsExpanded] = useState(false);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; filePath: string; isStaged?: boolean } | null>(null);
+  const [commitCtxMenu, setCommitCtxMenu] = useState<{ x: number; y: number; commit: GitCommit } | null>(null);
 
   const refresh = useCallback(() => {
     fetchStatus(currentPath);
@@ -135,6 +208,60 @@ export function GitPanel() {
   const handleFileClick = useCallback((filePath: string, staged?: boolean) => {
     fetchDiff(currentPath, filePath, staged);
   }, [fetchDiff, currentPath]);
+
+  const handleContextMenu = useCallback((e: React.MouseEvent, filePath: string, isStaged?: boolean) => {
+    setCtxMenu({ x: e.clientX, y: e.clientY, filePath, isStaged });
+  }, []);
+
+  const handleOpenFile = useCallback(async (filePath: string) => {
+    const fullPath = `${currentPath}/${filePath}`;
+    openFile({ name: filePath.split("/").pop() || filePath, path: fullPath, type: "file" as const });
+  }, [openFile, currentPath]);
+
+  const handleCopyPath = useCallback(async (filePath: string) => {
+    const fullPath = `${currentPath}/${filePath}`;
+    await navigator.clipboard.writeText(fullPath);
+  }, [currentPath]);
+
+  const getContextMenuItems = useCallback((filePath: string, isStaged?: boolean): MenuItem[] => [
+    {
+      label: "Open Diff",
+      icon: <Eye className="w-3 h-3" />,
+      onClick: () => fetchDiff(currentPath, filePath, isStaged),
+    },
+    {
+      label: "Open File",
+      icon: <FileText className="w-3 h-3" />,
+      onClick: () => handleOpenFile(filePath),
+    },
+    { label: "", onClick: () => {}, divider: true },
+    {
+      label: "Copy Path",
+      icon: <Copy className="w-3 h-3" />,
+      onClick: () => handleCopyPath(filePath),
+    },
+  ], [fetchDiff, currentPath, handleOpenFile, handleCopyPath]);
+
+  const handleCommitContextMenu = useCallback((e: React.MouseEvent, commit: GitCommit) => {
+    setCommitCtxMenu({ x: e.clientX, y: e.clientY, commit });
+  }, []);
+
+  const getCommitContextMenuItems = useCallback((commit: GitCommit): MenuItem[] => [
+    {
+      label: "Copy Hash",
+      icon: <Copy className="w-3 h-3" />,
+      onClick: () => navigator.clipboard.writeText(commit.hash),
+    },
+    {
+      label: "Copy Message",
+      icon: <Copy className="w-3 h-3" />,
+      onClick: () => navigator.clipboard.writeText(commit.message),
+    },
+  ], []);
+
+  const handleCommitFileClick = useCallback((hash: string, filePath: string) => {
+    fetchCommitFileDiff(currentPath, hash, filePath);
+  }, [fetchCommitFileDiff, currentPath]);
 
   const toggleCommits = useCallback(() => {
     const next = !commitsExpanded;
@@ -187,6 +314,7 @@ export function GitPanel() {
                 isSelected={selectedFilePath === f.path}
                 isStaged
                 onClick={handleFileClick}
+                onContextMenu={handleContextMenu}
               />
             ))}
           </div>
@@ -205,6 +333,7 @@ export function GitPanel() {
                 status={f.status}
                 isSelected={selectedFilePath === f.path}
                 onClick={handleFileClick}
+                onContextMenu={handleContextMenu}
               />
             ))}
           </div>
@@ -222,6 +351,7 @@ export function GitPanel() {
                 path={f}
                 isSelected={selectedFilePath === f}
                 onClick={handleFileClick}
+                onContextMenu={handleContextMenu}
               />
             ))}
           </div>
@@ -257,13 +387,41 @@ export function GitPanel() {
                 <div className="text-gray-600 text-xs text-center py-4">No commits</div>
               ) : (
                 commits.map((c) => (
-                  <CommitItem key={c.hash} commit={c} />
+                  <CommitItem
+                    key={c.hash}
+                    commit={c}
+                    expanded={expandedCommits.has(c.hash)}
+                    files={commitFiles[c.hash]}
+                    loading={loadingCommitFiles.has(c.hash)}
+                    selectedFilePath={selectedFilePath}
+                    onToggle={() => toggleCommitExpand(currentPath, c.hash)}
+                    onFileClick={(filePath) => handleCommitFileClick(c.hash, filePath)}
+                    onContextMenu={handleCommitContextMenu}
+                  />
                 ))
               )}
             </div>
           )}
         </div>
       </div>
+
+      {/* Context menus */}
+      {ctxMenu && (
+        <ContextMenu
+          x={ctxMenu.x}
+          y={ctxMenu.y}
+          items={getContextMenuItems(ctxMenu.filePath, ctxMenu.isStaged)}
+          onClose={() => setCtxMenu(null)}
+        />
+      )}
+      {commitCtxMenu && (
+        <ContextMenu
+          x={commitCtxMenu.x}
+          y={commitCtxMenu.y}
+          items={getCommitContextMenuItems(commitCtxMenu.commit)}
+          onClose={() => setCommitCtxMenu(null)}
+        />
+      )}
     </div>
   );
 }

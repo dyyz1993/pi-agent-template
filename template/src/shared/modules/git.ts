@@ -29,6 +29,14 @@ export interface GitMethods {
       }[];
     };
   };
+  "git.commitFiles": {
+    params: { repoPath: string; hash: string };
+    result: { files: GitFileChange[] };
+  };
+  "git.commitFileDiff": {
+    params: { repoPath: string; hash: string; filePath: string };
+    result: { filePath: string; diff: string; oldContent: string; newContent: string };
+  };
 }
 
 export interface GitFileChange {
