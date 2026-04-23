@@ -1,21 +1,20 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { resolve } from "path";
 
 export default defineConfig({
   plugins: [react()],
   root: "src/mainview",
-  resolve: {
-    alias: {
-      "@": resolve(__dirname, "src"),
-    },
-  },
   build: {
     outDir: "../../dist",
     emptyOutDir: true,
   },
   server: {
-    port: 0,
-    strictPort: false,
+    port: 5173,
+    strictPort: true,
+  },
+  resolve: {
+    alias: {
+      "@chat-agent/rpc-core": "/Users/xuyingzhou/Project/study-desktop/pi-agent-template/packages/rpc-core/src/index.ts",
+    },
   },
 });
