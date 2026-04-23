@@ -79,3 +79,12 @@ jobs:
 
       - name: Verify project created
         run: test -f /tmp/ci-test/package.json
+
+  integration-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Run E2E integration test
+        run: bun run scripts/e2e-test.ts
