@@ -1,13 +1,20 @@
 import { create } from "zustand";
 import { apiClient } from "../lib/api-client";
+import type { RPCMethods } from "../lib/api-client";
+import type { MethodResult } from "@dyyz1993/rpc-core";
 import type { DemoMethod } from "../types";
+
+type DemoResult = MethodResult<RPCMethods, "system.ping">
+  | MethodResult<RPCMethods, "system.hello">
+  | MethodResult<RPCMethods, "system.echo">
+  | MethodResult<RPCMethods, "chat.send">;
 
 interface AppState {
   mode: "desktop" | "web";
   ready: boolean;
   logs: string[];
   method: DemoMethod;
-  result: unknown;
+  result: DemoResult | null;
   tickEvents: string[];
   tickCount: number;
   subscriptionId: string | null;
@@ -68,7 +75,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     addLog(`RPC call: ${method}`);
     try {
       addLog(`Calling: ${method}...`);
-      let res: unknown;
+      let res: DemoResult;
       if (method === "system.ping") {
         res = await apiClient.call("system.ping", {});
       } else if (method === "system.hello") {

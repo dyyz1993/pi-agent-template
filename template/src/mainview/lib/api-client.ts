@@ -84,7 +84,7 @@ class APIClientImpl {
 
   private detectEnvironment(): "electrobun" | "browser" {
     if (typeof window === "undefined") return "browser";
-    if ((window as unknown as Record<string, unknown>).__electrobunBunBridge) return "electrobun";
+    if (window.__electrobunBunBridge) return "electrobun";
     return "browser";
   }
 
@@ -107,7 +107,7 @@ class APIClientImpl {
   private setupElectrobunBridge(ipcTransport: IPCTransport): void {
     if (typeof window === "undefined") return;
 
-    const win = window as unknown as Record<string, unknown>;
+    const win = window;
 
     // 1. 注册接收函数：Bun 通过 executeJavascript 调用此函数发送消息到 Browser
     win.__piAgentIPC = (msg: unknown) => {
@@ -115,9 +115,7 @@ class APIClientImpl {
     };
 
     // 2. 覆写 send：将 RPC-core 消息包装成 Electrobun 消息格式，通过原生桥接发送
-    const bridge = win.__electrobunBunBridge as
-      | { postMessage: (msg: string) => void }
-      | undefined;
+    const bridge = win.__electrobunBunBridge;
 
     if (bridge) {
       ipcTransport.send = async (message: unknown) => {
