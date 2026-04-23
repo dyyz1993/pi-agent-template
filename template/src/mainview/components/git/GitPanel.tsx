@@ -1,6 +1,6 @@
-import { memo, useEffect, useCallback } from "react";
-import { GitBranch, RefreshCw, FileQuestion, Plus, Minus, Pencil } from "lucide-react";
-import { useGitStore, type GitFileChange } from "../../stores/use-git-store";
+import { memo, useEffect, useCallback, useState } from "react";
+import { GitBranch, GitCommitHorizontal, RefreshCw, FileQuestion, Plus, Minus, Pencil, ChevronRight, ChevronDown } from "lucide-react";
+import { useGitStore, type GitFileChange, type GitCommit } from "../../stores/use-git-store";
 import { useExplorerStore } from "../../stores/use-explorer-store";
 
 function statusIcon(status: GitFileChange["status"]) {
@@ -22,7 +22,21 @@ function statusLabel(status: GitFileChange["status"]) {
   }
 }
 
-/* Extracted FileItem to module level with React.memo */
+function relativeTime(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diff = now.getTime() - d.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return d.toLocaleDateString();
+}
+
+/* File item with React.memo */
 interface FileItemProps {
   path: string;
   status: GitFileChange["status"];
@@ -70,6 +84,27 @@ const UntrackedItem = memo(function UntrackedItem({ path, isSelected, onClick }:
   );
 });
 
+/* Commit item */
+interface CommitItemProps {
+  commit: GitCommit;
+}
+
+const CommitItem = memo(function CommitItem({ commit }: CommitItemProps) {
+  return (
+    <div className="flex items-start gap-1.5 px-2 py-1 text-xs hover:bg-gray-700/50 rounded">
+      <GitCommitHorizontal className="w-3 h-3 text-gray-500 mt-0.5 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="text-gray-300 truncate">{commit.message}</div>
+        <div className="text-gray-500 text-[10px] flex items-center gap-1.5 mt-0.5">
+          <span className="text-indigo-400 font-mono">{commit.shortHash}</span>
+          <span>{commit.author}</span>
+          <span>{relativeTime(commit.date)}</span>
+        </div>
+      </div>
+    </div>
+  );
+});
+
 export function GitPanel() {
   const branch = useGitStore((s) => s.branch);
   const ahead = useGitStore((s) => s.ahead);
@@ -77,15 +112,21 @@ export function GitPanel() {
   const staged = useGitStore((s) => s.staged);
   const changed = useGitStore((s) => s.changed);
   const untracked = useGitStore((s) => s.untracked);
+  const commits = useGitStore((s) => s.commits);
+  const loadingCommits = useGitStore((s) => s.loadingCommits);
   const currentDiff = useGitStore((s) => s.currentDiff);
   const fetchStatus = useGitStore((s) => s.fetchStatus);
   const fetchDiff = useGitStore((s) => s.fetchDiff);
+  const fetchLog = useGitStore((s) => s.fetchLog);
 
   const currentPath = useExplorerStore((s) => s.currentPath);
 
+  const [commitsExpanded, setCommitsExpanded] = useState(false);
+
   const refresh = useCallback(() => {
     fetchStatus(currentPath);
-  }, [fetchStatus, currentPath]);
+    if (commitsExpanded) fetchLog(currentPath);
+  }, [fetchStatus, fetchLog, currentPath, commitsExpanded]);
 
   useEffect(() => {
     refresh();
@@ -94,6 +135,14 @@ export function GitPanel() {
   const handleFileClick = useCallback((filePath: string, staged?: boolean) => {
     fetchDiff(currentPath, filePath, staged);
   }, [fetchDiff, currentPath]);
+
+  const toggleCommits = useCallback(() => {
+    const next = !commitsExpanded;
+    setCommitsExpanded(next);
+    if (next && commits.length === 0) {
+      fetchLog(currentPath);
+    }
+  }, [commitsExpanded, commits.length, fetchLog, currentPath]);
 
   const totalChanges = staged.length + changed.length + untracked.length;
   const selectedFilePath = currentDiff?.filePath ?? null;
@@ -178,11 +227,42 @@ export function GitPanel() {
           </div>
         )}
 
-        {totalChanges === 0 && (
+        {totalChanges === 0 && !commitsExpanded && (
           <div className="text-gray-500 text-xs text-center py-8">
             No changes detected
           </div>
         )}
+
+        {/* Commit History — collapsible section at bottom */}
+        <div className="mt-2 border-t border-gray-700 pt-1">
+          <button
+            className="w-full px-2 py-1 text-[10px] uppercase tracking-wide text-gray-500 font-semibold flex items-center gap-1 hover:text-gray-300 transition-colors"
+            onClick={toggleCommits}
+          >
+            {commitsExpanded ? (
+              <ChevronDown className="w-3 h-3" />
+            ) : (
+              <ChevronRight className="w-3 h-3" />
+            )}
+            Commits
+            {commits.length > 0 && (
+              <span className="text-gray-600 ml-auto">{commits.length}</span>
+            )}
+          </button>
+          {commitsExpanded && (
+            <div className="mt-0.5">
+              {loadingCommits ? (
+                <div className="text-gray-500 text-xs text-center py-4">Loading...</div>
+              ) : commits.length === 0 ? (
+                <div className="text-gray-600 text-xs text-center py-4">No commits</div>
+              ) : (
+                commits.map((c) => (
+                  <CommitItem key={c.hash} commit={c} />
+                ))
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -7,6 +7,14 @@ export interface GitFileChange {
   status: "modified" | "added" | "deleted" | "renamed" | "copied";
 }
 
+export interface GitCommit {
+  hash: string;
+  shortHash: string;
+  message: string;
+  author: string;
+  date: string;
+}
+
 interface GitState {
   branch: string;
   ahead: number;
@@ -14,11 +22,14 @@ interface GitState {
   staged: GitFileChange[];
   changed: GitFileChange[];
   untracked: string[];
+  commits: GitCommit[];
+  loadingCommits: boolean;
   currentDiff: { filePath: string; diff: string; oldContent: string; newContent: string } | null;
   loadingDiff: boolean;
 
   fetchStatus: (repoPath: string) => Promise<void>;
   fetchDiff: (repoPath: string, filePath: string, staged?: boolean) => Promise<void>;
+  fetchLog: (repoPath: string) => Promise<void>;
   clearDiff: () => void;
 }
 
@@ -29,6 +40,8 @@ export const useGitStore = create<GitState>((set) => ({
   staged: [],
   changed: [],
   untracked: [],
+  commits: [],
+  loadingCommits: false,
   currentDiff: null,
   loadingDiff: false,
 
@@ -60,6 +73,18 @@ export const useGitStore = create<GitState>((set) => ({
     } catch (err) {
       addLog(`Git diff error: ${err instanceof Error ? err.message : String(err)}`);
       set({ loadingDiff: false });
+    }
+  },
+
+  fetchLog: async (repoPath) => {
+    set({ loadingCommits: true });
+    try {
+      const res = await apiClient.call("git.log", { repoPath, maxCount: 50 });
+      set({ commits: res.commits, loadingCommits: false });
+    } catch (err) {
+      const addLog = useAppStore.getState().addLog;
+      addLog(`Git log error: ${err instanceof Error ? err.message : String(err)}`);
+      set({ loadingCommits: false });
     }
   },
 
