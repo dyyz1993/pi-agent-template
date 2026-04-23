@@ -1,46 +1,13 @@
 import { createServer } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { RPCServer, type Transport } from "@chat-agent/rpc-core";
-import { createTypedRegister } from "./shared/typed-handlers";
-import { readdir, stat, readFile } from "fs/promises";
+import { registerAllHandlers } from "./shared/register-all-handlers";
+import { stat, readFile } from "fs/promises";
 import { existsSync } from "fs";
-import { join, extname, basename } from "path";
+import { extname, basename } from "path";
 
 const PORT = 3100;
 const AUTH_TOKEN = "pi-agent-template-token";
-
-// 共享 handler 注册函数（复用类型推导）
-function registerSharedHandlers(rpcServer: RPCServer) {
-  const register = createTypedRegister(rpcServer);
-
-  register("system.ping", async () => ({ pong: true, timestamp: Date.now(), platform: "web" as const }));
-
-  register("system.hello", async (params) => {
-    return { message: `Hello ${params.name || "World"}!`, timestamp: Date.now() };
-  });
-
-  register("system.echo", async (params) => params);
-
-  register("file.listDir", async (params) => {
-    const basePath = params.path || process.cwd();
-    const entries: { name: string; path: string; type: "file" | "directory"; size?: number }[] = [];
-    try {
-      const files = await readdir(basePath);
-      for (const name of files) {
-        const fullPath = join(basePath, name);
-        try {
-          const s = await stat(fullPath);
-          entries.push({ name, path: fullPath, type: s.isDirectory() ? "directory" : "file", size: s.size });
-        } catch {
-          entries.push({ name, path: fullPath, type: "file" as const });
-        }
-      }
-    } catch (err) {
-      console.error("listDir error:", err);
-    }
-    return { entries, basePath };
-  });
-}
 
 // Token 验证
 function verifyToken(req: { headers: Record<string, string | undefined>; url?: string }): boolean {
@@ -219,33 +186,12 @@ wss.on("connection", (ws: WebSocket, req) => {
 
   const rpcServer = new RPCServer(wsTransport as Transport);
 
-  // 注册共享 handlers（类型安全）
-  registerSharedHandlers(rpcServer);
-
-  // Timer: 每秒 emitEvent("tick")
-  const register = createTypedRegister(rpcServer);
-  let timerId: ReturnType<typeof setInterval> | null = null;
-  register("timer.start", async () => {
-    if (timerId !== null) return { alreadyRunning: true };
-    let count = 0;
-    timerId = setInterval(() => {
-      count++;
-      rpcServer.emitEvent("timer.tick", { count, timestamp: Date.now() });
-    }, 1000);
-    return { started: true };
-  });
-  register("timer.stop", async () => {
-    if (timerId !== null) {
-      clearInterval(timerId);
-      timerId = null;
-    }
-    return { stopped: true };
-  });
+  // 注册所有 handlers（单点定义，自动推导）
+  registerAllHandlers(rpcServer, { platform: "web" });
 
   ws.on("close", () => {
     // eslint-disable-next-line no-console
     console.log("[WS] Client disconnected, total:", wss.clients.size);
-    if (timerId !== null) clearInterval(timerId);
     rpcServer.close();
   });
 

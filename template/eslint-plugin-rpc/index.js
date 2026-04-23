@@ -1,12 +1,12 @@
 /**
- * eslint-plugin-rpc — RPC 模块化规范 ESLint 插件
+ * eslint-plugin-rpc — RPC 模块化规范 ESLint 插件（单注册架构）
  *
  * 规则列表：
  *   - rpc/no-bare-method          : 方法名必须使用 module.action 格式
- *   - rpc/no-direct-register      : 禁止直接 server.register()，必须用 createTypedRegister
+ *   - rpc/no-direct-register      : server.register() 只允许在 handlers/ 目录内使用
  *   - rpc/schema-merge-only       : rpc-schema.ts 禁止直接定义方法
  *   - rpc/module-file-naming      : 模块文件命名、导出、方法前缀强制规范
- *   - rpc/require-typed-register  : 调用 register() 的文件必须导入 createTypedRegister
+ *   - rpc/require-typed-register  : 入口文件必须导入 registerAllHandlers
  *   - rpc/require-api-client      : 前端必须通过 apiClient 调用 RPC
  */
 "use strict";

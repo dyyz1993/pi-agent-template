@@ -6,12 +6,12 @@ import type { TimerMethods, TimerEvents } from "./modules/timer";
 /**
  * RPC 方法定义 — 前后端共享的唯一类型入口
  *
- * 新增方法：
- * 1. 在 modules/ 下对应模块文件中添加方法定义
+ * 新增方法只需三步：
+ * 1. 在 modules/ 下对应模块文件中添加方法类型定义
  * 2. 在下方 interface 中合并新模块（如果没有的话）
- * 3. 在 bun/index.ts 或 server.ts 中用 register("方法名", handler) 注册实现
+ * 3. 在 handlers/ 下对应模块文件中添加 handler 实现，并在 register-all-handlers.ts 中注册
  *
- * handler 的 params 和返回值会自动推导，无需额外类型标注
+ * 入口文件（bun/index.ts, server.ts）无需修改，自动获得新方法。
  */
 export interface RPCMethods extends AnyMethods, SystemMethods, FileMethods, TimerMethods {}
 

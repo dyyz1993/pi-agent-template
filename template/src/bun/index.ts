@@ -1,7 +1,7 @@
 import { BrowserWindow, BrowserView, Updater, ApplicationMenu } from "electrobun/bun";
 import { RPCServer } from "@chat-agent/rpc-core";
 import { ElectrobunTransport } from "../gateway/ipc-transport";
-import { createTypedRegister } from "../shared/typed-handlers";
+import { registerAllHandlers } from "../shared/register-all-handlers";
 
 async function getMainViewUrl(): Promise<string> {
   const channel = await Updater.localInfo.channel();
@@ -24,67 +24,9 @@ const url = await getMainViewUrl();
 
 const transport = new ElectrobunTransport();
 const server = new RPCServer(transport);
-const register = createTypedRegister(server);
 
-// --- 注册 RPC handlers（params 和返回值自动推导） ---
-
-register("system.ping", async () => {
-  return { pong: true, timestamp: Date.now(), platform: "desktop" };
-});
-
-register("system.hello", async (params) => {
-  return { message: `Hello ${params.name || "World"}!`, timestamp: Date.now() };
-});
-
-register("system.echo", async (params) => params);
-
-register("file.listDir", async (params) => {
-  const { readdir, stat } = await import("fs/promises");
-  const { join } = await import("path");
-  const basePath = params.path || process.cwd();
-  const entries: { name: string; path: string; type: "file" | "directory"; size?: number }[] = [];
-  try {
-    const files = await readdir(basePath);
-    for (const name of files) {
-      const fullPath = join(basePath, name);
-      try {
-        const s = await stat(fullPath);
-        entries.push({
-          name,
-          path: fullPath,
-          type: s.isDirectory() ? "directory" : "file",
-          size: s.size,
-        });
-      } catch {
-        entries.push({ name, path: fullPath, type: "file" });
-      }
-    }
-  } catch (e) {
-    console.error("listDir error:", e);
-  }
-  return { entries, basePath };
-});
-
-// Timer: 每秒 emitEvent("tick")
-let timerId: ReturnType<typeof setInterval> | null = null;
-
-register("timer.start", async () => {
-  if (timerId !== null) return { alreadyRunning: true };
-  let count = 0;
-  timerId = setInterval(() => {
-    count++;
-    server.emitEvent("timer.tick", { count, timestamp: Date.now() });
-  }, 1000);
-  return { started: true };
-});
-
-register("timer.stop", async () => {
-  if (timerId !== null) {
-    clearInterval(timerId);
-    timerId = null;
-  }
-  return { stopped: true };
-});
+// --- 注册 RPC handlers（单点定义，自动推导） ---
+registerAllHandlers(server, { platform: "desktop" });
 
 // --- 创建窗口 ---
 
