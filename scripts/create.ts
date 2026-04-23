@@ -80,8 +80,14 @@ const rootPkgPath = join(targetDir, 'package.json');
 const rootPkg = JSON.parse(readFileSync(rootPkgPath, 'utf-8'));
 if (!rootPkg.workspaces) {
   rootPkg.workspaces = ['packages/*'];
-  writeFileSync(rootPkgPath, JSON.stringify(rootPkg, null, '\t') + '\n');
 }
+
+// Point @dyyz1993/rpc-core to local workspace instead of npm
+if (rootPkg.dependencies && rootPkg.dependencies['@dyyz1993/rpc-core']) {
+  rootPkg.dependencies['@dyyz1993/rpc-core'] = 'workspace:*';
+}
+
+writeFileSync(rootPkgPath, JSON.stringify(rootPkg, null, '\t') + '\n');
 
 console.log('Installing dependencies...');
 execSync('bun install', { cwd: targetDir, stdio: 'inherit' });
