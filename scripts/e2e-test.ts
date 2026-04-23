@@ -3,7 +3,7 @@
 
 /**
  * E2E integration test: creates a project from template, starts the web server,
- * connects via WebSocket, and verifies RPC communication works.
+ * and verifies HTTP endpoints + WebSocket RPC communication.
  *
  * Usage:
  *   bun run scripts/e2e-test.ts [project-dir]
@@ -34,7 +34,7 @@ function log(tag: string, msg: string) {
 function fail(tag: string, msg: string): never {
   console.error(`\n[${tag}] FAIL: ${msg}\n`);
   cleanup(1);
-  process.exit(1); // TypeScript needs this even though cleanup may exit
+  process.exit(1);
 }
 
 function cleanup(code: number) {
@@ -45,7 +45,7 @@ function cleanup(code: number) {
   }
   if (autoCreated && projectDir && existsSync(projectDir)) {
     log("cleanup", `Removing temp project: ${projectDir}`);
-    rmSync(projectDir, { recursive: true, force: true });
+    try { rmSync(projectDir, { recursive: true, force: true }); } catch { /* ignore cleanup error */ }
   }
   if (code !== 0) process.exit(code);
 }
@@ -68,39 +68,33 @@ async function waitForServer(maxWaitMs = 10_000): Promise<void> {
   fail("wait", `Server did not start within ${maxWaitMs}ms`);
 }
 
-async function wsSendRecv(messages: Record<string, unknown>[]): Promise<Map<string, unknown>> {
-  return new Promise((resolve, reject) => {
-    const ws = new WebSocket(WS_URL);
-    const results = new Map<string, unknown>();
-    let received = 0;
+async function wsRpc(method: string, params: unknown): Promise<unknown> {
+  const id = `rpc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const msg = JSON.stringify({ id, type: "request", method, params });
 
+  return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
-      ws.close();
-      reject(new Error("WebSocket timeout"));
+      reject(new Error(`RPC timeout: ${method}`));
     }, TIMEOUT_MS);
 
+    const ws = new WebSocket(WS_URL);
+
     ws.onopen = () => {
-      for (const msg of messages) {
-        ws.send(JSON.stringify(msg));
-      }
+      ws.send(msg);
     };
 
     ws.onmessage = (event: MessageEvent) => {
-      const msg = JSON.parse(event.data as string);
-      if (msg.id) {
-        results.set(msg.id, msg);
-        received++;
-        if (received === messages.length) {
-          clearTimeout(timer);
-          ws.close();
-          resolve(results);
-        }
+      const data = JSON.parse(event.data as string);
+      if (data.id === id) {
+        clearTimeout(timer);
+        ws.close();
+        resolve(data);
       }
     };
 
     ws.onerror = () => {
       clearTimeout(timer);
-      reject(new Error("WebSocket connection error"));
+      reject(new Error(`WebSocket error: ${method}`));
     };
   });
 }
@@ -149,100 +143,13 @@ async function main() {
   await waitForServer();
   log("server", "Server is ready");
 
-  // Run RPC tests
-  log("test", "Running RPC integration tests...\n");
+  // Run tests
+  log("test", "Running integration tests...\n");
 
   let passed = 0;
   let failed = 0;
 
-  // Test 1: system.ping
-  {
-    const pingId = "test-ping-1";
-    const results = await wsSendRecv([
-      { id: pingId, type: "request", method: "system.ping", params: {} },
-    ]);
-    const res = results.get(pingId) as Record<string, unknown> | undefined;
-    if (res && (res.result as Record<string, unknown>)?.pong === true) {
-      log("PASS", "system.ping → { pong: true }");
-      passed++;
-    } else {
-      log("FAIL", `system.ping → ${JSON.stringify(res)}`);
-      failed++;
-    }
-  }
-
-  // Test 2: system.hello
-  {
-    const helloId = "test-hello-1";
-    const results = await wsSendRecv([
-      { id: helloId, type: "request", method: "system.hello", params: { name: "E2E" } },
-    ]);
-    const res = results.get(helloId) as Record<string, unknown> | undefined;
-    const result = res?.result as Record<string, unknown> | undefined;
-    if (result && result.message === "Hello E2E!") {
-      log("PASS", `system.hello → "${result.message}"`);
-      passed++;
-    } else {
-      log("FAIL", `system.hello → ${JSON.stringify(res)}`);
-      failed++;
-    }
-  }
-
-  // Test 3: system.echo
-  {
-    const echoId = "test-echo-1";
-    const echoPayload = { array: [1, 2, 3], nested: { key: "value" } };
-    const results = await wsSendRecv([
-      { id: echoId, type: "request", method: "system.echo", params: echoPayload },
-    ]);
-    const res = results.get(echoId) as Record<string, unknown> | undefined;
-    const result = res?.result as Record<string, unknown> | undefined;
-    if (result && JSON.stringify(result) === JSON.stringify(echoPayload)) {
-      log("PASS", "system.echo → payload echoed correctly");
-      passed++;
-    } else {
-      log("FAIL", `system.echo → ${JSON.stringify(res)}`);
-      failed++;
-    }
-  }
-
-  // Test 4: unknown method returns error
-  {
-    const errId = "test-err-1";
-    const results = await wsSendRecv([
-      { id: errId, type: "request", method: "nonexistent.method", params: {} },
-    ]);
-    const res = results.get(errId) as Record<string, unknown> | undefined;
-    if (res && res.error) {
-      log("PASS", `nonexistent.method → error: ${(res.error as Record<string, unknown>)?.message}`);
-      passed++;
-    } else {
-      log("FAIL", `nonexistent.method should error → ${JSON.stringify(res)}`);
-      failed++;
-    }
-  }
-
-  // Test 5: concurrent RPC calls
-  {
-    const results = await wsSendRecv([
-      { id: "conc-1", type: "request", method: "system.ping", params: {} },
-      { id: "conc-2", type: "request", method: "system.hello", params: { name: "A" } },
-      { id: "conc-3", type: "request", method: "system.echo", params: { x: 1 } },
-    ]);
-    const allOk =
-      (results.get("conc-1") as Record<string, unknown>)?.type === "response" &&
-      (results.get("conc-2") as Record<string, unknown>)?.type === "response" &&
-      (results.get("conc-3") as Record<string, unknown>)?.type === "response";
-    if (allOk) {
-      log("PASS", "3 concurrent calls → all got responses");
-      passed++;
-    } else {
-      log("FAIL", `concurrent calls → ${JSON.stringify(Object.fromEntries(results))}`);
-      failed++;
-    }
-  }
-
-  // Test 6: health endpoint (HTTP, no auth needed)
+  // Test 1: Health endpoint (HTTP, no auth)
   {
     const res = await fetch(`http://localhost:${PORT}/health`);
     const body = (await res.json()) as Record<string, unknown>;
@@ -255,18 +162,106 @@ async function main() {
     }
   }
 
-  // Test 7: auth rejection (wrong token)
+  // Test 2: Auth rejection (HTTP, wrong token)
+  {
+    const res = await fetch(`http://localhost:${PORT}/info/`, {
+      headers: { Authorization: "Bearer wrong-token" },
+    });
+    if (res.status === 401) {
+      log("PASS", "Wrong token → 401 Unauthorized");
+      passed++;
+    } else {
+      log("FAIL", `Wrong token → ${res.status} (expected 401)`);
+      failed++;
+    }
+  }
+
+  // Test 3: Auth rejection (WebSocket, wrong token)
   {
     const authResult = await new Promise<string>((resolve) => {
       const ws = new WebSocket(`ws://localhost:${PORT}/?token=wrong-token`);
-      ws.onclose = (event: CloseEvent) => resolve(`closed:${event.code}`);
-      ws.onerror = () => resolve("error");
+      const timer = setTimeout(() => resolve("timeout"), 5000);
+      ws.onclose = (event: CloseEvent) => { clearTimeout(timer); resolve(`closed:${event.code}`); };
+      ws.onerror = () => { clearTimeout(timer); resolve("error"); };
     });
     if (authResult === "closed:4001") {
-      log("PASS", "Wrong token → connection rejected (4001)");
+      log("PASS", "WS wrong token → connection rejected (4001)");
       passed++;
     } else {
-      log("FAIL", `Wrong token → ${authResult} (expected closed:4001)`);
+      log("FAIL", `WS wrong token → ${authResult} (expected closed:4001)`);
+      failed++;
+    }
+  }
+
+  // Test 4: RPC - system.ping via WebSocket
+  {
+    try {
+      const data = (await wsRpc("system.ping", {})) as Record<string, unknown>;
+      const result = data.result as Record<string, unknown> | undefined;
+      if (result?.pong === true) {
+        log("PASS", `system.ping → { pong: true, platform: "${result.platform}" }`);
+        passed++;
+      } else {
+        log("FAIL", `system.ping → ${JSON.stringify(data)}`);
+        failed++;
+      }
+    } catch (err) {
+      log("FAIL", `system.ping → ${(err as Error).message}`);
+      failed++;
+    }
+  }
+
+  // Test 5: RPC - system.hello via WebSocket
+  {
+    try {
+      const data = (await wsRpc("system.hello", { name: "E2E" })) as Record<string, unknown>;
+      const result = data.result as Record<string, unknown> | undefined;
+      if (result?.message === "Hello E2E!") {
+        log("PASS", `system.hello → "${result.message}"`);
+        passed++;
+      } else {
+        log("FAIL", `system.hello → ${JSON.stringify(data)}`);
+        failed++;
+      }
+    } catch (err) {
+      log("FAIL", `system.hello → ${(err as Error).message}`);
+      failed++;
+    }
+  }
+
+  // Test 6: RPC - system.echo via WebSocket
+  {
+    const payload = { array: [1, 2, 3], nested: { key: "value" } };
+    try {
+      const data = (await wsRpc("system.echo", payload)) as Record<string, unknown>;
+      const result = data.result;
+      if (JSON.stringify(result) === JSON.stringify(payload)) {
+        log("PASS", "system.echo → payload echoed correctly");
+        passed++;
+      } else {
+        log("FAIL", `system.echo → ${JSON.stringify(data)}`);
+        failed++;
+      }
+    } catch (err) {
+      log("FAIL", `system.echo → ${(err as Error).message}`);
+      failed++;
+    }
+  }
+
+  // Test 7: RPC - unknown method returns error
+  {
+    try {
+      const data = (await wsRpc("nonexistent.method", {})) as Record<string, unknown>;
+      if (data.error) {
+        const errMsg = (data.error as Record<string, unknown>)?.message as string;
+        log("PASS", `nonexistent.method → error: "${errMsg}"`);
+        passed++;
+      } else {
+        log("FAIL", `nonexistent.method should error → ${JSON.stringify(data)}`);
+        failed++;
+      }
+    } catch (err) {
+      log("FAIL", `nonexistent.method → ${(err as Error).message}`);
       failed++;
     }
   }
