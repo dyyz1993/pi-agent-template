@@ -1,10 +1,10 @@
 export interface Transport {
   send(message: unknown): Promise<void>;
   onMessage(handler: MessageHandler): () => void;
-  onError?(handler: ErrorHandler): () => void;
+  onError(handler: ErrorHandler): () => void;
   onDisconnect?(handler: DisconnectHandler): () => void;
-  close(): void;
   isConnected(): boolean;
+  close(): void;
 }
 
 export type MessageHandler = (message: unknown) => void;

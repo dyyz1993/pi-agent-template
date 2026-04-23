@@ -1,40 +1,78 @@
-import type { Transport, MessageHandler, DisconnectHandler } from '../core/transport';
+import type { Transport, MessageHandler, ErrorHandler } from '../core/transport';
+import type { RPCLogger } from '../core/types';
+
+export interface InMemoryTransportOptions {
+  logger?: RPCLogger;
+}
 
 export class InMemoryTransport implements Transport {
-  private handlers: Set<MessageHandler> = new Set();
-  private disconnectHandlers: Set<DisconnectHandler> = new Set();
-  private paired: InMemoryTransport | null = null;
-  private connected = true;
+  private peer: InMemoryTransport | null = null;
+  private messageHandlers: Set<MessageHandler> = new Set();
+  private errorHandlers: Set<ErrorHandler> = new Set();
+  private _isConnected: boolean = false;
+  private logger?: InMemoryTransportOptions['logger'];
 
-  pair(other: InMemoryTransport): void {
-    this.paired = other;
-    other.paired = this;
+  constructor(options?: InMemoryTransportOptions) {
+    this.logger = options?.logger;
+  }
+
+  static createPair(options?: InMemoryTransportOptions): { client: InMemoryTransport; server: InMemoryTransport } {
+    const client = new InMemoryTransport(options);
+    const server = new InMemoryTransport(options);
+
+    client.peer = server;
+    server.peer = client;
+    client._isConnected = true;
+    server._isConnected = true;
+
+    return { client, server };
   }
 
   async send(message: unknown): Promise<void> {
-    if (this.paired) {
-      this.paired.handlers.forEach(h => h(message));
+    if (!this._isConnected) {
+      throw new Error('Transport is not connected');
+    }
+
+    if (!this.peer) {
+      throw new Error('No peer connected');
+    }
+
+    for (const handler of this.peer.messageHandlers) {
+      handler(message);
     }
   }
 
   onMessage(handler: MessageHandler): () => void {
-    this.handlers.add(handler);
-    return () => this.handlers.delete(handler);
+    this.messageHandlers.add(handler);
+    return () => {
+      this.messageHandlers.delete(handler);
+    };
   }
 
-  onDisconnect(handler: DisconnectHandler): () => void {
-    this.disconnectHandlers.add(handler);
-    return () => this.disconnectHandlers.delete(handler);
-  }
-
-  close(): void {
-    this.handlers.clear();
-    this.connected = false;
-    this.disconnectHandlers.forEach(h => h());
-    this.disconnectHandlers.clear();
+  onError(handler: ErrorHandler): () => void {
+    this.errorHandlers.add(handler);
+    return () => {
+      this.errorHandlers.delete(handler);
+    };
   }
 
   isConnected(): boolean {
-    return this.connected;
+    return this._isConnected;
+  }
+
+  close(): void {
+    this._isConnected = false;
+    if (this.peer) {
+      this.peer._isConnected = false;
+      this.peer = null;
+    }
+    this.messageHandlers.clear();
+    this.errorHandlers.clear();
+  }
+
+  simulateError(error: Error): void {
+    for (const handler of this.errorHandlers) {
+      handler(error);
+    }
   }
 }

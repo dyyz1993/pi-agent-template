@@ -1,36 +1,40 @@
 export { RPCClient, type RPCClientOptions } from './client';
 export { RPCServer, type RPCServerOptions } from './server';
-export { TypedRPCServer, type TypedRPCServerOptions } from './typed-server';
-export { TypedRPCClient, type TypedRPCClientOptions } from './typed-client';
-export { ElectrobunTransport, type ElectrobunTransportOptions } from './transports/electrobun';
-export { WSServerTransport, type WSServerTransportOptions } from './transports/ws-server';
-export { BrowserTransport, type BrowserTransportOptions } from './transports/browser';
-export { InMemoryTransport } from './transports/in-memory';
-export { CompositeTransport } from './transports/composite';
-export { GatewayTransport, type GatewayTransportOptions } from './transports/gateway';
-export { AuthMiddleware, LocalAuthMiddleware, type TokenValidator } from './middleware/auth';
+export { IPCTransport, type IPCTransportOptions } from './transports/ipc';
+export { WebSocketTransport, type WebSocketTransportOptions } from './transports/websocket';
+export { InMemoryTransport, type InMemoryTransportOptions } from './transports/in-memory';
+export { 
+  createTypedServer, 
+  createTypedClient,
+  defineRPC,
+  defineModule,
+  type TypedServer,
+  type TypedClient,
+  type MethodParams,
+  type MethodResult,
+  type AnyMethods,
+  type AnyEvents,
+  type RPCServerAPI,
+  type RPCClientAPI,
+  type RPCModule,
+  type ExtractMethods,
+  type FnsToMethods,
+} from './typed';
 export type { Transport, MessageHandler, ErrorHandler, DisconnectHandler } from './core/transport';
-export type {
-  RPCMessage,
-  RPCRequest,
-  RPCResponse,
-  RPCEvent,
-  RPCSubscribe,
-  RPCUnsubscribe,
-  RPCHandler,
+export type { 
+  RPCMessage, 
+  RPCRequest, 
+  RPCResponse, 
+  RPCEvent, 
+  SubscriptionFilter, 
   EventHandler,
-  RPCLogger
-} from './core/types';
-export type {
-  RPCMethodSchema,
-  RPCEventSchema,
-  RPCMethods,
-  RPCEvents,
-  MethodParams,
-  MethodResult,
+  StreamPayload,
+  RPCHandler,
+  RPCLogger,
+  DefaultEventMetadata,
+  EventWithMetadata,
+  EventWithOptionalMetadata,
+  EventWithoutMetadata,
   EventPayload,
-  EventMetadata,
-} from './core/schema';
-export type { RequestContext } from './core/context';
-export { createLocalContext, createRemoteContext } from './core/context';
-export type { Middleware, MiddlewareResult, MiddlewareChain } from './core/middleware';
+  EventMetadata
+} from './core/types';
