@@ -37,6 +37,42 @@ export interface GitMethods {
     params: { repoPath: string; hash: string; filePath: string };
     result: { filePath: string; diff: string; oldContent: string; newContent: string };
   };
+  "git.branches": {
+    params: { repoPath: string };
+    result: {
+      branches: { name: string; isCurrent: boolean; isRemote: boolean }[];
+    };
+  };
+  "git.checkout": {
+    params: { repoPath: string; branch: string };
+    result: { ok: boolean };
+  };
+  "git.add": {
+    params: { repoPath: string; paths: string[] };
+    result: { ok: boolean };
+  };
+  "git.reset": {
+    params: { repoPath: string; paths: string[] };
+    result: { ok: boolean };
+  };
+  "git.commit": {
+    params: { repoPath: string; message: string };
+    result: { hash: string; shortHash: string };
+  };
+  "git.push": {
+    params: { repoPath: string };
+    result: { ok: boolean };
+  };
+  "git.pull": {
+    params: { repoPath: string };
+    result: { ok: boolean };
+  };
+  "git.worktreeList": {
+    params: { repoPath: string };
+    result: {
+      worktrees: { path: string; branch: string; isMain: boolean }[];
+    };
+  };
 }
 
 export interface GitFileChange {

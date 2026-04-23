@@ -177,4 +177,87 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 
     return { filePath, diff, oldContent, newContent };
   });
+
+  r("git.branches", async (params) => {
+    const repoRoot = getRepoRoot(params.repoPath);
+    const output = execGit(["branch", "-a", "--no-color"], repoRoot);
+    const branches = output.split("\n").filter(Boolean).map((line) => {
+      const isCurrent = line.startsWith("*");
+      const name = line.replace(/^\*?\s+/, "").trim();
+      const isRemote = name.startsWith("remotes/");
+      return { name, isCurrent, isRemote };
+    });
+    return { branches };
+  });
+
+  r("git.checkout", async (params) => {
+    const repoRoot = getRepoRoot(params.repoPath);
+    execGit(["checkout", params.branch], repoRoot);
+    return { ok: true };
+  });
+
+  r("git.add", async (params) => {
+    const repoRoot = getRepoRoot(params.repoPath);
+    execGit(["add", ...params.paths], repoRoot);
+    return { ok: true };
+  });
+
+  r("git.reset", async (params) => {
+    const repoRoot = getRepoRoot(params.repoPath);
+    execGit(["reset", "HEAD", "--", ...params.paths], repoRoot);
+    return { ok: true };
+  });
+
+  r("git.commit", async (params) => {
+    const repoRoot = getRepoRoot(params.repoPath);
+    const output = execGit(["commit", "-m", params.message], repoRoot);
+    // Extract hash from output like "[main abc1234] message"
+    const hashMatch = output.match(/\[[\w\-/.]+\s+([0-9a-f]{7,40})\]/);
+    const shortHash = hashMatch?.[1] || "";
+    let hash = "";
+    if (shortHash) {
+      hash = execGit(["rev-parse", shortHash], repoRoot).trim();
+    }
+    return { hash, shortHash };
+  });
+
+  r("git.push", async (params) => {
+    const repoRoot = getRepoRoot(params.repoPath);
+    execGit(["push"], repoRoot);
+    return { ok: true };
+  });
+
+  r("git.pull", async (params) => {
+    const repoRoot = getRepoRoot(params.repoPath);
+    execGit(["pull"], repoRoot);
+    return { ok: true };
+  });
+
+  r("git.worktreeList", async (params) => {
+    const repoRoot = getRepoRoot(params.repoPath);
+    const output = execGit(["worktree", "list", "--porcelain"], repoRoot);
+    const worktrees: { path: string; branch: string; isMain: boolean }[] = [];
+    let current: Partial<typeof worktrees[0]> = {};
+
+    for (const line of output.split("\n")) {
+      if (line.startsWith("worktree ")) {
+        if (current.path) {
+          worktrees.push({ path: current.path!, branch: current.branch || "", isMain: !!current.isMain });
+        }
+        current = { path: line.slice(9), isMain: false };
+      } else if (line.startsWith("branch ")) {
+        current.branch = line.slice(7).replace("refs/heads/", "");
+      } else if (line === "bare") {
+        current.isMain = false;
+      } else if (line === "" && current.path) {
+        // first worktree is main
+        if (worktrees.length === 0) current.isMain = true;
+      }
+    }
+    if (current.path) {
+      worktrees.push({ path: current.path!, branch: current.branch || "", isMain: !!current.isMain });
+    }
+
+    return { worktrees };
+  });
 }
