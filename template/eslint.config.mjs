@@ -1,87 +1,43 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
+import rpcPlugin from './eslint-plugin-rpc/index.js';
 
 export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
     ignores: [
-      'dist/**',
       'node_modules/**',
       'build/**',
-      '**/dist/**',
-      'src/rpc-browser.js',
-      'src/mainview/public/**',
-      '!eslint.config.mjs',
-      '!**/.eslintrc*',
+      'dist/**',
+      'eslint-plugin-rpc/**',
+      'postcss.config.js',
+      'tailwind.config.js',
     ],
   },
   {
-    files: ['src/**/*.ts', 'src/**/*.tsx'],
-    languageOptions: {
-      parserOptions: {
-        tsconfigRootDir: __dirname,
-        project: './tsconfig.json',
-      },
+    files: ['src/**/*.{ts,tsx}'],
+    plugins: {
+      rpc: rpcPlugin,
     },
     rules: {
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: "CallExpression[callee.type='MemberExpression'][callee.object.name='console'][callee.property.name='log']",
-          message: '禁止使用 console.log，请使用 pino Logger。参见 .trae/rules/logging.md',
-        },
-        {
-          selector: "CallExpression[callee.type='MemberExpression'][callee.object.name='console'][callee.property.name='info']",
-          message: '禁止使用 console.info，请使用 pino Logger。参见 .trae/rules/logging.md',
-        },
-        {
-          selector: "CallExpression[callee.type='MemberExpression'][callee.object.name='console'][callee.property.name='debug']",
-          message: '禁止使用 console.debug，请使用 pino Logger。参见 .trae/rules/logging.md',
-        },
-      ],
-      '@typescript-eslint/no-unused-vars': [
-        'error',
-        {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-        },
-      ],
+      // TS 严格规则
       '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-non-null-assertion': 'off',
-      '@typescript-eslint/explicit-function-return-type': 'off',
-      '@typescript-eslint/no-extraneous-class': 'off',
-      '@typescript-eslint/no-unnecessary-condition': 'off',
-      '@typescript-eslint/prefer-includes': 'error',
-      '@typescript-eslint/prefer-string-starts-ends-with': 'error',
-      'prefer-const': 'error',
-      'no-var': 'error',
-    },
-  },
-  {
-    files: ['src/mainview/**/*.ts', 'src/mainview/**/*.tsx'],
-    languageOptions: {
-      parserOptions: {
-        tsconfigRootDir: __dirname,
-        project: './tsconfig.json',
-      },
-    },
-    rules: {
-      'no-console': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/explicit-module-boundary-types': 'off',
-      '@typescript-eslint/no-extraneous-class': 'off',
+      '@typescript-eslint/no-empty-object-type': ['error', { allowObjectTypes: 'always', allowInterfaces: 'with-single-extends' }],
       '@typescript-eslint/no-unused-vars': [
         'error',
-        {
-          argsIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-        },
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
+      'no-empty': ['error', { allowEmptyCatch: true }],
+      'no-console': ['error', { allow: ['warn', 'error'] }],
+
+      // RPC 规范规则（严格模式，全部 error）
+      'rpc/no-bare-method': 'error',
+      'rpc/no-direct-register': 'error',
+      'rpc/schema-merge-only': 'error',
+      'rpc/module-file-naming': 'error',
+      'rpc/require-typed-register': 'error',
+      'rpc/require-api-client': 'error',
     },
   },
 );

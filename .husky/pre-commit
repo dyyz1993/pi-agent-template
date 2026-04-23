@@ -1,6 +1,6 @@
 #!/bin/sh
-# Root level lint
+# Root level lint (packages/ + scripts/)
 bun run lint
 
-# Template lint
+# Template lint (含 RPC 规范规则)
 cd template && bun run lint
