@@ -5,6 +5,9 @@
  * E2E integration test: creates a project from template, starts the web server,
  * and verifies HTTP endpoints + WebSocket RPC communication.
  *
+ * Uses @dyyz1993/rpc-core's RPCClient + WebSocketTransport for RPC tests,
+ * matching the exact same code path as the real application.
+ *
  * Usage:
  *   bun run scripts/e2e-test.ts [project-dir]
  *
@@ -15,6 +18,7 @@ import { spawn, execSync } from "child_process";
 import { existsSync, mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
+import { RPCClient, WebSocketTransport } from "../packages/rpc-core/src/index";
 
 const PORT = 3100;
 const TOKEN = "pi-agent-template-token";
@@ -24,6 +28,7 @@ const TIMEOUT_MS = 15_000;
 let projectDir: string;
 let autoCreated = false;
 let serverProcess: ReturnType<typeof spawn> | null = null;
+const serverLogs: string[] = [];
 
 // --- Helpers ---
 
@@ -33,6 +38,13 @@ function log(tag: string, msg: string) {
 
 function fail(tag: string, msg: string): never {
   console.error(`\n[${tag}] FAIL: ${msg}\n`);
+  if (serverLogs.length > 0) {
+    console.log("--- Server logs ---");
+    for (const line of serverLogs) {
+      console.log(line);
+    }
+    console.log("--- End server logs ---\n");
+  }
   cleanup(1);
   process.exit(1);
 }
@@ -68,35 +80,12 @@ async function waitForServer(maxWaitMs = 10_000): Promise<void> {
   fail("wait", `Server did not start within ${maxWaitMs}ms`);
 }
 
-async function wsRpc(method: string, params: unknown): Promise<unknown> {
-  const id = `rpc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const msg = JSON.stringify({ id, type: "request", method, params });
-
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error(`RPC timeout: ${method}`));
-    }, TIMEOUT_MS);
-
-    const ws = new WebSocket(WS_URL);
-
-    ws.onopen = () => {
-      ws.send(msg);
-    };
-
-    ws.onmessage = (event: MessageEvent) => {
-      const data = JSON.parse(event.data as string);
-      if (data.id === id) {
-        clearTimeout(timer);
-        ws.close();
-        resolve(data);
-      }
-    };
-
-    ws.onerror = () => {
-      clearTimeout(timer);
-      reject(new Error(`WebSocket error: ${method}`));
-    };
-  });
+/** Create an RPCClient connected via WebSocket to the server */
+async function createRpcClient(): Promise<{ client: RPCClient; transport: WebSocketTransport }> {
+  const transport = new WebSocketTransport({ url: WS_URL, reconnect: false });
+  await transport.connect();
+  const client = new RPCClient({ transport, timeout: TIMEOUT_MS });
+  return { client, transport };
 }
 
 // --- Main ---
@@ -132,8 +121,22 @@ async function main() {
   log("server", `Starting server in ${projectDir}...`);
   serverProcess = spawn("bun", ["run", "src/server.ts"], {
     cwd: projectDir,
-    stdio: "pipe",
+    stdio: ["pipe", "pipe", "pipe"],
     env: { ...process.env },
+  });
+
+  // Capture server output for debugging
+  serverProcess.stdout?.on("data", (data: Buffer) => {
+    const lines = data.toString().split("\n").filter(Boolean);
+    for (const line of lines) {
+      serverLogs.push(line);
+    }
+  });
+  serverProcess.stderr?.on("data", (data: Buffer) => {
+    const lines = data.toString().split("\n").filter(Boolean);
+    for (const line of lines) {
+      serverLogs.push(`[stderr] ${line}`);
+    }
   });
 
   serverProcess.on("error", (err) => {
@@ -193,76 +196,87 @@ async function main() {
     }
   }
 
-  // Test 4: RPC - system.ping via WebSocket
-  {
-    try {
-      const data = (await wsRpc("system.ping", {})) as Record<string, unknown>;
-      const result = data.result as Record<string, unknown> | undefined;
-      if (result?.pong === true) {
-        log("PASS", `system.ping → { pong: true, platform: "${result.platform}" }`);
-        passed++;
-      } else {
-        log("FAIL", `system.ping → ${JSON.stringify(data)}`);
+  // Tests 4-7: Use RPCClient for WebSocket RPC tests
+  let rpcClient: RPCClient | null = null;
+  let rpcTransport: WebSocketTransport | null = null;
+
+  try {
+    log("rpc", "Connecting RPC client via WebSocketTransport...");
+    const { client, transport } = await createRpcClient();
+    rpcClient = client;
+    rpcTransport = transport;
+    log("rpc", "RPC client connected");
+
+    // Test 4: system.ping
+    {
+      try {
+        const result = await rpcClient.call<{ pong: boolean; platform: string; timestamp: number }>("system.ping", {});
+        if (result.pong === true) {
+          log("PASS", `system.ping → { pong: true, platform: "${result.platform}" }`);
+          passed++;
+        } else {
+          log("FAIL", `system.ping → ${JSON.stringify(result)}`);
+          failed++;
+        }
+      } catch (err) {
+        log("FAIL", `system.ping → ${(err as Error).message}`);
         failed++;
       }
-    } catch (err) {
-      log("FAIL", `system.ping → ${(err as Error).message}`);
-      failed++;
     }
-  }
 
-  // Test 5: RPC - system.hello via WebSocket
-  {
-    try {
-      const data = (await wsRpc("system.hello", { name: "E2E" })) as Record<string, unknown>;
-      const result = data.result as Record<string, unknown> | undefined;
-      if (result?.message === "Hello E2E!") {
-        log("PASS", `system.hello → "${result.message}"`);
-        passed++;
-      } else {
-        log("FAIL", `system.hello → ${JSON.stringify(data)}`);
+    // Test 5: system.hello
+    {
+      try {
+        const result = await rpcClient.call<{ message: string }>("system.hello", { name: "E2E" });
+        if (result.message === "Hello E2E!") {
+          log("PASS", `system.hello → "${result.message}"`);
+          passed++;
+        } else {
+          log("FAIL", `system.hello → ${JSON.stringify(result)}`);
+          failed++;
+        }
+      } catch (err) {
+        log("FAIL", `system.hello → ${(err as Error).message}`);
         failed++;
       }
-    } catch (err) {
-      log("FAIL", `system.hello → ${(err as Error).message}`);
-      failed++;
     }
-  }
 
-  // Test 6: RPC - system.echo via WebSocket
-  {
-    const payload = { array: [1, 2, 3], nested: { key: "value" } };
-    try {
-      const data = (await wsRpc("system.echo", payload)) as Record<string, unknown>;
-      const result = data.result;
-      if (JSON.stringify(result) === JSON.stringify(payload)) {
-        log("PASS", "system.echo → payload echoed correctly");
-        passed++;
-      } else {
-        log("FAIL", `system.echo → ${JSON.stringify(data)}`);
+    // Test 6: system.echo
+    {
+      const payload = { array: [1, 2, 3], nested: { key: "value" } };
+      try {
+        const result = await rpcClient.call<Record<string, unknown>>("system.echo", payload);
+        if (JSON.stringify(result) === JSON.stringify(payload)) {
+          log("PASS", "system.echo → payload echoed correctly");
+          passed++;
+        } else {
+          log("FAIL", `system.echo → ${JSON.stringify(result)}`);
+          failed++;
+        }
+      } catch (err) {
+        log("FAIL", `system.echo → ${(err as Error).message}`);
         failed++;
       }
-    } catch (err) {
-      log("FAIL", `system.echo → ${(err as Error).message}`);
-      failed++;
     }
-  }
 
-  // Test 7: RPC - unknown method returns error
-  {
-    try {
-      const data = (await wsRpc("nonexistent.method", {})) as Record<string, unknown>;
-      if (data.error) {
-        const errMsg = (data.error as Record<string, unknown>)?.message as string;
+    // Test 7: unknown method returns error
+    {
+      try {
+        await rpcClient.call("nonexistent.method", {});
+        log("FAIL", "nonexistent.method should have thrown an error");
+        failed++;
+      } catch (err) {
+        const errMsg = (err as Error).message;
         log("PASS", `nonexistent.method → error: "${errMsg}"`);
         passed++;
-      } else {
-        log("FAIL", `nonexistent.method should error → ${JSON.stringify(data)}`);
-        failed++;
       }
-    } catch (err) {
-      log("FAIL", `nonexistent.method → ${(err as Error).message}`);
-      failed++;
+    }
+  } catch (err) {
+    log("FAIL", `RPC client setup → ${(err as Error).message}`);
+    failed += 4; // All 4 RPC tests failed
+  } finally {
+    if (rpcTransport) {
+      rpcTransport.close();
     }
   }
 
@@ -270,6 +284,14 @@ async function main() {
   console.log(`\n${"=".repeat(40)}`);
   console.log(`E2E Results: ${passed} passed, ${failed} failed`);
   console.log("=".repeat(40));
+
+  if (failed > 0 && serverLogs.length > 0) {
+    console.log("\n--- Server logs (on failure) ---");
+    for (const line of serverLogs) {
+      console.log(line);
+    }
+    console.log("--- End server logs ---");
+  }
 
   cleanup(failed > 0 ? 1 : 0);
 }
