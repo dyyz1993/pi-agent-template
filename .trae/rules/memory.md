@@ -90,61 +90,47 @@ bun run create <project-name> [target-dir]
 2. 查看目录结构确认文件位置
 3. 确认是"底层包（packages/rpc-core）"还是"模板（template/）"
 
-## 2026-04-22 架构设计（核心需求）
+## 2026-04-23 核心诉求（最高优先级）
 
-### 多端支持
-| 端 | 传输方式 | 特点 |
-|----|---------|------|
-| **桌面端** | IPC | 自动选择，无需鉴权 |
-| **Web 端** | WebSocket | 需要鉴权 |
-| **TUI 端** | 内存 | 本地直接调用 |
+### RPC 底层包原则
+- **直接使用原始项目** `/Users/xuyingzhou/Project/study-desktop/my-react-tailwind-vite-app2` 的 `packages/@ai-chat/rpc-core`
+- 原始项目的 RPC 包已被验证完美，不要重新设计，直接拿过来用
+- 底层包的核心职责：**抹平 Web 与桌面端的差异**，统一 RPC 调用
 
-### 双端自动切换
-BrowserTransport 自动检测运行环境：
-- 检测到 `window.__electrobunBunBridge` → **IPC 模式（桌面端）**
-- 未检测到 → **WebSocket 模式（浏览器端）**
+### 三大核心诉求
 
-### 执行模式
-- 支持分开执行（单独启动桌面端或 Web 端）
-- 支持同时启动（多端并存）
-- 数据保持同步（通过统一的 RPC 层）
+#### 1. RPC 通信（核心中的核心）
+- 支持 RPC 方法调用（call）
+- 支持事件订阅（subscribe）和取消订阅（unsubscribe）
+- 底层自动识别 IPC（桌面）还是 WebSocket（Web），对上层透明
+- 前端显示当前连接协议（IPC / WebSocket）
 
-## 2026-04-22 文件服务设计
+#### 2. 网关与鉴权
+- **桌面端**：IPC 模式，**无需鉴权**（本机程序，天然安全）
+- **Web 端**：WebSocket 模式，**需要 Token 鉴权**（部署到 Linux 服务器，外部可访问）
+- Web 端 Token 先用**写死**的方式，简单实现
+- 桌面端和 Web 端可以**同时启动**，也可以**单独启动**
 
-### 问题背景
-- WebSocket 传图片或文件效果不佳，需依赖文件服务
-- 桌面端与 Web 端的服务层不一样
+#### 3. 文件系统
+- **桌面端**：直接使用本地路径（绝对路径 / `file://` 协议），无需 HTTP 服务
+- **Web 端**：必须通过 HTTP 服务访问文件（部署在远程服务器）
+- Web 端的 HTTP 文件服务也需要 Token 鉴权（参数或 Header 中携带）
+- 原因：WebSocket 传输图片/大文件效果不佳，必须走 HTTP
 
-### 服务层差异
-| 端 | 文件服务方式 |
-|----|------------|
-| **桌面端** | 基于绝对路径或 `file://` 协议 |
-| **Web 端** | 基于 HTTP 服务 |
+### 端差异总览
+| | 桌面端 | Web 端 |
+|--|-------|--------|
+| RPC 传输 | IPC（Electrobun） | WebSocket |
+| 鉴权 | 不需要 | Token（写死） |
+| 文件访问 | 本地路径直接访问 | HTTP 服务 + Token |
+| 运行环境 | 本地电脑 | Linux 服务器 |
 
-### 默认路径规则
-- 服务默认在**当前启动的根目录**下展示
-- 包括点击图片等操作，都通过这个服务获取
-- WORKSPACE_ROOT = 项目启动目录
-
-## 2026-04-22 鉴权策略
-
-### 鉴权配置
-| 端 | 传输方式 | 鉴权 |
-|----|---------|------|
-| **桌面端** | IPC | ❌ 不需要鉴权 |
-| **Web 端** | WebSocket | ✅ 需要 token 验证 |
-
-### 实现细节
-- **桌面端**: `ElectrobunTransport.handleMessage()` 收到 IPC 消息时，自动注入 `{ source: 'local', userId: 'local-user', role: 'admin' }` 上下文
-- **Web 端**: `AuthMiddleware` 验证请求中的 token，拒绝无上下文请求
-- 桌面端使用 `LocalAuthMiddleware`，Web 端使用 `AuthMiddleware`
-- **Gateway 统一鉴权**：`gateway.ts` 统一处理所有端的鉴权逻辑
-
-### 关键文件
-- `packages/rpc-core/src/transports/electrobun.ts` - IPC Transport
-- `packages/rpc-core/src/transports/browser.ts` - Browser Transport（含 IPC/WebSocket 自动切换）
-- `packages/rpc-core/src/transports/ws-server.ts` - WebSocket 服务端
-- `packages/rpc-core/src/middleware/auth.ts` - 鉴权中间件
+### 模板必须包含的内容
+1. 文件树结构展示
+2. PC 端 RPC 调用演示（call / subscribe / unsubscribe）
+3. 桌面端与 Web 端的连通性验证
+4. UI 显示当前底层协议（IPC / WebSocket）
+5. 未来预留：内存传输模式（给 Tauri 用）
 
 ## 2026-04-22 日志规范
 
