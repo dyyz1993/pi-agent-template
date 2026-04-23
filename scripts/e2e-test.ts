@@ -21,7 +21,10 @@ import { join, resolve } from "path";
 import { RPCClient, WebSocketTransport } from "../packages/rpc-core/src/index";
 
 const PORT = 3100;
-const TOKEN = "pi-agent-template-token";
+// Note: create.ts replaces "pi-agent-template" with project name,
+// so "pi-agent-template-token" becomes "e2e-app-token" in the created project.
+const PROJECT_NAME = "e2e-app";
+const TOKEN = `${PROJECT_NAME}-token`;
 const WS_URL = `ws://localhost:${PORT}/?token=${TOKEN}`;
 const TIMEOUT_MS = 15_000;
 
