@@ -27,9 +27,9 @@ module.exports = {
   create(context) {
     const filename = context.getFilename();
 
-    // 只检查入口文件
+    // 只检查入口文件（server.ts 已拆分，实际注册在 ws-handler.ts 中）
     const isEntryPoint =
-      filename.endsWith("bun/index.ts") || filename.endsWith("server.ts");
+      filename.endsWith("bun/index.ts") || filename.endsWith("gateway/ws-handler.ts");
 
     if (!isEntryPoint) return {};
 

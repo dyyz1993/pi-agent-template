@@ -1,5 +1,4 @@
 import { apiClient } from "../lib/api-client";
-import { AUTH_TOKEN } from "./constants";
 
 export interface DropEntry {
   name: string;
@@ -90,8 +89,10 @@ export async function uploadEntriesWeb(entries: DropEntry[], destDir: string): P
       // Upload file via HTTP
       const filePath = `${currentDir}/${entry.name}`;
       const arrayBuffer = await entry.file.arrayBuffer();
+      const baseUrl = apiClient.getBaseUrl();
+      const token = apiClient.getAuthToken();
       const res = await fetch(
-        `http://localhost:3100/file/upload?path=${encodeURIComponent(filePath)}&token=${AUTH_TOKEN}`,
+        `${baseUrl}/file/upload?path=${encodeURIComponent(filePath)}&token=${token}`,
         { method: "POST", body: arrayBuffer },
       );
       if (!res.ok) throw new Error(`Upload failed: ${entry.name}`);
@@ -130,8 +131,10 @@ export async function importFilesDesktop(entries: DropEntry[], destDir: string):
         // Fallback: no path available, upload via HTTP
         const filePath = `${currentDir}/${entry.name}`;
         const arrayBuffer = await entry.file.arrayBuffer();
+        const baseUrl = apiClient.getBaseUrl();
+        const token = apiClient.getAuthToken();
         const res = await fetch(
-          `http://localhost:3100/file/upload?path=${encodeURIComponent(filePath)}&token=${AUTH_TOKEN}`,
+          `${baseUrl}/file/upload?path=${encodeURIComponent(filePath)}&token=${token}`,
           { method: "POST", body: arrayBuffer },
         );
         if (!res.ok) throw new Error(`Upload failed: ${entry.name}`);

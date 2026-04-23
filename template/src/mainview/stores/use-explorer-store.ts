@@ -3,7 +3,7 @@ import { apiClient } from "../lib/api-client";
 import type { RPCMethods } from "../lib/api-client";
 import type { TreeNode, FilePreview, EditingNode } from "../types";
 import { isTextFile, isImageFile, formatSize } from "../utils/file-utils";
-import { AUTH_TOKEN, MAX_PREVIEW_SIZE, DEFAULT_PROJECT_ROOT } from "../utils/constants";
+import { MAX_PREVIEW_SIZE } from "../utils/constants";
 import { useAppStore } from "./use-app-store";
 import { uploadEntriesWeb, importFilesDesktop, type DropEntry } from "../utils/drop-handler";
 
@@ -46,7 +46,9 @@ function entriesToTreeNodes(entries: RPCMethods["file.listDir"]["result"]["entri
 function getFileUrl(filePath: string): string {
   const mode = useAppStore.getState().mode;
   if (mode === "desktop") return `file://${filePath}`;
-  return `http://localhost:3100/file/${encodeURIComponent(filePath)}?token=${AUTH_TOKEN}`;
+  const baseUrl = apiClient.getBaseUrl();
+  const token = apiClient.getAuthToken();
+  return `${baseUrl}/file/${encodeURIComponent(filePath)}?token=${token}`;
 }
 
 function findNode(nodes: TreeNode[], path: string): TreeNode | null {
@@ -99,7 +101,7 @@ function renameInTree(nodes: TreeNode[], oldPath: string, newPath: string, newNa
 
 export const useExplorerStore = create<ExplorerState>((set, get) => ({
   treeNodes: [],
-  currentPath: DEFAULT_PROJECT_ROOT,
+  currentPath: "",
   selectedPath: null,
   filePreview: null,
   loadingFile: false,

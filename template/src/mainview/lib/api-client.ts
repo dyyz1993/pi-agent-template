@@ -2,8 +2,23 @@ import { createTypedClient, WebSocketTransport, IPCTransport } from "@dyyz1993/r
 import type { TypedClient, MethodParams, MethodResult, EventPayload, EventMetadata } from "@dyyz1993/rpc-core";
 import type { RPCMethods, RPCEvents } from "../../shared/rpc-schema";
 
-// Token（与 server.ts 保持一致）
-const AUTH_TOKEN = "pi-agent-template-token";
+/**
+ * Token 来源优先级：
+ * 1. URL query ?token=xxx（部署时注入）
+ * 2. localStorage "rpc-auth-token"
+ * 3. 默认值（开发用）
+ */
+function resolveAuthToken(): string {
+  if (typeof window !== "undefined") {
+    const fromQuery = new URLSearchParams(window.location.search).get("token");
+    if (fromQuery) return fromQuery;
+    const fromStorage = localStorage.getItem("rpc-auth-token");
+    if (fromStorage) return fromStorage;
+  }
+  return "pi-agent-template-token";
+}
+
+const AUTH_TOKEN = resolveAuthToken();
 
 class APIClientImpl {
   private client: TypedClient<RPCMethods, RPCEvents> | null = null;
@@ -20,6 +35,7 @@ class APIClientImpl {
 
     const ipcTransport = new IPCTransport();
     this._transport = "ipc";
+    this._baseUrl = null; // 桌面端不走 HTTP
     this.client = createTypedClient<RPCMethods, RPCEvents>(ipcTransport);
     this.setupElectrobunBridge(ipcTransport);
     // eslint-disable-next-line no-console
@@ -74,11 +90,13 @@ class APIClientImpl {
 
   private getWebSocketUrl(): string {
     if (typeof window === "undefined") return `ws://localhost:3100?token=${AUTH_TOKEN}`;
-    return (
+    // 优先级：URL query ?ws= > localStorage > 当前 hostname
+    const customUrl = (
       new URLSearchParams(window.location.search).get("ws") ||
-      localStorage.getItem("rpc-websocket-url") ||
-      `ws://${window.location.hostname}:3100?token=${AUTH_TOKEN}`
+      localStorage.getItem("rpc-websocket-url")
     );
+    if (customUrl) return customUrl.includes("token=") ? customUrl : `${customUrl}?token=${AUTH_TOKEN}`;
+    return `ws://${window.location.hostname}:3100?token=${AUTH_TOKEN}`;
   }
 
   /**
@@ -118,8 +136,14 @@ class APIClientImpl {
     return this._transport;
   }
 
+  /** Web 端 HTTP 基础 URL（如 http://localhost:3100），桌面端返回 null */
   getBaseUrl(): string | null {
     return this._baseUrl;
+  }
+
+  /** 获取当前 auth token（用于需要直接调 HTTP 的场景） */
+  getAuthToken(): string {
+    return AUTH_TOKEN;
   }
 
   async call<K extends keyof RPCMethods>(
