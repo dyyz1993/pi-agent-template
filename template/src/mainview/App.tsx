@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Highlight, themes } from "prism-react-renderer";
 import { apiClient } from "./lib/api-client";
 import type { RPCMethods } from "./lib/api-client";
@@ -18,6 +18,8 @@ import {
   Send,
   Wifi,
   Monitor,
+  MessageSquare,
+  X,
 } from "lucide-react";
 
 type TreeNode = {
@@ -30,7 +32,7 @@ type TreeNode = {
   loaded?: boolean;
 };
 
-type DemoMethod = "system.ping" | "system.hello" | "system.echo";
+type DemoMethod = "system.ping" | "system.hello" | "system.echo" | "chat.send";
 
 type FilePreview = {
   path: string;
@@ -43,7 +45,13 @@ type FilePreview = {
   isImage: boolean;
 };
 
-// 文件类型 → 语言映射（prism）
+type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: number;
+};
+
 function getLanguage(filename: string): string {
   const ext = filename.split(".").pop()?.toLowerCase() || "";
   const map: Record<string, string> = {
@@ -109,6 +117,11 @@ function App() {
   const [loadingFile, setLoadingFile] = useState(false);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
 
+  // Chat state
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [inputText, setInputText] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
   // Subscription state
   const [tickEvents, setTickEvents] = useState<string[]>([]);
   const [tickCount, setTickCount] = useState(0);
@@ -120,7 +133,12 @@ function App() {
     setLogs((prev) => [...prev.slice(-50), `[${time}] ${msg}`]);
   }, []);
 
-  // 初始化 RPC 连接
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  // Initialize RPC connection
   useEffect(() => {
     const init = async () => {
       try {
@@ -129,6 +147,16 @@ function App() {
         setMode(transport === "ipc" ? "desktop" : "web");
         addLog(`${transport === "ipc" ? "Desktop" : "Web"} mode - ${transport.toUpperCase()}`);
         setReady(true);
+
+        // Subscribe to chat.message events
+        await apiClient.subscribe("chat.message", (payload) => {
+          setMessages((prev) => [...prev, {
+            id: payload.id,
+            role: payload.role,
+            content: payload.content,
+            timestamp: payload.timestamp,
+          }]);
+        }, {});
       } catch {
         setTimeout(init, 500);
       }
@@ -136,7 +164,7 @@ function App() {
     init();
   }, [addLog]);
 
-  // 获取文件内容的 URL（桌面端 file://，Web 端 HTTP）
+  // Get file content URL (desktop: file://, web: HTTP)
   const getFileUrl = useCallback((filePath: string): string => {
     if (mode === "desktop") {
       return `file://${filePath}`;
@@ -144,7 +172,7 @@ function App() {
     return `http://localhost:3100/file/${encodeURIComponent(filePath)}?token=${AUTH_TOKEN}`;
   }, [mode]);
 
-  // 点击文件 → 加载预览
+  // Click file -> load preview
   const openFile = useCallback(async (node: TreeNode) => {
     if (node.type === "directory") return;
     setSelectedPath(node.path);
@@ -185,6 +213,30 @@ function App() {
     setLoadingFile(false);
   }, [mode, getFileUrl, addLog]);
 
+  // --- Chat ---
+  const sendMessage = async () => {
+    if (!inputText.trim()) return;
+    const text = inputText.trim();
+    setInputText("");
+    setMessages((prev) => [...prev, {
+      id: `local-${Date.now()}`,
+      role: "user",
+      content: text,
+      timestamp: Date.now(),
+    }]);
+    try {
+      const res = await apiClient.call("chat.send", { content: text });
+      setMessages((prev) => [...prev, {
+        id: res.id,
+        role: res.role,
+        content: res.content,
+        timestamp: res.timestamp,
+      }]);
+    } catch (err) {
+      addLog(`Chat error: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+
   // --- RPC Calls ---
   const callRPC = async () => {
     addLog(`RPC call: ${method}`);
@@ -195,8 +247,11 @@ function App() {
         res = await apiClient.call("system.ping", {});
       } else if (method === "system.hello") {
         res = await apiClient.call("system.hello", {});
-      } else {
+      } else if (method === "system.echo") {
         res = await apiClient.call("system.echo", {});
+      } else if (method === "chat.send") {
+        const content = inputText.trim() || "Hello from RPC";
+        res = await apiClient.call("chat.send", { content });
       }
       setResult(res);
       addLog(`Result: ${JSON.stringify(res)}`);
@@ -348,7 +403,7 @@ function App() {
     );
   };
 
-  // --- 全屏 Loading ---
+  // --- Full-screen Loading ---
   if (!ready) {
     return (
       <div className="h-screen bg-gray-900 flex items-center justify-center">
@@ -371,8 +426,10 @@ function App() {
         <span className="ml-3 text-gray-400">Pi Agent</span>
       </div>
 
+      {/* Three-column layout */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Explorer sidebar */}
+
+        {/* ========== LEFT: Explorer sidebar ========== */}
         <div className="w-60 bg-gray-850 border-r border-gray-700 flex flex-col flex-shrink-0">
           <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-700 flex items-center gap-1.5">
             <Folder className="w-3.5 h-3.5" />
@@ -408,176 +465,233 @@ function App() {
           </div>
         </div>
 
-        {/* Main content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* File preview OR demo panels */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {filePreview ? (
-              /* --- File Preview --- */
-              <div className="flex-1 flex flex-col overflow-hidden">
-                {/* File header */}
-                <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700 flex-shrink-0">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm font-medium text-gray-200">{filePreview.name}</span>
-                    {filePreview.size > 0 && (
-                      <span className="text-xs text-gray-500">{formatSize(filePreview.size)}</span>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => { setFilePreview(null); setSelectedPath(null); }}
-                    className="text-gray-500 hover:text-white text-xs px-2 py-1 rounded hover:bg-gray-700 transition-colors"
-                  >
-                    Close
-                  </button>
-                </div>
+        {/* ========== CENTER: Chat panel ========== */}
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          {/* Chat header */}
+          <div className="px-4 py-2 bg-gray-800 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
+            <h2 className="text-sm font-semibold flex items-center gap-1.5">
+              <MessageSquare className="w-4 h-4 text-indigo-400" />
+              Messages
+              {messages.length > 0 && (
+                <span className="ml-1 px-2 py-0.5 bg-indigo-600/30 text-indigo-300 rounded text-[10px]">
+                  {messages.length}
+                </span>
+              )}
+            </h2>
+          </div>
 
-                {/* File content */}
-                <div className="flex-1 overflow-auto">
-                  {loadingFile ? (
-                    <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-                      <div className="w-5 h-5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin mr-2" />
-                      Loading...
-                    </div>
-                  ) : filePreview.isImage && filePreview.imageUrl ? (
-                    <div className="flex items-center justify-center h-full p-4 bg-[#1a1a2e]">
-                      <img
-                        src={filePreview.imageUrl}
-                        alt={filePreview.name}
-                        className="max-w-full max-h-full object-contain rounded"
-                      />
-                    </div>
-                  ) : filePreview.content ? (
-                    <Highlight
-                      theme={themes.nightOwl}
-                      code={filePreview.content}
-                      language={getLanguage(filePreview.name)}
-                    >
-                      {({ className, style, tokens, getLineProps, getTokenProps }) => (
-                        <pre
-                          className={`${className} text-xs leading-5 p-4 overflow-auto`}
-                          style={{ ...style, background: "#011627" }}
-                        >
-                          {tokens.map((line, i) => (
-                            <div key={i} {...getLineProps({ line })} className="flex">
-                              <span className="inline-block w-10 text-right pr-4 text-gray-600 select-none shrink-0">
-                                {i + 1}
-                              </span>
-                              <span className="flex-1">
-                                {line.map((token, key) => (
-                                  <span key={key} {...getTokenProps({ token })} />
-                                ))}
-                              </span>
-                            </div>
-                          ))}
-                        </pre>
-                      )}
-                    </Highlight>
-                  ) : null}
-                </div>
+          {/* Messages list */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {messages.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+                Start a conversation...
               </div>
             ) : (
-              /* --- Default: RPC + Subscriptions + Logs --- */
-              <div className="flex-1 flex flex-col p-4 overflow-y-auto gap-4">
-                {/* RPC Calls */}
-                <div className="bg-gray-800 rounded-lg p-4 flex-shrink-0">
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-sm font-semibold flex items-center gap-1.5">
-                      <Send className="w-4 h-4 text-indigo-400" />
-                      RPC Calls
-                    </h2>
-                    <div className="flex gap-2">
-                      <select
-                        value={method}
-                        onChange={(e) => setMethod(e.target.value as DemoMethod)}
-                        className="px-3 py-1 text-xs bg-gray-700 rounded-lg text-white border border-gray-600"
-                      >
-                        <option value="system.ping">system.ping</option>
-                        <option value="system.hello">system.hello</option>
-                        <option value="system.echo">system.echo</option>
-                      </select>
-                      <button
-                        onClick={callRPC}
-                        className="px-4 py-1 text-xs bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors flex items-center gap-1"
-                      >
-                        <Play className="w-3 h-3" />
-                        Call
-                      </button>
-                    </div>
+              messages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                >
+                  <div
+                    className={`max-w-[80%] px-3 py-2 rounded-lg text-sm whitespace-pre-wrap break-words ${
+                      msg.role === "user"
+                        ? "bg-indigo-600 text-white"
+                        : "bg-gray-700 text-gray-200"
+                    }`}
+                  >
+                    {msg.content}
                   </div>
-                  {!!result && (
-                    <div className="bg-gray-700 rounded-lg p-3">
-                      <pre className="text-green-400 text-xs overflow-x-auto">
-                        {JSON.stringify(result, null, 2)}
-                      </pre>
-                    </div>
+                </div>
+              ))
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input bar */}
+          <div className="px-4 py-3 bg-gray-800 border-t border-gray-700 flex gap-2 flex-shrink-0">
+            <input
+              type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
+              placeholder="Type a message..."
+              className="flex-1 px-3 py-2 text-sm bg-gray-700 rounded-lg text-white border border-gray-600 focus:border-indigo-500 focus:outline-none"
+            />
+            <button
+              onClick={sendMessage}
+              className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors flex items-center gap-1.5"
+            >
+              <Send className="w-4 h-4" />
+              Send
+            </button>
+          </div>
+
+          {/* File preview floating overlay */}
+          {filePreview && (
+            <div className="absolute inset-0 z-10 bg-gray-900/95 flex flex-col overflow-hidden">
+              {/* File header with close button */}
+              <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700 flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm font-medium text-gray-200">{filePreview.name}</span>
+                  {filePreview.size > 0 && (
+                    <span className="text-xs text-gray-500">{formatSize(filePreview.size)}</span>
                   )}
                 </div>
+                <button
+                  onClick={() => { setFilePreview(null); setSelectedPath(null); }}
+                  className="text-gray-400 hover:text-white p-1 rounded hover:bg-gray-700 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
 
-                {/* Subscriptions */}
-                <div className="bg-gray-800 rounded-lg p-4 flex-shrink-0">
-                  <div className="flex items-center justify-between mb-3">
-                    <h2 className="text-sm font-semibold flex items-center gap-1.5">
-                      {timerRunning ? (
-                        <Square className="w-4 h-4 text-green-400 fill-green-400" />
-                      ) : (
-                        <Play className="w-4 h-4 text-gray-400" />
-                      )}
-                      Subscriptions
-                      {timerRunning && (
-                        <span className="ml-1 px-2 py-0.5 bg-green-600/30 text-green-400 rounded text-[10px]">
-                          LIVE
-                        </span>
-                      )}
-                    </h2>
-                    <div className="flex gap-2 items-center">
-                      <span className="text-xs text-gray-400">
-                        {tickCount} events
-                      </span>
-                      {!subscriptionId ? (
-                        <button
-                          onClick={handleSubscribe}
-                          className="px-4 py-1 text-xs bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
-                        >
-                          Subscribe
-                        </button>
-                      ) : (
-                        <button
-                          onClick={handleUnsubscribe}
-                          className="px-4 py-1 text-xs bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-                        >
-                          Unsubscribe
-                        </button>
-                      )}
-                    </div>
+              {/* File content */}
+              <div className="flex-1 overflow-auto">
+                {loadingFile ? (
+                  <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+                    <div className="w-5 h-5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin mr-2" />
+                    Loading...
                   </div>
-                  <div className="bg-gray-700 rounded-lg p-3 max-h-40 overflow-y-auto font-mono text-xs">
-                    {tickEvents.length === 0 ? (
-                      <div className="text-gray-500 text-center py-2">No events yet. Click Subscribe to start.</div>
-                    ) : (
-                      tickEvents.map((ev, i) => (
-                        <div key={i} className="text-cyan-400">{ev}</div>
-                      ))
+                ) : filePreview.isImage && filePreview.imageUrl ? (
+                  <div className="flex items-center justify-center h-full p-4 bg-[#1a1a2e]">
+                    <img
+                      src={filePreview.imageUrl}
+                      alt={filePreview.name}
+                      className="max-w-full max-h-full object-contain rounded"
+                    />
+                  </div>
+                ) : filePreview.content ? (
+                  <Highlight
+                    theme={themes.nightOwl}
+                    code={filePreview.content}
+                    language={getLanguage(filePreview.name)}
+                  >
+                    {({ className, style, tokens, getLineProps, getTokenProps }) => (
+                      <pre
+                        className={`${className} text-xs leading-5 p-4 overflow-auto`}
+                        style={{ ...style, background: "#011627" }}
+                      >
+                        {tokens.map((line, i) => (
+                          <div key={i} {...getLineProps({ line })} className="flex">
+                            <span className="inline-block w-10 text-right pr-4 text-gray-600 select-none shrink-0">
+                              {i + 1}
+                            </span>
+                            <span className="flex-1">
+                              {line.map((token, key) => (
+                                <span key={key} {...getTokenProps({ token })} />
+                              ))}
+                            </span>
+                          </div>
+                        ))}
+                      </pre>
                     )}
-                  </div>
-                </div>
+                  </Highlight>
+                ) : null}
+              </div>
+            </div>
+          )}
+        </div>
 
-                {/* Logs */}
-                <div className="bg-gray-800 rounded-lg p-4 flex flex-col flex-1 min-h-0">
-                  <h2 className="text-sm font-semibold mb-3 flex-shrink-0 flex items-center gap-1.5">
-                    <File className="w-4 h-4 text-gray-400" />
-                    Logs
-                  </h2>
-                  <div className="flex-1 bg-black rounded-lg p-3 overflow-y-auto font-mono text-xs">
-                    {logs.map((log, i) => (
-                      <div key={i} className={log.includes("Error") ? "text-red-400" : "text-green-400"}>
-                        {log}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+        {/* ========== RIGHT: Debug panel ========== */}
+        <div className="w-72 bg-gray-850 border-l border-gray-700 flex flex-col flex-shrink-0 overflow-y-auto">
+          {/* RPC Calls */}
+          <div className="p-3 border-b border-gray-700">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-xs font-semibold flex items-center gap-1.5">
+                <Send className="w-3.5 h-3.5 text-indigo-400" />
+                RPC Calls
+              </h2>
+            </div>
+            <div className="flex gap-2 mb-2">
+              <select
+                value={method}
+                onChange={(e) => setMethod(e.target.value as DemoMethod)}
+                className="flex-1 px-2 py-1 text-xs bg-gray-700 rounded text-white border border-gray-600"
+              >
+                <option value="system.ping">system.ping</option>
+                <option value="system.hello">system.hello</option>
+                <option value="system.echo">system.echo</option>
+                <option value="chat.send">chat.send</option>
+              </select>
+              <button
+                onClick={callRPC}
+                className="px-3 py-1 text-xs bg-indigo-600 hover:bg-indigo-700 rounded transition-colors flex items-center gap-1"
+              >
+                <Play className="w-3 h-3" />
+                Call
+              </button>
+            </div>
+            {!!result && (
+              <div className="bg-gray-700 rounded p-2">
+                <pre className="text-green-400 text-[11px] overflow-x-auto whitespace-pre-wrap">
+                  {JSON.stringify(result, null, 2)}
+                </pre>
               </div>
             )}
+          </div>
+
+          {/* Subscriptions */}
+          <div className="p-3 border-b border-gray-700">
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-xs font-semibold flex items-center gap-1.5">
+                {timerRunning ? (
+                  <Square className="w-3.5 h-3.5 text-green-400 fill-green-400" />
+                ) : (
+                  <Play className="w-3.5 h-3.5 text-gray-400" />
+                )}
+                Subscriptions
+                {timerRunning && (
+                  <span className="ml-1 px-1.5 py-0.5 bg-green-600/30 text-green-400 rounded text-[10px]">
+                    LIVE
+                  </span>
+                )}
+              </h2>
+              <div className="flex gap-2 items-center">
+                <span className="text-[11px] text-gray-400">
+                  {tickCount} events
+                </span>
+                {!subscriptionId ? (
+                  <button
+                    onClick={handleSubscribe}
+                    className="px-2 py-0.5 text-xs bg-green-600 hover:bg-green-700 rounded transition-colors"
+                  >
+                    Subscribe
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleUnsubscribe}
+                    className="px-2 py-0.5 text-xs bg-red-600 hover:bg-red-700 rounded transition-colors"
+                  >
+                    Unsubscribe
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="bg-gray-700 rounded p-2 max-h-32 overflow-y-auto font-mono text-[11px]">
+              {tickEvents.length === 0 ? (
+                <div className="text-gray-500 text-center py-1">No events yet</div>
+              ) : (
+                tickEvents.map((ev, i) => (
+                  <div key={i} className="text-cyan-400">{ev}</div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Logs */}
+          <div className="p-3 flex flex-col flex-1 min-h-0">
+            <h2 className="text-xs font-semibold mb-2 flex-shrink-0 flex items-center gap-1.5">
+              <File className="w-3.5 h-3.5 text-gray-400" />
+              Logs
+            </h2>
+            <div className="flex-1 bg-black rounded p-2 overflow-y-auto font-mono text-[11px]">
+              {logs.map((log, i) => (
+                <div key={i} className={log.includes("Error") ? "text-red-400" : "text-green-400"}>
+                  {log}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

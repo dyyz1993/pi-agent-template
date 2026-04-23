@@ -2,6 +2,7 @@ import type { AnyMethods } from "@chat-agent/rpc-core";
 import type { SystemMethods } from "./modules/system";
 import type { FileMethods } from "./modules/file";
 import type { TimerMethods, TimerEvents } from "./modules/timer";
+import type { ChatMethods, ChatEvents } from "./modules/chat";
 
 /**
  * RPC 方法定义 — 前后端共享的唯一类型入口
@@ -13,9 +14,9 @@ import type { TimerMethods, TimerEvents } from "./modules/timer";
  *
  * 入口文件（bun/index.ts, server.ts）无需修改，自动获得新方法。
  */
-export interface RPCMethods extends AnyMethods, SystemMethods, FileMethods, TimerMethods {}
+export interface RPCMethods extends AnyMethods, SystemMethods, FileMethods, TimerMethods, ChatMethods {}
 
 /**
  * RPC 事件定义 — 合并所有模块事件
  */
-export interface RPCEvents extends TimerEvents {}
+export interface RPCEvents extends TimerEvents, ChatEvents {}

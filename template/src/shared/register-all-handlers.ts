@@ -2,6 +2,7 @@ import type { RPCServer } from "@chat-agent/rpc-core";
 import { registerSystemHandlers } from "./handlers/system";
 import { registerFileHandlers } from "./handlers/file";
 import { registerTimerHandlers } from "./handlers/timer";
+import { registerChatHandlers } from "./handlers/chat";
 
 interface HandlerOptions {
   platform: "desktop" | "web";
@@ -19,4 +20,5 @@ export function registerAllHandlers(server: RPCServer, options: HandlerOptions):
   registerSystemHandlers(server, options);
   registerFileHandlers(server);
   registerTimerHandlers(server);
+  registerChatHandlers(server);
 }
