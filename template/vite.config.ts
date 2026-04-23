@@ -15,7 +15,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@chat-agent/rpc-core": resolve(__dirname, "packages/rpc-core/src/index.ts"),
+      "@dyyz1993/rpc-core": resolve(__dirname, "packages/rpc-core/src/index.ts"),
     },
   },
 });

@@ -87,8 +87,8 @@ export interface <Module>Events {
 ### 4.2 Handler 实现（handlers/<module>.ts）
 
 ```typescript
-import type { RPCServer } from "@chat-agent/rpc-core";
-import type { MethodParams, MethodResult } from "@chat-agent/rpc-core";
+import type { RPCServer } from "@dyyz1993/rpc-core";
+import type { MethodParams, MethodResult } from "@dyyz1993/rpc-core";
 import type { RPCMethods } from "../rpc-schema";
 
 type RegisterFn = <K extends keyof RPCMethods & string>(
@@ -117,7 +117,7 @@ export function registerXxxHandlers(server: RPCServer, options?: XxxOptions): vo
 ## 5. 注册编排（register-all-handlers.ts）
 
 ```typescript
-import type { RPCServer } from "@chat-agent/rpc-core";
+import type { RPCServer } from "@dyyz1993/rpc-core";
 import { registerSystemHandlers } from "./handlers/system";
 import { registerFileHandlers } from "./handlers/file";
 import { registerTimerHandlers } from "./handlers/timer";
@@ -142,7 +142,7 @@ export function registerAllHandlers(server: RPCServer, options: HandlerOptions):
 ### 6.1 桌面端（bun/index.ts）
 
 ```typescript
-import { RPCServer } from "@chat-agent/rpc-core";
+import { RPCServer } from "@dyyz1993/rpc-core";
 import { ElectrobunTransport } from "../gateway/ipc-transport";
 import { registerAllHandlers } from "../shared/register-all-handlers";
 

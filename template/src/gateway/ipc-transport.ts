@@ -1,4 +1,4 @@
-import type { Transport, MessageHandler, ErrorHandler } from "@chat-agent/rpc-core";
+import type { Transport, MessageHandler, ErrorHandler } from "@dyyz1993/rpc-core";
 
 /**
  * Transport that bridges between Bun and Webview via:

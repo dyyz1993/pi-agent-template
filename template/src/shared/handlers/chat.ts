@@ -1,5 +1,5 @@
-import type { RPCServer } from "@chat-agent/rpc-core";
-import type { MethodParams, MethodResult } from "@chat-agent/rpc-core";
+import type { RPCServer } from "@dyyz1993/rpc-core";
+import type { MethodParams, MethodResult } from "@dyyz1993/rpc-core";
 import type { RPCMethods, HandlerOptions } from "../rpc-schema";
 import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";

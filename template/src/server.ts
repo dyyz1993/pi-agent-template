@@ -1,6 +1,6 @@
 import { createServer } from "http";
 import { WebSocketServer, WebSocket } from "ws";
-import { RPCServer, type Transport } from "@chat-agent/rpc-core";
+import { RPCServer, type Transport } from "@dyyz1993/rpc-core";
 import { registerAllHandlers } from "./shared/register-all-handlers";
 import { stat, readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";

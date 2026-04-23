@@ -12,7 +12,7 @@
 		"lint:fix": "eslint . --fix"
 	},
 	"dependencies": {
-		"@chat-agent/rpc-core": "workspace:*",
+		"@dyyz1993/rpc-core": "workspace:*",
 		"@tanstack/react-virtual": "^3.13.24",
 		"electrobun": "1.13.1",
 		"lucide-react": "^1.8.0",

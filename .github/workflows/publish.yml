@@ -35,10 +35,9 @@ jobs:
         run: bun run test:rpc
 
       - name: Setup npm auth
-        run: |
-          cat > packages/rpc-core/.npmrc << 'EOF'
-          //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}
-          EOF
+        run: echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > packages/rpc-core/.npmrc
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish
         working-directory: packages/rpc-core

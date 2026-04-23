@@ -1,4 +1,4 @@
-import type { RPCServer } from "@chat-agent/rpc-core";
+import type { RPCServer } from "@dyyz1993/rpc-core";
 import type { HandlerOptions } from "./rpc-schema";
 import * as handlers from "./handlers/index";
 

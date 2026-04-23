@@ -1,5 +1,5 @@
 import { BrowserWindow, BrowserView, Updater, ApplicationMenu } from "electrobun/bun";
-import { RPCServer } from "@chat-agent/rpc-core";
+import { RPCServer } from "@dyyz1993/rpc-core";
 import { ElectrobunTransport } from "../gateway/ipc-transport";
 import { registerAllHandlers } from "../shared/register-all-handlers";
 

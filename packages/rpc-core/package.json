@@ -1,5 +1,5 @@
 {
-  "name": "@chat-agent/rpc-core",
+  "name": "@dyyz1993/rpc-core",
   "version": "1.0.0",
   "description": "Type-safe RPC communication framework with request-response and pub-sub patterns",
   "type": "module",

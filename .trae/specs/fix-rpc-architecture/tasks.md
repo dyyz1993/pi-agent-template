@@ -20,7 +20,7 @@
 
 ### 4. 重构 main.tsx
 - [x] 4.1: 删除 `template/src/mainview/rpc-browser.js`
-- [x] 4.2: 更新 `main.tsx`，导入 `RPCClient` + `BrowserTransport` from `@chat-agent/rpc-core`
+- [x] 4.2: 更新 `main.tsx`，导入 `RPCClient` + `BrowserTransport` from `@dyyz1993/rpc-core`
 - [x] 4.3: 确保 `transport.connect()` 被调用（持久连接）
 - [x] 4.4: 构建验证 Vite 不报 `http` / `ws` 模块错误
 
@@ -33,7 +33,7 @@
 ## Phase 3: 桌面端 IPC 修复
 
 ### 6. 重构 bun/index.ts
-- [x] 6.1: 导入 `createDesktopServer()` from `@chat-agent/rpc-core`
+- [x] 6.1: 导入 `createDesktopServer()` from `@dyyz1993/rpc-core`
 - [x] 6.2: 使用工厂函数创建 server + transport + rpc
 - [x] 6.3: 确认发送通道用 `'message'` 而非 `'rpc-message'`
 - [x] 6.4: 注册 ping/hello/echo/listDir handlers

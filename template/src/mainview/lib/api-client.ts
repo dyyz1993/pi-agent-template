@@ -1,5 +1,5 @@
-import { createTypedClient, WebSocketTransport, IPCTransport } from "@chat-agent/rpc-core";
-import type { TypedClient, MethodParams, MethodResult, EventPayload, EventMetadata } from "@chat-agent/rpc-core";
+import { createTypedClient, WebSocketTransport, IPCTransport } from "@dyyz1993/rpc-core";
+import type { TypedClient, MethodParams, MethodResult, EventPayload, EventMetadata } from "@dyyz1993/rpc-core";
 import type { RPCMethods, RPCEvents } from "../../shared/rpc-schema";
 
 // Token（与 server.ts 保持一致）

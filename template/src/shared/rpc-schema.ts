@@ -1,4 +1,4 @@
-import type { AnyMethods } from "@chat-agent/rpc-core";
+import type { AnyMethods } from "@dyyz1993/rpc-core";
 import type { SystemMethods } from "./modules/system";
 import type { FileMethods } from "./modules/file";
 import type { TimerMethods, TimerEvents } from "./modules/timer";
