@@ -10,10 +10,9 @@ export class InMemoryTransport implements Transport {
   private messageHandlers: Set<MessageHandler> = new Set();
   private errorHandlers: Set<ErrorHandler> = new Set();
   private _isConnected: boolean = false;
-  private logger?: InMemoryTransportOptions['logger'];
 
-  constructor(options?: InMemoryTransportOptions) {
-    this.logger = options?.logger;
+  constructor(_options?: InMemoryTransportOptions) {
+    // options reserved for future use (e.g. logger)
   }
 
   static createPair(options?: InMemoryTransportOptions): { client: InMemoryTransport; server: InMemoryTransport } {
