@@ -1,20 +1,20 @@
 import type { RPCServer } from "@chat-agent/rpc-core";
 import type { MethodParams, MethodResult } from "@chat-agent/rpc-core";
-import type { RPCMethods } from "../rpc-schema";
+import type { RPCMethods, HandlerOptions } from "../rpc-schema";
 
 type RegisterFn = <K extends keyof RPCMethods & string>(
   method: K,
   handler: (params: MethodParams<RPCMethods, K>) => Promise<MethodResult<RPCMethods, K>>,
 ) => void;
 
-export function registerTimerHandlers(server: RPCServer): void {
-  const register: RegisterFn = (method, handler) => {
+export function register(server: RPCServer, _options: HandlerOptions): void {
+  const r: RegisterFn = (method, handler) => {
     server.register(method, handler as (params: unknown) => Promise<unknown>);
   };
 
   let timerId: ReturnType<typeof setInterval> | null = null;
 
-  register("timer.start", async () => {
+  r("timer.start", async () => {
     if (timerId !== null) return { alreadyRunning: true };
     let count = 0;
     timerId = setInterval(() => {
@@ -24,7 +24,7 @@ export function registerTimerHandlers(server: RPCServer): void {
     return { started: true };
   });
 
-  register("timer.stop", async () => {
+  r("timer.stop", async () => {
     if (timerId !== null) {
       clearInterval(timerId);
       timerId = null;

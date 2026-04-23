@@ -195,8 +195,10 @@ wss.on("connection", (ws: WebSocket, req) => {
 
   const rpcServer = new RPCServer(wsTransport as Transport);
 
-  // 注册所有 handlers（单点定义，自动推导）
-  registerAllHandlers(rpcServer, { platform: "web" });
+  // 自动发现并注册所有 handlers
+  registerAllHandlers(rpcServer, { platform: "web" }).catch((err: Error) => {
+    console.error("[WS] Failed to register handlers:", err);
+  });
 
   ws.on("close", () => {
     // eslint-disable-next-line no-console

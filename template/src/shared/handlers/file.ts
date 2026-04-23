@@ -1,6 +1,6 @@
 import type { RPCServer } from "@chat-agent/rpc-core";
 import type { MethodParams, MethodResult } from "@chat-agent/rpc-core";
-import type { RPCMethods } from "../rpc-schema";
+import type { RPCMethods, HandlerOptions } from "../rpc-schema";
 import { readdir, stat } from "fs/promises";
 import { join } from "path";
 
@@ -9,12 +9,12 @@ type RegisterFn = <K extends keyof RPCMethods & string>(
   handler: (params: MethodParams<RPCMethods, K>) => Promise<MethodResult<RPCMethods, K>>,
 ) => void;
 
-export function registerFileHandlers(server: RPCServer): void {
-  const register: RegisterFn = (method, handler) => {
+export function register(server: RPCServer, _options: HandlerOptions): void {
+  const r: RegisterFn = (method, handler) => {
     server.register(method, handler as (params: unknown) => Promise<unknown>);
   };
 
-  register("file.listDir", async (params) => {
+  r("file.listDir", async (params) => {
     const basePath = params.path || process.cwd();
     const entries: { name: string; path: string; type: "file" | "directory"; size?: number }[] = [];
     try {

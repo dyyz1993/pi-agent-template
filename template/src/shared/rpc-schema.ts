@@ -7,12 +7,12 @@ import type { ChatMethods, ChatEvents } from "./modules/chat";
 /**
  * RPC 方法定义 — 前后端共享的唯一类型入口
  *
- * 新增方法只需三步：
- * 1. 在 modules/ 下对应模块文件中添加方法类型定义
- * 2. 在下方 interface 中合并新模块（如果没有的话）
- * 3. 在 handlers/ 下对应模块文件中添加 handler 实现，并在 register-all-handlers.ts 中注册
+ * 新增方法只需两步：
+ * 1. 在 modules/ 下添加类型定义，并在下方 extends 链添加
+ * 2. 在 handlers/ 下添加 handler 实现（导出 register 函数）
  *
- * 入口文件（bun/index.ts, server.ts）无需修改，自动获得新方法。
+ * handlers/ 自动发现，无需修改 register-all-handlers.ts
+ * 入口文件（bun/index.ts, server.ts）无需修改
  */
 export interface RPCMethods extends AnyMethods, SystemMethods, FileMethods, TimerMethods, ChatMethods {}
 
@@ -20,3 +20,10 @@ export interface RPCMethods extends AnyMethods, SystemMethods, FileMethods, Time
  * RPC 事件定义 — 合并所有模块事件
  */
 export interface RPCEvents extends TimerEvents, ChatEvents {}
+
+/**
+ * Handler 注册选项
+ */
+export interface HandlerOptions {
+  platform: "desktop" | "web";
+}
