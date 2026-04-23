@@ -1,104 +1,92 @@
-import { BrowserWindow, Updater, Utils, ApplicationMenu, BrowserView } from "electrobun/bun";
-import { TypedRPCServer, ElectrobunTransport, CompositeTransport, LocalAuthMiddleware } from '@chat-agent/rpc-core';
-import type { PiAgentMethods, PiAgentEvents } from '../schema';
-import { logger } from '../logger';
-
-const DEV_SERVER_PORT = 5175;
-const DEV_SERVER_URL = `http://localhost:${DEV_SERVER_PORT}`;
-
-const ipcTransport = new ElectrobunTransport();
-const compositeTransport = new CompositeTransport();
-compositeTransport.addTransport('ipc', ipcTransport);
-
-const localAuth = new LocalAuthMiddleware({ userId: 'local-user', role: 'admin' });
-
-const server = new TypedRPCServer<PiAgentMethods, PiAgentEvents>(compositeTransport, {
-  middleware: [localAuth],
-  methods: {
-    hello: async (params, context) => {
-      const name = params?.name || 'World';
-      logger.info({ method: 'hello', userId: context?.userId }, 'RPC call');
-      return { message: `Hello ${name}!`, timestamp: Date.now() };
-    },
-    ping: async (context) => ({ pong: true, timestamp: Date.now(), platform: context?.source || 'desktop' }),
-  },
-  events: {
-    heartbeat: { payload: { serverTime: 0 }, metadata: { server: '', platform: '' } },
-  },
-});
-
-const rpc = BrowserView.defineRPC({
-  maxRequestTime: 60000,
-  handlers: {
-    requests: {},
-    messages: {
-      'rpc-message': (data: string) => {
-        try {
-          const message = JSON.parse(data);
-          ipcTransport.handleMessage(message);
-        } catch (error) {
-          logger.error({ err: error }, 'Failed to parse RPC message');
-        }
-      }
-    }
-  }
-});
-
-ipcTransport.setWebView(rpc);
+import { BrowserWindow, BrowserView, Updater, ApplicationMenu } from "electrobun/bun";
+import { RPCServer } from "@chat-agent/rpc-core";
+import { ElectrobunTransport } from "../gateway/ipc-transport";
+import { createTypedRegister } from "../shared/typed-handlers";
 
 async function getMainViewUrl(): Promise<string> {
   const channel = await Updater.localInfo.channel();
+  const DEV_SERVER_URL = "http://localhost:5173";
   if (channel === "dev") {
     try {
       await fetch(DEV_SERVER_URL, { method: "HEAD" });
-      logger.info({ url: DEV_SERVER_URL }, 'HMR enabled: Using Vite dev server');
+      // eslint-disable-next-line no-console
+      console.log(`HMR enabled: Using Vite dev server at ${DEV_SERVER_URL}`);
       return DEV_SERVER_URL;
     } catch {
-      logger.info('Vite dev server not running. Run \'bun run dev:ui\' for HMR support.');
+      // eslint-disable-next-line no-console
+      console.log("Vite dev server not running.");
     }
   }
   return "views://mainview/index.html";
 }
 
-ApplicationMenu.setApplicationMenu([
-  {
-    label: "Pi Agent",
-    submenu: [
-      { role: "about" },
-      { type: "separator" },
-      { role: "hide" },
-      { role: "hideOthers" },
-      { role: "showAll" },
-      { type: "separator" },
-      { role: "quit" },
-    ],
-  },
-  {
-    label: "Edit",
-    submenu: [
-      { role: "undo" },
-      { role: "redo" },
-      { type: "separator" },
-      { role: "cut" },
-      { role: "copy" },
-      { role: "paste" },
-      { role: "pasteAndMatchStyle" },
-      { role: "delete" },
-      { type: "separator" },
-      { role: "selectAll" },
-    ],
-  },
-  {
-    label: "View",
-    submenu: [{ role: "toggleFullScreen" }],
-  },
-  {
-    label: "Window",
-    submenu: [{ role: "minimize" }, { role: "zoom" }],
-  },
-]);
-
 const url = await getMainViewUrl();
+
+const transport = new ElectrobunTransport();
+const server = new RPCServer(transport);
+const register = createTypedRegister(server);
+
+// --- 注册 RPC handlers（params 和返回值自动推导） ---
+
+register("system.ping", async () => {
+  return { pong: true, timestamp: Date.now(), platform: "desktop" };
+});
+
+register("system.hello", async (params) => {
+  return { message: `Hello ${params.name || "World"}!`, timestamp: Date.now() };
+});
+
+register("system.echo", async (params) => params);
+
+register("file.listDir", async (params) => {
+  const { readdir, stat } = await import("fs/promises");
+  const { join } = await import("path");
+  const basePath = params.path || process.cwd();
+  const entries: { name: string; path: string; type: "file" | "directory"; size?: number }[] = [];
+  try {
+    const files = await readdir(basePath);
+    for (const name of files) {
+      const fullPath = join(basePath, name);
+      try {
+        const s = await stat(fullPath);
+        entries.push({
+          name,
+          path: fullPath,
+          type: s.isDirectory() ? "directory" : "file",
+          size: s.size,
+        });
+      } catch {
+        entries.push({ name, path: fullPath, type: "file" });
+      }
+    }
+  } catch (e) {
+    console.error("listDir error:", e);
+  }
+  return { entries, basePath };
+});
+
+// Timer: 每秒 emitEvent("tick")
+let timerId: ReturnType<typeof setInterval> | null = null;
+
+register("timer.start", async () => {
+  if (timerId !== null) return { alreadyRunning: true };
+  let count = 0;
+  timerId = setInterval(() => {
+    count++;
+    server.emitEvent("timer.tick", { count, timestamp: Date.now() });
+  }, 1000);
+  return { started: true };
+});
+
+register("timer.stop", async () => {
+  if (timerId !== null) {
+    clearInterval(timerId);
+    timerId = null;
+  }
+  return { stopped: true };
+});
+
+// --- 创建窗口 ---
 
 const mainWindow = new BrowserWindow({
   title: "Pi Agent",
@@ -109,17 +97,32 @@ const mainWindow = new BrowserWindow({
     x: 200,
     y: 200,
   },
-  rpc,
+  rpc: BrowserView.defineRPC({
+    maxRequestTime: 60000,
+    handlers: {
+      requests: {},
+      messages: {
+        "rpc-message": (data: unknown) => {
+          try {
+            const message = typeof data === "string" ? JSON.parse(data) : data;
+            transport.handleMessage(message);
+          } catch (error) {
+            console.error("[IPC] Failed to parse RPC message:", error);
+          }
+        },
+      },
+    },
+  }),
 });
 
-mainWindow.on("close", () => {
-  Utils.quit();
-});
+transport.setBrowserView(mainWindow.webview);
 
-logger.info('Pi Agent desktop app started with RPC architecture!');
+// eslint-disable-next-line no-console
+console.log("Pi Agent desktop app started!");
 
-setInterval(() => {
-  server.emitEvent('heartbeat', { serverTime: Date.now() }, { server: 'pi-agent', platform: 'desktop' });
-}, 5000);
-
-export { rpc };
+ApplicationMenu.setApplicationMenu([
+  { label: "Pi Agent", submenu: [{ role: "about" }, { type: "separator" }, { role: "hide" }, { role: "hideOthers" }, { role: "showAll" }, { type: "separator" }, { role: "quit" }] },
+  { label: "Edit", submenu: [{ role: "undo" }, { role: "redo" }, { type: "separator" }, { role: "cut" }, { role: "copy" }, { role: "paste" }, { role: "selectAll" }] },
+  { label: "View", submenu: [{ role: "toggleFullScreen" }] },
+  { label: "Window", submenu: [{ role: "minimize" }, { role: "zoom" }] },
+]);

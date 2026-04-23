@@ -1,486 +1,357 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from "react";
+import { apiClient } from "./lib/api-client";
+import type { RPCMethods } from "./lib/api-client";
 
-interface FileEntry { name: string; path: string; type: 'file' | 'directory'; size?: number; modified?: number; children?: FileEntry[]; }
+type TreeNode = {
+  name: string;
+  path: string;
+  type: "file" | "directory";
+  size?: number;
+  children?: TreeNode[];
+  expanded?: boolean;
+  loaded?: boolean;
+};
 
-const isDesktop = () => !!(window as unknown as { __electrobunBunBridge?: unknown }).__electrobunBunBridge;
-const wsUrl = isDesktop() ? 'ws://localhost:3000' : (location.port === '8080' ? 'ws://localhost:3000' : `ws://${location.host}`);
-const WORKSPACE_ROOT = '/Users/xuyingzhou/Project/study-desktop/my-react-tailwind-vite-app2/templates/pi-agent-template';
-
-function normalizePath(p: string): string {
-  if (p.startsWith(WORKSPACE_ROOT)) {
-    return p.substring(WORKSPACE_ROOT.length + 1);
-  }
-  return p;
-}
-
-function pathMatches(entryPath: string, searchPath: string): boolean {
-  return entryPath === searchPath || entryPath === normalizePath(searchPath);
-}
-
-function FileIcon({ name }: { name: string }) {
-  const ext = name.split('.').pop()?.toLowerCase() || '';
-  const colors: Record<string, string> = {
-    ts:'#3178c6', tsx:'#3178c6', js:'#f7df1e', jsx:'#61dafb',
-    json:'#f5a623', html:'#e44d26', css:'#264de4', md:'#519aba',
-    sh:'#89e051', png:'#a074c4', jpg:'#a074c4', svg:'#ffb13b',
-    rs:'#dea584', go:'#00acd7', py:'#3572A5', toml:'#9c4221',
-    lock:'#8a8a8a', yml:'#cb171e', yaml:'#cb171e',
-  };
-  const color = colors[ext] || '#808080';
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/>
-    </svg>
-  );
-}
-function FolderIcon({ opened }: { opened: boolean }) {
-  if (opened) {
-    return (
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e5c07b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-        <path d="M2 10h20"/>
-      </svg>
-    );
-  }
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e5c07b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-    </svg>
-  );
-}
-function ChevronIcon({ expanded }: { expanded: boolean }) {
-  return (
-    <svg
-      width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#6c7086" strokeWidth="2"
-      strokeLinecap="round" strokeLinejoin="round"
-      style={{ transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.1s' }}
-    >
-      <path d="M9 18l6-6-6-6"/>
-    </svg>
-  );
-}
-
-interface TreeItemProps {
-  entry: FileEntry;
-  depth: number;
-  expandedPaths: Set<string>;
-  onToggle: (path: string) => void;
-  onFileClick: (path: string) => void;
-  activePath: string | null;
-}
-
-function TreeItem({ entry, depth, expandedPaths, onToggle, onFileClick, activePath }: TreeItemProps) {
-  const isDir = entry.type === 'directory';
-  const normPath = (p: string) => p.startsWith(WORKSPACE_ROOT) ? p.substring(WORKSPACE_ROOT.length + 1) : p;
-  const isExpanded = isDir && [...expandedPaths].some(p => p === entry.path || p === normPath(entry.path));
-  const isActive = activePath === entry.path;
-  const indent = 8 + depth * 16;
-
-  return (
-    <div>
-      <div
-        className={`tree-row ${isActive ? 'active' : ''}`}
-        style={{ paddingLeft: `${indent}px` }}
-        onClick={() => {
-          if (isDir) { onToggle(entry.path); }
-          else { onFileClick(entry.path); }
-        }}
-      >
-        <span className="chevron">
-          {isDir ? <ChevronIcon expanded={isExpanded} /> : <span style={{ width: 12 }} />}
-        </span>
-        <span className="file-icon">{isDir ? <FolderIcon opened={isExpanded} /> : <FileIcon name={entry.name} />}</span>
-        <span className="file-name">{entry.name}</span>
-      </div>
-      {isDir && isExpanded && entry.children?.map(child => (
-        <TreeItem
-          key={child.path}
-          entry={child}
-          depth={depth + 1}
-          expandedPaths={expandedPaths}
-          onToggle={onToggle}
-          onFileClick={onFileClick}
-          activePath={activePath}
-        />
-      ))}
-    </div>
-  );
-}
-
-interface AppState {
-  connected: boolean;
-  files: FileEntry[];
-  openFiles: Record<string, { type: string; content?: string; url?: string; path: string; size: number }>;
-  activePath: string | null;
-  logs: { msg: unknown; type: string; time: string }[];
-  selectedMethod: string;
-  params: string;
-  subscribed: boolean;
-  subId: string | null;
-  loginError: string;
-  showDiff: boolean;
-  showLogin: boolean;
-  expandedPaths: Set<string>;
-}
+type DemoMethod = "system.ping" | "system.hello" | "system.echo";
 
 function App() {
-  const [state, setState] = useState<AppState>({
-    connected: false, files: [], openFiles: {}, activePath: null,
-    logs: [], selectedMethod: 'hello', params: '{"name": "World"}',
-    subscribed: false, subId: null, loginError: '', showDiff: false, showLogin: true, expandedPaths: new Set(),
-  });
+  const [logs, setLogs] = useState<string[]>([]);
+  const [method, setMethod] = useState<DemoMethod>("system.ping");
+  const [result, setResult] = useState<unknown>(null);
+  const [treeNodes, setTreeNodes] = useState<TreeNode[]>([]);
+  const [currentPath, setCurrentPath] = useState(".");
+  const [mode, setMode] = useState<"desktop" | "web">("web");
+  const [ready, setReady] = useState(false);
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const pendingRef = useRef<Record<string, (v: unknown) => void>>({});
-  const reqIdRef = useRef(0);
-  const filesRef = useRef<FileEntry[]>([]);
+  // Subscription state
+  const [tickEvents, setTickEvents] = useState<string[]>([]);
+  const [tickCount, setTickCount] = useState(0);
+  const [subscriptionId, setSubscriptionId] = useState<string | null>(null);
+  const [timerRunning, setTimerRunning] = useState(false);
 
-  const update = useCallback((patch: Partial<AppState>) => {
-    setState(prev => ({ ...prev, ...patch } as Partial<AppState> & AppState));
+  const addLog = useCallback((msg: string) => {
+    const time = new Date().toLocaleTimeString();
+    setLogs((prev) => [...prev.slice(-50), `[${time}] ${msg}`]);
   }, []);
 
-  const sendWs = useCallback((msg: object) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(msg));
-    }
-  }, []);
-
-  const wsCall = useCallback(<T,>(method: string, ps?: unknown): Promise<T> => {
-    return new Promise((resolve, reject) => {
-      const id = String(++reqIdRef.current);
-      pendingRef.current[id] = resolve as (v: unknown) => void;
-      sendWs({ type: 'request', id, method, params: ps });
-      setTimeout(() => {
-        if (pendingRef.current[id]) { delete pendingRef.current[id]; reject(new Error('Request timeout: ' + method)); }
-      }, 10000);
-    });
-  }, [sendWs]);
-
-  const addLog = useCallback((msg: unknown, type: string) => {
-    update({ logs: [...state.logs.slice(-99), { msg, type, time: new Date().toLocaleTimeString() }] });
-  }, [state.logs, update]);
-
-  const updateTreeChildren = useCallback((files: FileEntry[], path: string, children: FileEntry[]): FileEntry[] => {
-    return files.map(f => {
-      if (pathMatches(f.path, path)) {
-        return { ...f, children: children };
-      }
-      if (f.children) {
-        return { ...f, children: updateTreeChildren(f.children, path, children) };
-      }
-      return f;
-    });
-  }, []);
-
-  const handleToggle = useCallback(async (path: string) => {
-    const isExp = state.expandedPaths.has(path);
-    if (isExp) {
-      update({ expandedPaths: new Set([...state.expandedPaths].filter(p => p !== path)) });
-    } else {
-      const normPath = (p: string) => p.startsWith(WORKSPACE_ROOT) ? p.substring(WORKSPACE_ROOT.length + 1) : p;
-      const matchesEntry = (entryPath: string, searchPath: string) => entryPath === searchPath || entryPath === normPath(searchPath);
-
-      let children: FileEntry[] = [];
-      if (filesRef.current.length > 0) {
-        const findInTree = (files: FileEntry[]): FileEntry | null => {
-          for (const f of files) {
-            if (matchesEntry(f.path, path)) return f;
-            if (f.children) { const found = findInTree(f.children); if (found) return found; }
-          }
-          return null;
-        };
-        const found = findInTree(filesRef.current);
-        if (found?.children && found.children.length > 0) {
-          children = found.children;
-        }
-      }
-      if (children.length === 0) {
-        try {
-          const result = await wsCall<{ entries?: FileEntry[] }>('listDir', { path });
-          children = (result.entries || []).sort((a, b) => {
-            if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
-            return a.name.localeCompare(b.name);
-          });
-        } catch (e) { addLog(String(e), 'err'); return; }
-      }
-      const updateInTree = (files: FileEntry[]): FileEntry[] => {
-        return files.map(f => {
-          if (matchesEntry(f.path, path)) {
-            return { ...f, children: children };
-          }
-          if (f.children) {
-            return { ...f, children: updateInTree(f.children) };
-          }
-          return f;
-        });
-      };
-      const newFiles = updateInTree(filesRef.current);
-      filesRef.current = newFiles;
-      const newExpanded = new Set(state.expandedPaths);
-      newExpanded.add(path);
-      update({ files: [...newFiles], expandedPaths: newExpanded });
-    }
-  }, [state.expandedPaths, wsCall, addLog, update]);
-
-  const handleFileClick = useCallback(async (path: string) => {
-    if (state.openFiles[path]) {
-      update({ activePath: path });
-      return;
-    }
-    try {
-      const info = await wsCall<{ type: string; content?: string; url?: string; path: string; size: number }>('readFile', { path });
-      update({ openFiles: { ...state.openFiles, [path]: info }, activePath: path });
-    } catch (e) { addLog(String(e), 'err'); }
-  }, [state.openFiles, wsCall, addLog, update]);
-
-  const handleConnect = useCallback((token: string) => {
-    const fullUrl = wsUrl + (token ? `?token=${encodeURIComponent(token)}` : '');
-    const ws = new WebSocket(fullUrl);
-    wsRef.current = ws;
-    ws.onopen = () => {
-      update({ connected: true, showLogin: false });
-      wsCall<{ entries: FileEntry[] }>('listDir', { path: '.' }).then(result => {
-        const sorted = result.entries.sort((a, b) => {
-          if (a.type !== b.type) return a.type === 'directory' ? -1 : 1;
-          return a.name.localeCompare(b.name);
-        });
-        filesRef.current = sorted;
-        update({ files: sorted });
-      }).catch(e => addLog(String(e), 'err'));
-    };
-    ws.onmessage = (e) => {
-      try {
-        const msg = JSON.parse(e.data);
-        if (msg.type === 'response' && msg.id && pendingRef.current[msg.id]) {
-          const resolve = pendingRef.current[msg.id];
-          delete pendingRef.current[msg.id];
-          resolve(msg.result || msg.error);
-        }
-        if (msg.type === 'event') { addLog(msg, 'event'); }
-      } catch { /* ignore parse errors */ }
-    };
-    ws.onclose = () => { update({ connected: false, showLogin: true }); };
-    ws.onerror = () => { update({ loginError: 'Connection failed' }); };
-  }, [wsCall, addLog, update]);
-
+  // 初始化 RPC 连接，未连接则全屏 loading
   useEffect(() => {
-    if (isDesktop()) {
-      handleConnect('local');
-    } else {
-      const saved = localStorage.getItem('pi_agent_token');
-      if (saved) { handleConnect(saved); }
-      else { update({ showLogin: true }); }
-    }
-  }, []);
+    const init = async () => {
+      try {
+        await apiClient.initialize();
+        const transport = apiClient.getTransport();
+        setMode(transport === "ipc" ? "desktop" : "web");
+        addLog(`${transport === "ipc" ? "Desktop" : "Web"} mode - ${transport.toUpperCase()}`);
+        setReady(true);
+      } catch {
+        setTimeout(init, 500);
+      }
+    };
+    init();
+  }, [addLog]);
 
-  const handleCall = useCallback(async () => {
-    let p: unknown;
-    try { p = JSON.parse(state.params); } catch { p = undefined; }
-    addLog({ method: state.selectedMethod, params: p }, 'sent');
+  // --- RPC Calls ---
+  const callRPC = async () => {
+    addLog(`RPC call: ${method}`);
     try {
-      const result = await wsCall(state.selectedMethod, p);
-      addLog(result, 'recv');
-    } catch (e) { addLog(String(e), 'err'); }
-  }, [state.params, state.selectedMethod, wsCall, addLog]);
-
-  const handleSubscribe = useCallback(() => {
-    if (state.subscribed && state.subId) {
-      sendWs({ type: 'unsubscribe', subscriptionId: state.subId });
-      update({ subscribed: false, subId: null });
-      addLog('Unsubscribed', 'info');
-    } else {
-      const id = String(++reqIdRef.current);
-      update({ subscribed: true, subId: id });
-      sendWs({ type: 'subscribe', eventType: 'heartbeat', filter: {}, subscriptionId: id });
-      addLog('Subscribed: heartbeat', 'info');
+      addLog(`Calling: ${method}...`);
+      let res: unknown;
+      if (method === "system.ping") {
+        res = await apiClient.call("system.ping", {});
+      } else if (method === "system.hello") {
+        res = await apiClient.call("system.hello", {});
+      } else {
+        res = await apiClient.call("system.echo", {});
+      }
+      setResult(res);
+      addLog(`Result: ${JSON.stringify(res)}`);
+    } catch (err) {
+      addLog(`Error: ${err instanceof Error ? err.message : String(err)}`);
     }
-  }, [state.subscribed, state.subId, sendWs, addLog, update]);
+  };
 
-  const closeFile = useCallback((path: string) => {
-    const updated = { ...state.openFiles };
-    delete updated[path];
-    update({ openFiles: updated, activePath: state.activePath === path ? null : state.activePath });
-  }, [state.openFiles, state.activePath, update]);
+  // --- Tree Explorer ---
+  const entriesToTreeNodes = (entries: RPCMethods["file.listDir"]["result"]["entries"]): TreeNode[] => {
+    return entries.map((e) => ({
+      name: e.name,
+      path: e.path,
+      type: e.type,
+      size: e.size,
+      children: e.type === "directory" ? [] : undefined,
+      expanded: false,
+      loaded: false,
+    }));
+  };
 
-  const openPaths = Object.keys(state.openFiles);
+  const toggleNode = async (nodePath: string) => {
+    const findNode = (nodes: TreeNode[], path: string): TreeNode | null => {
+      for (const n of nodes) {
+        if (n.path === path) return n;
+        if (n.children) {
+          const found = findNode(n.children, path);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
 
-  if (state.showLogin) {
+    const updateExpanded = (nodes: TreeNode[], path: string, expanded: boolean): TreeNode[] => {
+      return nodes.map((n) => {
+        if (n.path === path) return { ...n, expanded };
+        if (n.children) return { ...n, children: updateExpanded(n.children, path, expanded) };
+        return n;
+      });
+    };
+
+    const target = findNode(treeNodes, nodePath);
+    if (!target) return;
+
+    if (target.expanded) {
+      setTreeNodes(updateExpanded(treeNodes, nodePath, false));
+    } else if (target.loaded) {
+      setTreeNodes(updateExpanded(treeNodes, nodePath, true));
+    } else {
+      addLog(`ListDir: ${nodePath}`);
+      try {
+        const res = await apiClient.call("file.listDir", { path: nodePath });
+        const children = entriesToTreeNodes(res.entries);
+        addLog(`Found ${res.entries.length} items`);
+
+        const loadChildren = (nodes: TreeNode[]): TreeNode[] => {
+          return nodes.map((n) => {
+            if (n.path === nodePath) return { ...n, children, expanded: true, loaded: true };
+            if (n.children) return { ...n, children: loadChildren(n.children) };
+            return n;
+          });
+        };
+        setTreeNodes(loadChildren(treeNodes));
+      } catch (err) {
+        addLog(`Error: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+  };
+
+  const listRootDir = async () => {
+    addLog(`ListDir: ${currentPath}`);
+    try {
+      const res = await apiClient.call("file.listDir", { path: currentPath });
+      setTreeNodes(entriesToTreeNodes(res.entries));
+      addLog(`Found ${res.entries.length} items`);
+    } catch (err) {
+      addLog(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+
+  // --- Subscriptions ---
+  const handleSubscribe = async () => {
+    try {
+      addLog("Subscribing to tick events...");
+
+      await apiClient.call("timer.start", {});
+      setTimerRunning(true);
+      addLog("Timer started");
+
+      const subId = await apiClient.subscribe("timer.tick", (payload) => {
+        const time = new Date(payload.timestamp).toLocaleTimeString();
+        setTickEvents((prev) => [...prev.slice(-19), `#${payload.count} @ ${time}`]);
+        setTickCount((c) => c + 1);
+      }, {});
+      setSubscriptionId(subId);
+      addLog(`Subscribed: ${subId}`);
+    } catch (err) {
+      addLog(`Subscribe error: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+
+  const handleUnsubscribe = async () => {
+    try {
+      if (subscriptionId) {
+        apiClient.unsubscribe(subscriptionId);
+        setSubscriptionId(null);
+        addLog("Unsubscribed");
+      }
+      await apiClient.call("timer.stop", {});
+      setTimerRunning(false);
+      addLog("Timer stopped");
+    } catch (err) {
+      addLog(`Unsubscribe error: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+
+  // --- Tree Node Renderer ---
+  const renderTreeNode = (node: TreeNode, depth: number): React.ReactNode => {
+    const isDir = node.type === "directory";
     return (
-      <div className="login-overlay">
-        <div className="login-box">
-          <h2>🔐 Pi Agent</h2>
-          <p className="desc">Enter your access key to connect</p>
-          {isDesktop() && <div className="local-hint">✅ Desktop — auto authenticated</div>}
-          {!isDesktop() && (
-            <>
-              <input type="password" placeholder="Access Key" defaultValue="test-secret-token" />
-              <button className="btn" onClick={() => {
-                const t = (document.querySelector('input[type=password]') as HTMLInputElement)?.value.trim();
-                if (!t) { update({ loginError: 'Please enter access key' }); return; }
-                localStorage.setItem('pi_agent_token', t);
-                handleConnect(t);
-              }}>Connect</button>
-            </>
+      <li key={node.path}>
+        <div
+          className="flex items-center gap-1.5 px-2 py-0.5 text-xs rounded hover:bg-gray-700 cursor-pointer"
+          style={{ paddingLeft: `${depth * 16 + 8}px` }}
+          onClick={() => isDir && toggleNode(node.path)}
+        >
+          {isDir ? (
+            <span className="text-yellow-400 text-[10px]">{node.expanded ? "▼" : "▶"}</span>
+          ) : (
+            <span className="text-gray-500 text-[10px] w-3 inline-block"> </span>
           )}
-          {state.loginError && <div className="error-msg">{state.loginError}</div>}
+          <span className="text-gray-400">{isDir ? "📁" : "📄"}</span>
+          <span className={isDir ? "text-blue-400" : "text-gray-300"}>{node.name}</span>
+        </div>
+        {isDir && node.expanded && node.children && (
+          <ul>
+            {node.children.map((child) => renderTreeNode(child, depth + 1))}
+          </ul>
+        )}
+      </li>
+    );
+  };
+
+  // --- 全屏 Loading（RPC 未连接时） ---
+  if (!ready) {
+    return (
+      <div className="h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block w-8 h-8 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin mb-4" />
+          <div className="text-gray-400 text-sm">Connecting to RPC server...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <>
-      <div className="topbar">
-        <h1>🖥️ Pi Agent</h1>
-        <span className={`transport-badge ${isDesktop() ? 'ipc' : 'websocket'}`}>{isDesktop() ? 'IPC' : 'WS'}</span>
-        <div className={`status-dot ${state.connected ? 'ok' : ''}`}></div>
-        <span className="status-text">{state.connected ? 'Connected' : 'Disconnected'}</span>
-        <div className="topbar-right">
-          <span className="user-name">{isDesktop() ? '👤 Desktop' : '👤 Remote'}</span>
-          <button className="logout-btn" onClick={() => { localStorage.removeItem('pi_agent_token'); wsRef.current?.close(); update({ showLogin: true }); }}>Logout</button>
-          {openPaths.length >= 2 && <button className="btn" style={{ background: '#cba6f7', fontSize: 11 }} onClick={() => update({ showDiff: true })}>🔀 Diff</button>}
-        </div>
+    <div className="h-screen bg-gray-900 text-white flex flex-col overflow-hidden">
+      <div className="h-8 bg-gray-800 flex items-center px-3 text-xs border-b border-gray-700 flex-shrink-0">
+        <span className={`px-2 py-0.5 rounded ${mode === "desktop" ? "bg-green-600" : "bg-blue-600"}`}>
+          {mode === "desktop" ? "Desktop (IPC)" : "Web (WebSocket)"}
+        </span>
+        <span className="ml-3 text-gray-400">Pi Agent</span>
       </div>
 
-      <div className="main">
-        <div className="sidebar">
-          <div className="sidebar-header"><span>EXPLORER</span></div>
-          <div className="file-tree">
-            {state.files.map(entry => (
-              <TreeItem
-                key={entry.path}
-                entry={entry}
-                depth={0}
-                expandedPaths={state.expandedPaths}
-                onToggle={handleToggle}
-                onFileClick={handleFileClick}
-                activePath={state.activePath}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Explorer sidebar */}
+        <div className="w-60 bg-gray-850 border-r border-gray-700 flex flex-col flex-shrink-0">
+          <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-700">
+            Explorer
+          </div>
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <div className="flex gap-2 p-2 border-b border-gray-700">
+              <input
+                type="text"
+                value={currentPath}
+                onChange={(e) => setCurrentPath(e.target.value)}
+                placeholder="Path"
+                className="flex-1 px-2 py-1 text-xs bg-gray-700 rounded text-white border border-gray-600"
               />
-            ))}
+              <button
+                onClick={listRootDir}
+                className="px-2 py-1 text-xs bg-indigo-600 hover:bg-indigo-700 rounded transition-colors"
+              >
+                List
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-1">
+              {treeNodes.length === 0 ? (
+                <div className="text-gray-500 text-xs text-center py-4">No files</div>
+              ) : (
+                <ul className="space-y-0.5">
+                  {treeNodes.map((node) => renderTreeNode(node, 0))}
+                </ul>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="content">
-          <div className="tabs">
-            <div className={`tab ${!state.activePath ? 'active' : ''}`} onClick={() => update({ activePath: null })}>⚡ RPC</div>
-            {openPaths.map(p => {
-              const name = p.split('/').pop()!;
-              return (
-                <div key={p} className={`tab ${state.activePath === p ? 'active' : ''}`} onClick={() => update({ activePath: p })}>
-                  <FileIcon name={name} /> <span style={{ marginRight: 4 }}>{name}</span>
-                  <span className="close-tab" onClick={(e) => { e.stopPropagation(); closeFile(p); }}>✕</span>
-                </div>
-              );
-            })}
-          </div>
-
-          {!state.activePath ? (
-            <div className="rpc-panel">
-              <h3>RPC Call</h3>
-              <div className="row">
-                <label>Method</label>
-                <div className="methods">
-                  {['hello','echo','ping','listDir','readFile'].map(m => (
-                    <button key={m} className={`method-btn ${state.selectedMethod === m ? 'active' : ''}`} onClick={() => {
-                      update({ selectedMethod: m });
-                      const pm: Record<string, string> = { hello:'{"name": "World"}', echo:'{"message": "Hello!"}', ping:'', listDir:'{"path": "."}', readFile:'{"path": "package.json"}' };
-                      update({ params: pm[m] || '' });
-                    }}>{m}</button>
-                  ))}
+        {/* Main content */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col p-4 overflow-y-auto gap-4">
+            {/* RPC Calls */}
+            <div className="bg-gray-800 rounded-lg p-4 flex-shrink-0">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold">RPC Calls</h2>
+                <div className="flex gap-2">
+                  <select
+                    value={method}
+                    onChange={(e) => setMethod(e.target.value as DemoMethod)}
+                    className="px-3 py-1 text-xs bg-gray-700 rounded-lg text-white border border-gray-600"
+                  >
+                    <option value="system.ping">system.ping</option>
+                    <option value="system.hello">system.hello</option>
+                    <option value="system.echo">system.echo</option>
+                  </select>
+                  <button
+                    onClick={callRPC}
+                    className="px-4 py-1 text-xs bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-colors"
+                  >
+                    Call
+                  </button>
                 </div>
               </div>
-              <div className="row">
-                <label>Params</label>
-                <textarea value={state.params} onChange={e => update({ params: e.target.value })} />
-              </div>
-              <div className="row">
-                <label></label>
-                <button className="btn" onClick={handleCall}>🚀 Call</button>
-              </div>
+              {!!result && (
+                <div className="bg-gray-700 rounded-lg p-3">
+                  <pre className="text-green-400 text-xs overflow-x-auto">
+                    {JSON.stringify(result, null, 2)}
+                  </pre>
+                </div>
+              )}
+            </div>
 
-              <h3 className="mt3">Subscribe</h3>
-              <div className="row">
-                <label>Event</label>
-                <input type="text" defaultValue="heartbeat" readOnly />
-                <button className={`btn ${state.subscribed ? 'danger' : 'success'}`} onClick={handleSubscribe}>
-                  {state.subscribed ? 'Unsubscribe' : 'Subscribe'}
-                </button>
+            {/* Subscriptions */}
+            <div className="bg-gray-800 rounded-lg p-4 flex-shrink-0">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold">
+                  Subscriptions
+                  {timerRunning && (
+                    <span className="ml-2 px-2 py-0.5 bg-green-600/30 text-green-400 rounded text-[10px]">
+                      LIVE
+                    </span>
+                  )}
+                </h2>
+                <div className="flex gap-2 items-center">
+                  <span className="text-xs text-gray-400">
+                    {tickCount} events
+                  </span>
+                  {!subscriptionId ? (
+                    <button
+                      onClick={handleSubscribe}
+                      className="px-4 py-1 text-xs bg-green-600 hover:bg-green-700 rounded-lg transition-colors"
+                    >
+                      Subscribe
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleUnsubscribe}
+                      className="px-4 py-1 text-xs bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                    >
+                      Unsubscribe
+                    </button>
+                  )}
+                </div>
               </div>
+              <div className="bg-gray-700 rounded-lg p-3 max-h-40 overflow-y-auto font-mono text-xs">
+                {tickEvents.length === 0 ? (
+                  <div className="text-gray-500 text-center py-2">No events yet. Click Subscribe to start.</div>
+                ) : (
+                  tickEvents.map((ev, i) => (
+                    <div key={i} className="text-cyan-400">{ev}</div>
+                  ))
+                )}
+              </div>
+            </div>
 
-              <h3 className="mt3">Log</h3>
-              <div className="log">
-                {state.logs.map((l, i) => (
-                  <div key={i} className={`log-entry ${l.type}`}>
-                    <span className="time">{l.time}</span>
-                    <span className={`tag ${l.type}`}>{l.type.toUpperCase()}</span>
-                    <pre>{typeof l.msg === 'object' ? JSON.stringify(l.msg, null, 2) : String(l.msg)}</pre>
+            {/* Logs */}
+            <div className="bg-gray-800 rounded-lg p-4 flex flex-col flex-1 min-h-0">
+              <h2 className="text-sm font-semibold mb-3 flex-shrink-0">Logs</h2>
+              <div className="flex-1 bg-black rounded-lg p-3 overflow-y-auto font-mono text-xs">
+                {logs.map((log, i) => (
+                  <div key={i} className={log.includes("Error") ? "text-red-400" : "text-green-400"}>
+                    {log}
                   </div>
                 ))}
               </div>
             </div>
-          ) : (
-            <div className="file-viewer">
-              {(() => {
-                const info = state.openFiles[state.activePath];
-                if (!info) return null;
-                return (
-                  <>
-                    <div className="file-toolbar">
-                      <span className="file-path">{info.path}</span>
-                      <span className="file-size">{info.size ? (info.size < 1024 ? info.size + 'B' : info.size < 1024 * 1024 ? (info.size / 1024).toFixed(1) + 'K' : (info.size / 1024 / 1024).toFixed(1) + 'M') : ''}</span>
-                      {info.url && <a className="btn download-btn" href={info.url} target="_blank" rel="noopener">⬇ Download</a>}
-                    </div>
-                    {info.type === 'text' && info.content !== undefined ? (
-                      <div className="file-content">
-                        {info.content.split('\n').map((line, i) => (
-                          <div key={i} className="line">
-                            <span className="line-num">{i + 1}</span>
-                            <span className="line-text">{line}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="binary-hint">📦 {info.type === 'binary' ? 'Binary file' : 'Large file'}</div>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {state.showDiff && openPaths.length >= 2 && (
-        <div className="diff-overlay" onClick={() => update({ showDiff: false })}>
-          <div className="diff-modal" onClick={e => e.stopPropagation()}>
-            <div className="diff-modal-header">
-              <h3>🔀 Diff</h3>
-              <button className="btn-icon" onClick={() => update({ showDiff: false })}>✕</button>
-            </div>
-            <div className="diff-viewer">
-              {(() => {
-                const a = state.openFiles[openPaths[openPaths.length - 2]];
-                const b = state.openFiles[openPaths[openPaths.length - 1]];
-                if (!a?.content || !b?.content) return null;
-                const DiffLib = (window as unknown as { Diff?: { diffLines: (a: string, b: string) => Array<{ value: string; added?: boolean; removed?: boolean }> } }).Diff;
-                if (!DiffLib) return <div className="binary-hint">Diff library not loaded</div>;
-                const d = DiffLib.diffLines(a.content, b.content);
-                return d.map((part, i) => {
-                  const cls = part.added ? 'diff-add' : part.removed ? 'diff-delete' : 'diff-context';
-                  const prefix = part.added ? '+' : part.removed ? '-' : ' ';
-                  return part.value.split('\n').filter((l, idx, arr) => idx < arr.length - 1 || l).map((line, j) => (
-                    <div key={`${i}-${j}`} className={`diff-line ${cls}`}>
-                      <span className="diff-prefix">{prefix}</span>
-                      <span className="diff-text">{line}</span>
-                    </div>
-                  ));
-                });
-              })()}
-            </div>
           </div>
         </div>
-      )}
-    </>
+      </div>
+    </div>
   );
 }
 
