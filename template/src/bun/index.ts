@@ -25,8 +25,8 @@ const url = await getMainViewUrl();
 const transport = new ElectrobunTransport();
 const server = new RPCServer(transport);
 
-// --- 注册 RPC handlers（自动发现 handlers/ 目录） ---
-await registerAllHandlers(server, { platform: "desktop" });
+// --- 注册 RPC handlers（自动导入 handlers barrel） ---
+registerAllHandlers(server, { platform: "desktop" });
 
 // --- 创建窗口 ---
 
