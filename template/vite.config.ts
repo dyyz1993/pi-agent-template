@@ -1,5 +1,6 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { resolve } from "path";
 
 export default defineConfig({
   plugins: [react()],
@@ -14,7 +15,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@chat-agent/rpc-core": "/Users/xuyingzhou/Project/study-desktop/pi-agent-template/packages/rpc-core/src/index.ts",
+      "@chat-agent/rpc-core": resolve(__dirname, "packages/rpc-core/src/index.ts"),
     },
   },
 });

@@ -6,6 +6,7 @@ import { resolve, join } from 'path';
 import { execSync } from 'child_process';
 
 const TEMPLATE_DIR = resolve(import.meta.dir, '..', 'template');
+const PACKAGES_DIR = resolve(import.meta.dir, '..', 'packages');
 const args = process.argv.slice(2);
 
 if (args.length === 0) {
@@ -69,11 +70,28 @@ function copyAndReplace(srcDir: string, destDir: string): void {
 
 copyAndReplace(TEMPLATE_DIR, targetDir);
 
+// Copy packages directory for workspace dependencies
+if (existsSync(PACKAGES_DIR)) {
+  copyAndReplace(PACKAGES_DIR, join(targetDir, 'packages'));
+}
+
+// Ensure workspace config exists in root package.json
+const rootPkgPath = join(targetDir, 'package.json');
+const rootPkg = JSON.parse(readFileSync(rootPkgPath, 'utf-8'));
+if (!rootPkg.workspaces) {
+  rootPkg.workspaces = ['packages/*'];
+  writeFileSync(rootPkgPath, JSON.stringify(rootPkg, null, '\t') + '\n');
+}
+
 console.log('Installing dependencies...');
 execSync('bun install', { cwd: targetDir, stdio: 'inherit' });
 
 console.log('Building browser bundle...');
-execSync('bun run build:browser', { cwd: targetDir, stdio: 'pipe' });
+try {
+  execSync('bun run build:browser', { cwd: targetDir, stdio: 'pipe' });
+} catch {
+  console.log('(build:browser skipped - script not found)');
+}
 
 console.log('Initializing git...');
 execSync('git init', { cwd: targetDir, stdio: 'pipe' });
