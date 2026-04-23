@@ -51,6 +51,15 @@ const MIME_TYPES: Record<string, string> = {
 
 // HTTP Server
 const httpServer = createServer(async (req, res) => {
+  // CORS
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Authorization, Range");
+  if (req.method === "OPTIONS") {
+    res.writeHead(204).end();
+    return;
+  }
+
   if (!req.url) {
     res.writeHead(400).end();
     return;
