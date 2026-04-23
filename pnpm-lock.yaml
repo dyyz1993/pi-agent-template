@@ -37,8 +37,8 @@ importers:
   template:
     dependencies:
       '@dyyz1993/rpc-core':
-        specifier: workspace:*
-        version: link:../packages/rpc-core
+        specifier: ^1.0.0
+        version: 1.0.0
       '@tanstack/react-virtual':
         specifier: ^3.13.24
         version: 3.13.24(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -199,6 +199,9 @@ packages:
   '@babel/types@7.29.0':
     resolution: {integrity: sha512-LwdZHpScM4Qz8Xw2iKSzS+cfglZzJGvofQICy7W7v4caru4EaAmyUuO6BGrbyQ2mYV11W0U8j5mBhd14dd3B0A==}
     engines: {node: '>=6.9.0'}
+
+  '@dyyz1993/rpc-core@1.0.0':
+    resolution: {integrity: sha512-YFkD0itwVRXj5JWHug+vewnw9Z4RkdAshCn73E8hZHMYwWXHmVj0E+Vica1WUVObYForQ5qiBR52e8L9AlP2rQ==}
 
   '@emotion/babel-plugin@11.13.5':
     resolution: {integrity: sha512-pxHCpT2ex+0q+HH91/zsdHkw/lXd468DIN2zvfvLtPKLLMo6gQj7oLObq8PhkrxOZb/gGCq03S3Z7PDhS8pduQ==}
@@ -2225,6 +2228,10 @@ snapshots:
     dependencies:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
+
+  '@dyyz1993/rpc-core@1.0.0':
+    dependencies:
+      uuid: 9.0.1
 
   '@emotion/babel-plugin@11.13.5':
     dependencies:
