@@ -50,8 +50,21 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Type check
+      - name: Type check (root)
         run: bun run type-check
+
+      - name: Install template dependencies
+        run: cd template && bun install
+
+      - name: Type check (template)
+        run: |
+          cd template
+          ERRORS=$(npx tsc --noEmit 2>&1 | grep "error TS" | grep -v "node_modules" || true)
+          if [ -n "$ERRORS" ]; then
+            echo "$ERRORS"
+            exit 1
+          fi
+          echo "Template type check passed"
 
   test:
     runs-on: ubuntu-latest

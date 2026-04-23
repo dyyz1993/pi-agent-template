@@ -2,5 +2,6 @@
 # Root level lint (packages/ + scripts/)
 bun run lint
 
-# Template lint (含 RPC 规范规则)
-cd template && bun run lint
+# Template lint (含 RPC 规范规则）
+(cd template && bun run lint)
+(cd template && ERRORS=$(npx tsc --noEmit 2>&1 | grep "error TS" | grep -v "node_modules" || true) && if [ -n "$ERRORS" ]; then echo "$ERRORS" && exit 1; fi)
