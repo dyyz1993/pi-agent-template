@@ -45,6 +45,9 @@ importers:
       lucide-react:
         specifier: ^1.8.0
         version: 1.8.0(react@18.3.1)
+      prism-react-renderer:
+        specifier: ^2.4.1
+        version: 2.4.1(react@18.3.1)
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -616,6 +619,9 @@ packages:
   '@types/node@25.6.0':
     resolution: {integrity: sha512-+qIYRKdNYJwY3vRCZMdJbPLJAtGjQBudzZzdzwQYkEPQd+PJGixUL5QfvCLDaULoLv+RhT3LDkwEfKaAkgSmNQ==}
 
+  '@types/prismjs@1.26.6':
+    resolution: {integrity: sha512-vqlvI7qlMvcCBbVe0AKAb4f97//Hy0EBTaiW8AalRnG/xAN5zOiWWyrNqNXeq8+KAuvRewjCVY1+IPxk4RdNYw==}
+
   '@types/prop-types@15.7.15':
     resolution: {integrity: sha512-F6bEyamV9jKGAFBEmlQnesRPGOQqS2+Uwi0Em15xenOxHaf2hv6L8YCVn3rPdPJOiJfPiCnLIRyvwVaqMY3MIw==}
 
@@ -897,6 +903,10 @@ packages:
   cliui@8.0.1:
     resolution: {integrity: sha512-BSeNnyus75C4//NQ9gQt1/csTXyo/8Sb+afLAkzAptFuMsod9HFokGNudZpi/oQV73hnVK+sR+5PVRMd+Dr7YQ==}
     engines: {node: '>=12'}
+
+  clsx@2.1.1:
+    resolution: {integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==}
+    engines: {node: '>=6'}
 
   color-convert@2.0.1:
     resolution: {integrity: sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==}
@@ -1583,6 +1593,11 @@ packages:
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
+
+  prism-react-renderer@2.4.1:
+    resolution: {integrity: sha512-ey8Ls/+Di31eqzUxC46h8MksNuGx/n0AAC8uKpwFau4RPDYLuE3EXTp8N8G2vX2N7UC/+IXeNUnlWBGGcAG+Ig==}
+    peerDependencies:
+      react: '>=16.0.0'
 
   process-nextick-args@2.0.1:
     resolution: {integrity: sha512-3ouUOpQhtgrbOa17J7+uxOTpITYWaGP7/AhoR3+A+/1e9skrzelGi/dXzEYyvbxubEF6Wn2ypscTKiKJFFn1ag==}
@@ -2386,6 +2401,8 @@ snapshots:
     dependencies:
       undici-types: 7.19.2
 
+  '@types/prismjs@1.26.6': {}
+
   '@types/prop-types@15.7.15': {}
 
   '@types/react-dom@18.3.7(@types/react@18.3.28)':
@@ -2419,10 +2436,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@typescript-eslint/eslint-plugin@8.59.0(@typescript-eslint/parser@8.59.0(eslint@10.2.1(jiti@1.21.7))(typescript@5.9.3))(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3)':
+  '@typescript-eslint/eslint-plugin@8.59.0(@typescript-eslint/parser@8.59.0(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3))(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3)':
     dependencies:
       '@eslint-community/regexpp': 4.12.2
-      '@typescript-eslint/parser': 8.59.0(eslint@10.2.1(jiti@1.21.7))(typescript@5.9.3)
+      '@typescript-eslint/parser': 8.59.0(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3)
       '@typescript-eslint/scope-manager': 8.59.0
       '@typescript-eslint/type-utils': 8.59.0(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3)
       '@typescript-eslint/utils': 8.59.0(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3)
@@ -2753,6 +2770,8 @@ snapshots:
       string-width: 4.2.3
       strip-ansi: 6.0.1
       wrap-ansi: 7.0.0
+
+  clsx@2.1.1: {}
 
   color-convert@2.0.1:
     dependencies:
@@ -3428,6 +3447,12 @@ snapshots:
 
   prelude-ls@1.2.1: {}
 
+  prism-react-renderer@2.4.1(react@18.3.1):
+    dependencies:
+      '@types/prismjs': 1.26.6
+      clsx: 2.1.1
+      react: 18.3.1
+
   process-nextick-args@2.0.1: {}
 
   process@0.11.10: {}
@@ -3740,7 +3765,7 @@ snapshots:
 
   typescript-eslint@8.59.0(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3):
     dependencies:
-      '@typescript-eslint/eslint-plugin': 8.59.0(@typescript-eslint/parser@8.59.0(eslint@10.2.1(jiti@1.21.7))(typescript@5.9.3))(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3)
+      '@typescript-eslint/eslint-plugin': 8.59.0(@typescript-eslint/parser@8.59.0(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3))(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3)
       '@typescript-eslint/parser': 8.59.0(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3)
       '@typescript-eslint/typescript-estree': 8.59.0(typescript@5.9.3)
       '@typescript-eslint/utils': 8.59.0(eslint@9.39.4(jiti@1.21.7))(typescript@5.9.3)
