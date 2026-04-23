@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Folder, RefreshCw, File, FolderPlus, Pencil, Trash2, Copy, Pin, PinOff } from "lucide-react";
+import { Folder, RefreshCw, File, FolderPlus, Pencil, Trash2, Copy } from "lucide-react";
 import type { TreeNode, EditingNode } from "../../types";
 import type { DropEntry } from "../../utils/drop-handler";
 import { readDropItems } from "../../utils/drop-handler";
@@ -7,8 +7,7 @@ import { TreeNodeItem } from "./TreeNodeItem";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { InlineInput } from "./InlineInput";
-import { useSidebarStore } from "../../stores/use-sidebar-store";
-import { useBreakpoint } from "../../hooks/use-breakpoint";
+import { PinButton } from "../sidebar/PinButton";
 
 interface ExplorerSidebarProps {
   treeNodes: TreeNode[];
@@ -53,11 +52,6 @@ export function ExplorerSidebar({
   onImportFiles,
   hideOuterShell,
 }: ExplorerSidebarProps) {
-  const isPinned = useSidebarStore((s) => s.isPinned);
-  const setPinned = useSidebarStore((s) => s.setPinned);
-  const breakpoint = useBreakpoint();
-  const isMobile = breakpoint === "mobile";
-
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -149,15 +143,7 @@ export function ExplorerSidebar({
         <Folder className="w-3.5 h-3.5" />
         Explorer
       </div>
-      {!isMobile && (
-        <button
-          onClick={() => setPinned(!isPinned)}
-          title={isPinned ? "Unpin sidebar" : "Pin sidebar"}
-          className="text-gray-500 hover:text-white transition-colors"
-        >
-          {isPinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
-        </button>
-      )}
+      <PinButton />
     </div>
   );
 

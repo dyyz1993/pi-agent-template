@@ -3,15 +3,14 @@ import {
   GitBranch, RefreshCw, FileQuestion, Plus, Minus, Pencil,
   ChevronRight, ChevronDown, Eye, FileText, Copy,
   Upload, Download, ChevronUp, ChevronDown as BranchChevron,
-  FolderTree, Pin, PinOff,
+  FolderTree,
 } from "lucide-react";
 import { useGitStore, type GitFileChange, type GitCommit } from "../../stores/use-git-store";
 import { useExplorerStore } from "../../stores/use-explorer-store";
-import { useSidebarStore } from "../../stores/use-sidebar-store";
-import { useBreakpoint } from "../../hooks/use-breakpoint";
 import { ContextMenu, type MenuItem } from "../explorer/ContextMenu";
 import { GitCommitInput } from "./GitCommitInput";
 import { GitBranchSelector } from "./GitBranchSelector";
+import { PinButton } from "../sidebar/PinButton";
 
 /* ── Helpers ────────────────────────────────────────────── */
 
@@ -209,11 +208,6 @@ interface GitPanelProps {
 }
 
 export function GitPanel({ hideOuterShell }: GitPanelProps) {
-  const isPinned = useSidebarStore((s) => s.isPinned);
-  const setPinned = useSidebarStore((s) => s.setPinned);
-  const breakpoint = useBreakpoint();
-  const isMobile = breakpoint === "mobile";
-
   const branch = useGitStore((s) => s.branch);
   const ahead = useGitStore((s) => s.ahead);
   const behind = useGitStore((s) => s.behind);
@@ -337,15 +331,7 @@ export function GitPanel({ hideOuterShell }: GitPanelProps) {
   const selectedFilePath = currentDiff?.filePath ?? null;
   const hasMultipleWorktrees = worktrees.length > 1;
 
-  const pinButton = !isMobile ? (
-    <button
-      onClick={() => setPinned(!isPinned)}
-      title={isPinned ? "Unpin sidebar" : "Pin sidebar"}
-      className="text-gray-500 hover:text-white transition-colors"
-    >
-      {isPinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
-    </button>
-  ) : null;
+  const pinButton = <PinButton />;
 
   const panelContent = (
     <>

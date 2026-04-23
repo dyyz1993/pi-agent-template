@@ -5,7 +5,7 @@ import { useAppStore } from "./stores/use-app-store";
 import { useExplorerStore } from "./stores/use-explorer-store";
 import { useChatStore } from "./stores/use-chat-store";
 import { useSidebarStore } from "./stores/use-sidebar-store";
-import { useBreakpoint } from "./hooks/use-breakpoint";
+import { useBreakpointSync } from "./hooks/use-breakpoint";
 import { ActivityBar } from "./components/activity-bar/ActivityBar";
 import { MobileTabBar } from "./components/activity-bar/MobileTabBar";
 import { ExplorerSidebar } from "./components/explorer/ExplorerSidebar";
@@ -46,7 +46,19 @@ function App() {
   const setDrawerOpen = useSidebarStore((s) => s.setDrawerOpen);
   const sidebarWidth = useSidebarStore((s) => s.sidebarWidth);
   const setSidebarWidth = useSidebarStore((s) => s.setSidebarWidth);
+  const breakpoint = useSidebarStore((s) => s.breakpoint);
 
+  // 全局单一 ResizeObserver 同步断点
+  useBreakpointSync();
+
+  const isMobile = breakpoint === "mobile";
+  const isDesktop = breakpoint === "desktop";
+
+  const sidebarIsDrawer = isMobile || !isPinned;
+  const showSidebar = activePanel !== null && (isPinned || drawerOpen);
+  const showDebug = isDesktop;
+
+  // Resize handle
   const resizingRef = useRef(false);
   const startXRef = useRef(0);
   const startWidthRef = useRef(0);
@@ -74,14 +86,6 @@ function App() {
     window.addEventListener("mousemove", onMove);
     window.addEventListener("mouseup", onUp);
   }, [sidebarWidth, setSidebarWidth]);
-
-  const breakpoint = useBreakpoint();
-  const isMobile = breakpoint === "mobile";
-  const isDesktop = breakpoint === "desktop";
-
-  const sidebarIsDrawer = isMobile || !isPinned;
-  const showSidebar = activePanel !== null && (isPinned || drawerOpen);
-  const showDebug = isDesktop;
 
   // Initialize RPC connection
   useEffect(() => {
@@ -145,6 +149,33 @@ function App() {
     );
   }
 
+  const sidebarContent = activePanel === "explorer" ? (
+    <ExplorerSidebar
+      treeNodes={treeNodes}
+      currentPath={currentPath}
+      selectedPath={selectedPath}
+      editingNode={editingNode}
+      onPathChange={setCurrentPath}
+      onRefresh={listRootDir}
+      onToggle={toggleNode}
+      onOpenFile={openFile}
+      onCreateFile={createFile}
+      onCreateDir={createDir}
+      onRenameNode={renameNode}
+      onDeleteNode={deleteNode}
+      onStartEditing={startEditing}
+      onCancelEditing={cancelEditing}
+      onImportFiles={importFiles}
+      hideOuterShell
+    />
+  ) : activePanel === "git" ? (
+    <GitPanel hideOuterShell />
+  ) : activePanel === "search" ? (
+    <div className="flex-1 flex items-center justify-center text-gray-500 text-xs p-4 text-center">
+      Search panel coming soon
+    </div>
+  ) : null;
+
   return (
     <div className="h-screen bg-gray-900 text-white flex flex-col overflow-hidden">
       {/* Title bar — mobile 隐藏 */}
@@ -166,27 +197,7 @@ function App() {
         {showSidebar && isPinned && !isMobile && (
           <div className="bg-gray-850 border-r border-gray-700 flex flex-col flex-shrink-0 overflow-hidden relative"
             style={{ width: sidebarWidth }}>
-            {activePanel === "explorer" && (
-              <ExplorerSidebar
-                treeNodes={treeNodes}
-                currentPath={currentPath}
-                selectedPath={selectedPath}
-                editingNode={editingNode}
-                onPathChange={setCurrentPath}
-                onRefresh={listRootDir}
-                onToggle={toggleNode}
-                onOpenFile={openFile}
-                onCreateFile={createFile}
-                onCreateDir={createDir}
-                onRenameNode={renameNode}
-                onDeleteNode={deleteNode}
-                onStartEditing={startEditing}
-                onCancelEditing={cancelEditing}
-                onImportFiles={importFiles}
-                hideOuterShell
-              />
-            )}
-            {activePanel === "git" && <GitPanel hideOuterShell />}
+            {sidebarContent}
             {/* Resize handle */}
             <div
               className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-indigo-500/50 active:bg-indigo-500 transition-colors z-10"
@@ -217,30 +228,14 @@ function App() {
         <>
           <div
             className="fixed inset-0 bg-black/50 z-40"
+            style={isMobile ? { bottom: 56 } : undefined}
             onClick={() => setDrawerOpen(false)}
           />
-          <div className="fixed left-0 top-0 bottom-0 w-60 z-50 bg-gray-850 border-r border-gray-700 flex flex-col overflow-hidden">
-            {activePanel === "explorer" && (
-              <ExplorerSidebar
-                treeNodes={treeNodes}
-                currentPath={currentPath}
-                selectedPath={selectedPath}
-                editingNode={editingNode}
-                onPathChange={setCurrentPath}
-                onRefresh={listRootDir}
-                onToggle={toggleNode}
-                onOpenFile={openFile}
-                onCreateFile={createFile}
-                onCreateDir={createDir}
-                onRenameNode={renameNode}
-                onDeleteNode={deleteNode}
-                onStartEditing={startEditing}
-                onCancelEditing={cancelEditing}
-                onImportFiles={importFiles}
-                hideOuterShell
-              />
-            )}
-            {activePanel === "git" && <GitPanel hideOuterShell />}
+          <div
+            className="fixed left-0 top-0 w-60 z-50 bg-gray-850 border-r border-gray-700 flex flex-col overflow-hidden"
+            style={isMobile ? { top: 0, bottom: 56 } : { top: 0, bottom: 0 }}
+          >
+            {sidebarContent}
           </div>
         </>
       )}

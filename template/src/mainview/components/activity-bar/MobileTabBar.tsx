@@ -1,11 +1,5 @@
-import { Folder, GitBranch, Search } from "lucide-react";
-import { useSidebarStore, type SidebarPanelId } from "../../stores/use-sidebar-store";
-
-const items: { id: SidebarPanelId; icon: typeof Folder; label: string }[] = [
-  { id: "explorer", icon: Folder, label: "Explorer" },
-  { id: "git", icon: GitBranch, label: "Source Control" },
-  { id: "search", icon: Search, label: "Search" },
-];
+import { useSidebarStore } from "../../stores/use-sidebar-store";
+import { items } from "./ActivityBar";
 
 export function MobileTabBar() {
   const activePanel = useSidebarStore((s) => s.activePanel);
