@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Folder, RefreshCw, File, FolderPlus, Pencil, Trash2, Copy } from "lucide-react";
+import { Folder, RefreshCw, File, FolderPlus, Pencil, Trash2, Copy, Pin, PinOff } from "lucide-react";
 import type { TreeNode, EditingNode } from "../../types";
 import type { DropEntry } from "../../utils/drop-handler";
 import { readDropItems } from "../../utils/drop-handler";
@@ -7,6 +7,8 @@ import { TreeNodeItem } from "./TreeNodeItem";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { InlineInput } from "./InlineInput";
+import { useSidebarStore } from "../../stores/use-sidebar-store";
+import { useBreakpoint } from "../../hooks/use-breakpoint";
 
 interface ExplorerSidebarProps {
   treeNodes: TreeNode[];
@@ -24,6 +26,7 @@ interface ExplorerSidebarProps {
   onStartEditing: (path: string, type: EditingNode["type"]) => void;
   onCancelEditing: () => void;
   onImportFiles: (entries: DropEntry[], destDir: string) => Promise<number>;
+  hideOuterShell?: boolean;
 }
 
 interface ContextMenuState {
@@ -48,7 +51,13 @@ export function ExplorerSidebar({
   onStartEditing,
   onCancelEditing,
   onImportFiles,
+  hideOuterShell,
 }: ExplorerSidebarProps) {
+  const isPinned = useSidebarStore((s) => s.isPinned);
+  const setPinned = useSidebarStore((s) => s.setPinned);
+  const breakpoint = useBreakpoint();
+  const isMobile = breakpoint === "mobile";
+
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -134,12 +143,27 @@ export function ExplorerSidebar({
     editingNode.path === currentPath &&
     (editingNode.type === "newFile" || editingNode.type === "newDir");
 
-  return (
-    <div className="w-60 bg-gray-850 border-r border-gray-700 flex flex-col flex-shrink-0">
-      <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-700 flex items-center gap-1.5">
+  const header = (
+    <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-700 flex items-center justify-between">
+      <div className="flex items-center gap-1.5">
         <Folder className="w-3.5 h-3.5" />
         Explorer
       </div>
+      {!isMobile && (
+        <button
+          onClick={() => setPinned(!isPinned)}
+          title={isPinned ? "Unpin sidebar" : "Pin sidebar"}
+          className="text-gray-500 hover:text-white transition-colors"
+        >
+          {isPinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
+        </button>
+      )}
+    </div>
+  );
+
+  const content = (
+    <>
+      {header}
       <div className="flex-1 overflow-hidden flex flex-col">
         <div className="flex gap-2 p-2 border-b border-gray-700">
           <input
@@ -217,6 +241,16 @@ export function ExplorerSidebar({
           onCancel={() => setPendingDelete(null)}
         />
       )}
+    </>
+  );
+
+  if (hideOuterShell) {
+    return <div className="flex flex-col flex-1 overflow-hidden">{content}</div>;
+  }
+
+  return (
+    <div className="w-60 bg-gray-850 border-r border-gray-700 flex flex-col flex-shrink-0">
+      {content}
     </div>
   );
 }

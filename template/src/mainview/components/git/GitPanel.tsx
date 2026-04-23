@@ -3,10 +3,12 @@ import {
   GitBranch, RefreshCw, FileQuestion, Plus, Minus, Pencil,
   ChevronRight, ChevronDown, Eye, FileText, Copy,
   Upload, Download, ChevronUp, ChevronDown as BranchChevron,
-  FolderTree,
+  FolderTree, Pin, PinOff,
 } from "lucide-react";
 import { useGitStore, type GitFileChange, type GitCommit } from "../../stores/use-git-store";
 import { useExplorerStore } from "../../stores/use-explorer-store";
+import { useSidebarStore } from "../../stores/use-sidebar-store";
+import { useBreakpoint } from "../../hooks/use-breakpoint";
 import { ContextMenu, type MenuItem } from "../explorer/ContextMenu";
 import { GitCommitInput } from "./GitCommitInput";
 import { GitBranchSelector } from "./GitBranchSelector";
@@ -202,7 +204,16 @@ const CommitItem = memo(function CommitItem({
 
 /* ── Main Panel ─────────────────────────────────────────── */
 
-export function GitPanel() {
+interface GitPanelProps {
+  hideOuterShell?: boolean;
+}
+
+export function GitPanel({ hideOuterShell }: GitPanelProps) {
+  const isPinned = useSidebarStore((s) => s.isPinned);
+  const setPinned = useSidebarStore((s) => s.setPinned);
+  const breakpoint = useBreakpoint();
+  const isMobile = breakpoint === "mobile";
+
   const branch = useGitStore((s) => s.branch);
   const ahead = useGitStore((s) => s.ahead);
   const behind = useGitStore((s) => s.behind);
@@ -326,8 +337,18 @@ export function GitPanel() {
   const selectedFilePath = currentDiff?.filePath ?? null;
   const hasMultipleWorktrees = worktrees.length > 1;
 
-  return (
-    <div className="w-60 bg-gray-850 flex flex-col flex-shrink-0 overflow-hidden">
+  const pinButton = !isMobile ? (
+    <button
+      onClick={() => setPinned(!isPinned)}
+      title={isPinned ? "Unpin sidebar" : "Pin sidebar"}
+      className="text-gray-500 hover:text-white transition-colors"
+    >
+      {isPinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
+    </button>
+  ) : null;
+
+  const panelContent = (
+    <>
       {/* Header */}
       <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-700 flex items-center gap-1.5">
         <GitBranch className="w-3.5 h-3.5" />
@@ -338,6 +359,7 @@ export function GitPanel() {
               {totalChanges}
             </span>
           )}
+          {pinButton}
           <button onClick={handlePull} className="text-gray-500 hover:text-white" disabled={loadingAction === "pull"} title="Pull">
             <Download className="w-3 h-3" />
           </button>
@@ -506,6 +528,16 @@ export function GitPanel() {
           items={getCommitContextMenuItems(commitCtxMenu.commit)}
           onClose={() => setCommitCtxMenu(null)} />
       )}
+    </>
+  );
+
+  if (hideOuterShell) {
+    return <div className="flex flex-col flex-1 overflow-hidden">{panelContent}</div>;
+  }
+
+  return (
+    <div className="w-60 bg-gray-850 flex flex-col flex-shrink-0 overflow-hidden">
+      {panelContent}
     </div>
   );
 }
