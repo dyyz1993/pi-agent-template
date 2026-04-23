@@ -30,7 +30,19 @@ class APIClientImpl {
    * 异步初始化：Web 端使用（连接 WebSocket）
    */
   async initialize(): Promise<void> {
-    if (this.client) return;
+    // 已连接且 transport 正常 → 直接返回
+    if (this.client && (this._transport === "ipc" || this.wsTransport?.isConnected())) {
+      return;
+    }
+
+    // client 存在但 WS 断开了 → 清理后重连
+    if (this.client && this.wsTransport && !this.wsTransport.isConnected()) {
+      this.wsTransport.close();
+      this.wsTransport = null;
+      this.client = null;
+      this.initPromise = null;
+    }
+
     if (this.initPromise) return this.initPromise;
 
     this.initPromise = (async () => {
@@ -43,8 +55,8 @@ class APIClientImpl {
         this._transport = "websocket";
         const wsUrl = this.getWebSocketUrl();
         this.wsTransport = new WebSocketTransport(wsUrl);
-        this.client = createTypedClient<RPCMethods, RPCEvents>(this.wsTransport);
         await this.wsTransport.connect();
+        this.client = createTypedClient<RPCMethods, RPCEvents>(this.wsTransport);
 
         const wsUrlObj = new URL(wsUrl);
         this._baseUrl = `http://${wsUrlObj.host}`;

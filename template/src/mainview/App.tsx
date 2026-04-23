@@ -138,7 +138,7 @@ function App() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Initialize RPC connection
+  // Initialize RPC connection（架构层：只管连接）
   useEffect(() => {
     const init = async () => {
       try {
@@ -147,22 +147,47 @@ function App() {
         setMode(transport === "ipc" ? "desktop" : "web");
         addLog(`${transport === "ipc" ? "Desktop" : "Web"} mode - ${transport.toUpperCase()}`);
         setReady(true);
-
-        // Subscribe to chat.message events
-        await apiClient.subscribe("chat.message", (payload) => {
-          setMessages((prev) => [...prev, {
-            id: payload.id,
-            role: payload.role,
-            content: payload.content,
-            timestamp: payload.timestamp,
-          }]);
-        }, {});
       } catch {
-        setTimeout(init, 500);
+        setTimeout(init, 1000);
       }
     };
     init();
   }, [addLog]);
+
+  // 业务逻辑：连接就绪后，订阅事件 + 拉取历史
+  useEffect(() => {
+    if (!ready) return;
+
+    const setup = async () => {
+      // 订阅 chat.message
+      await apiClient.subscribe("chat.message", (payload) => {
+        setMessages((prev) => [...prev, {
+          id: payload.id,
+          role: payload.role,
+          content: payload.content,
+          timestamp: payload.timestamp,
+        }]);
+      }, {});
+      addLog("Subscribed to chat.message");
+
+      // 拉取历史消息
+      try {
+        const history = await apiClient.call("chat.list", { limit: 100 });
+        if (history.messages.length > 0) {
+          setMessages(history.messages.map((m: { id: string; role: "user" | "assistant"; content: string; timestamp: number }) => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            timestamp: m.timestamp,
+          })));
+          addLog(`Loaded ${history.messages.length} history messages`);
+        }
+      } catch (err) {
+        addLog(`Failed to load history: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    };
+    setup();
+  }, [ready, addLog]);
 
   // Get file content URL (desktop: file://, web: HTTP)
   const getFileUrl = useCallback((filePath: string): string => {
@@ -218,20 +243,9 @@ function App() {
     if (!inputText.trim()) return;
     const text = inputText.trim();
     setInputText("");
-    setMessages((prev) => [...prev, {
-      id: `local-${Date.now()}`,
-      role: "user",
-      content: text,
-      timestamp: Date.now(),
-    }]);
     try {
-      const res = await apiClient.call("chat.send", { content: text });
-      setMessages((prev) => [...prev, {
-        id: res.id,
-        role: res.role,
-        content: res.content,
-        timestamp: res.timestamp,
-      }]);
+      await apiClient.call("chat.send", { content: text });
+      // 消息通过 chat.message 订阅接收，不在此处添加
     } catch (err) {
       addLog(`Chat error: ${err instanceof Error ? err.message : String(err)}`);
     }

@@ -11,7 +11,7 @@ export interface ChatMethods {
   };
   "chat.send": {
     params: { content: string };
-    result: { id: string; role: "assistant"; content: string; timestamp: number };
+    result: { ok: boolean };
   };
 }
 
