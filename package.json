@@ -6,7 +6,10 @@
     "create": "bun run scripts/create.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test": "cd packages/rpc-core && bun test tests/rpc.test.ts",
+    "test:rpc": "cd packages/rpc-core && bun test tests/rpc.test.ts",
+    "type-check": "tsc --noEmit"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

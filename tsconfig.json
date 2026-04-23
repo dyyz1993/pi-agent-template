@@ -8,8 +8,9 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true
+    "allowSyntheticDefaultImports": true,
+    "types": ["bun"]
   },
   "include": ["packages/**/*", "scripts/**/*"],
-  "exclude": ["node_modules", "template"]
+  "exclude": ["node_modules", "template", "**/*.test.ts", "**/__tests__/**", "**/__wip__/**"]
 }
