@@ -45,7 +45,6 @@ async function saveMessages(messages: ChatMessage[]): Promise<void> {
     // eslint-disable-next-line no-console
     console.log(`[Chat] Saved ${messages.length} messages to ${filePath}`);
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error(`[Chat] Failed to save history:`, err);
   }
 }
