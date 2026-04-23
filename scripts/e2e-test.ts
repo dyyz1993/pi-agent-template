@@ -69,8 +69,6 @@ async function waitForServer(maxWaitMs = 10_000): Promise<void> {
 }
 
 async function wsSendRecv(messages: Record<string, unknown>[]): Promise<Map<string, unknown>> {
-  const { WebSocket } = await import("ws");
-
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(WS_URL);
     const results = new Map<string, unknown>();
@@ -81,14 +79,14 @@ async function wsSendRecv(messages: Record<string, unknown>[]): Promise<Map<stri
       reject(new Error("WebSocket timeout"));
     }, TIMEOUT_MS);
 
-    ws.on("open", () => {
+    ws.addEventListener("open", () => {
       for (const msg of messages) {
         ws.send(JSON.stringify(msg));
       }
     });
 
-    ws.on("message", (data: Buffer) => {
-      const msg = JSON.parse(data.toString());
+    ws.addEventListener("message", (event: MessageEvent) => {
+      const msg = JSON.parse(event.data as string);
       if (msg.id) {
         results.set(msg.id, msg);
         received++;
@@ -100,9 +98,9 @@ async function wsSendRecv(messages: Record<string, unknown>[]): Promise<Map<stri
       }
     });
 
-    ws.on("error", (err: Error) => {
+    ws.addEventListener("error", () => {
       clearTimeout(timer);
-      reject(err);
+      reject(new Error("WebSocket connection error"));
     });
   });
 }
@@ -259,11 +257,10 @@ async function main() {
 
   // Test 7: auth rejection (wrong token)
   {
-    const { WebSocket } = await import("ws");
     const authResult = await new Promise<string>((resolve) => {
       const ws = new WebSocket(`ws://localhost:${PORT}/?token=wrong-token`);
-      ws.on("close", (code: number) => resolve(`closed:${code}`));
-      ws.on("error", () => resolve("error"));
+      ws.addEventListener("close", (event: CloseEvent) => resolve(`closed:${event.code}`));
+      ws.addEventListener("error", () => resolve("error"));
     });
     if (authResult === "closed:4001") {
       log("PASS", "Wrong token → connection rejected (4001)");
