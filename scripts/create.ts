@@ -6,7 +6,6 @@ import { resolve, join } from 'path';
 import { execSync } from 'child_process';
 
 const TEMPLATE_DIR = resolve(import.meta.dir, '..', 'template');
-const PACKAGES_DIR = resolve(import.meta.dir, '..', 'packages');
 const args = process.argv.slice(2);
 
 if (args.length === 0) {
@@ -70,21 +69,21 @@ function copyAndReplace(srcDir: string, destDir: string): void {
 
 copyAndReplace(TEMPLATE_DIR, targetDir);
 
-// Copy packages directory for workspace dependencies
-if (existsSync(PACKAGES_DIR)) {
-  copyAndReplace(PACKAGES_DIR, join(targetDir, 'packages'));
+// Resolve @dyyz1993/rpc-core version from npm (latest published)
+let rpcCoreVersion = '1.0.0';
+try {
+  rpcCoreVersion = execSync('npm view @dyyz1993/rpc-core version', { encoding: 'utf-8' }).trim();
+  console.log(`Using @dyyz1993/rpc-core@${rpcCoreVersion} from npm`);
+} catch {
+  console.log(`(npm lookup failed, falling back to @dyyz1993/rpc-core@${rpcCoreVersion})`);
 }
 
-// Ensure workspace config exists in root package.json
+// Update package.json: replace workspace:* with resolved npm version
 const rootPkgPath = join(targetDir, 'package.json');
 const rootPkg = JSON.parse(readFileSync(rootPkgPath, 'utf-8'));
-if (!rootPkg.workspaces) {
-  rootPkg.workspaces = ['packages/*'];
-}
-
-// Point @dyyz1993/rpc-core to local workspace instead of npm
+delete rootPkg.workspaces;
 if (rootPkg.dependencies && rootPkg.dependencies['@dyyz1993/rpc-core']) {
-  rootPkg.dependencies['@dyyz1993/rpc-core'] = 'workspace:*';
+  rootPkg.dependencies['@dyyz1993/rpc-core'] = `^${rpcCoreVersion}`;
 }
 
 writeFileSync(rootPkgPath, JSON.stringify(rootPkg, null, '\t') + '\n');
