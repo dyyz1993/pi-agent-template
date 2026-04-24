@@ -5,6 +5,9 @@ import { readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { join, dirname } from "path";
 import { homedir } from "os";
+import { createLogger } from "../lib/logger";
+
+const log = createLogger("chat");
 
 // 存储路径 — 使用用户主目录，桌面端和 Web 端都能可靠写入
 function getStoragePath(): string {
@@ -18,18 +21,15 @@ async function loadMessages(): Promise<ChatMessage[]> {
   const filePath = getStoragePath();
   try {
     if (!existsSync(filePath)) {
-      // eslint-disable-next-line no-console
-      console.log(`[Chat] No history file at ${filePath}`);
+      log.info(`No history file at ${filePath}`);
       return [];
     }
     const raw = await readFile(filePath, "utf-8");
     const msgs = JSON.parse(raw) as ChatMessage[];
-    // eslint-disable-next-line no-console
-    console.log(`[Chat] Loaded ${msgs.length} messages from ${filePath}`);
+    log.info(`Loaded ${msgs.length} messages from ${filePath}`);
     return msgs;
   } catch (err) {
-    // eslint-disable-next-line no-console
-    console.log(`[Chat] Failed to load history:`, err);
+    log.error("Failed to load history", { error: err });
     return [];
   }
 }
@@ -42,10 +42,9 @@ async function saveMessages(messages: ChatMessage[]): Promise<void> {
       await mkdir(dir, { recursive: true });
     }
     await writeFile(filePath, JSON.stringify(messages, null, 2), "utf-8");
-    // eslint-disable-next-line no-console
-    console.log(`[Chat] Saved ${messages.length} messages to ${filePath}`);
+    log.info(`Saved ${messages.length} messages to ${filePath}`);
   } catch (err) {
-    console.error(`[Chat] Failed to save history:`, err);
+    log.error("Failed to save history", { error: err });
   }
 }
 

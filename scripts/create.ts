@@ -89,6 +89,10 @@ if (rootPkg.dependencies && rootPkg.dependencies['@dyyz1993/rpc-core']) {
 
 writeFileSync(rootPkgPath, JSON.stringify(rootPkg, null, '\t') + '\n');
 
+// Git init first so husky prepare can find .git during bun install
+console.log('Initializing git...');
+execSync('git init', { cwd: targetDir, stdio: 'pipe' });
+
 console.log('Installing dependencies...');
 execSync('bun install', { cwd: targetDir, stdio: 'inherit' });
 
@@ -99,8 +103,21 @@ try {
   console.log('(build:browser skipped - script not found)');
 }
 
-console.log('Initializing git...');
-execSync('git init', { cwd: targetDir, stdio: 'pipe' });
+// Setup husky pre-commit hook
+const huskyDir = join(targetDir, '.husky');
+mkdirSync(huskyDir, { recursive: true });
+const preCommitPath = join(huskyDir, 'pre-commit');
+const preCommitContent = [
+  '#!/bin/sh',
+  'bun run lint',
+  'ERRORS=$(npx tsc --noEmit 2>&1 | grep "error TS" | grep -v "node_modules" || true)',
+  'if [ -n "$ERRORS" ]; then',
+  '  echo "$ERRORS"',
+  '  exit 1',
+  'fi',
+].join('\n') + '\n';
+writeFileSync(preCommitPath, preCommitContent);
+
 execSync('git add -A', { cwd: targetDir, stdio: 'pipe' });
 
 try {
@@ -114,7 +131,6 @@ console.log('Project created successfully!');
 console.log('');
 console.log('Next steps:');
 console.log(`  cd ${targetDir}`);
-console.log('  bun run dev          # Start desktop app');
-console.log('  bun run server       # Start web server');
-console.log('  bun run ui           # Start UI server');
+console.log('  bun run dev          # Start desktop app (Electrobun)');
+console.log('  bun run dev:web      # Start web mode (Vite + Gateway)');
 console.log('');
