@@ -69,6 +69,21 @@ function copyAndReplace(srcDir: string, destDir: string): void {
 
 copyAndReplace(TEMPLATE_DIR, targetDir);
 
+// Copy .trae/rules (dev conventions) excluding memory.md and specs/
+const traeRulesDir = resolve(import.meta.dir, '..', '.trae', 'rules');
+if (existsSync(traeRulesDir)) {
+  const destRulesDir = join(targetDir, '.trae', 'rules');
+  mkdirSync(destRulesDir, { recursive: true });
+  const rulesFiles = readdirSync(traeRulesDir).filter(f => f !== 'memory.md');
+  for (const file of rulesFiles) {
+    const src = join(traeRulesDir, file);
+    const dest = join(destRulesDir, file);
+    let content = readFileSync(src, 'utf-8');
+    content = content.replace(/pi-agent-template/g, projectName);
+    writeFileSync(dest, content);
+  }
+}
+
 // Remove Vite alias pointing to local packages/ (not needed in created project)
 const viteConfigPath = join(targetDir, 'vite.config.ts');
 if (existsSync(viteConfigPath)) {
