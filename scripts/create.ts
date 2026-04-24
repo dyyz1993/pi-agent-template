@@ -121,7 +121,7 @@ writeFileSync(preCommitPath, preCommitContent);
 execSync('git add -A', { cwd: targetDir, stdio: 'pipe' });
 
 try {
-  execSync(`git commit -m "feat: init ${projectName} from pi-agent-template"`, { cwd: targetDir, stdio: 'pipe' });
+  execSync(`git commit --no-verify -m "feat: init ${projectName} from pi-agent-template"`, { cwd: targetDir, stdio: 'pipe' });
 } catch {
   console.log('(git commit skipped - no files to commit)');
 }
