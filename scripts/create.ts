@@ -69,6 +69,15 @@ function copyAndReplace(srcDir: string, destDir: string): void {
 
 copyAndReplace(TEMPLATE_DIR, targetDir);
 
+// Remove Vite alias pointing to local packages/ (not needed in created project)
+const viteConfigPath = join(targetDir, 'vite.config.ts');
+if (existsSync(viteConfigPath)) {
+  let viteConfig = readFileSync(viteConfigPath, 'utf-8');
+  viteConfig = viteConfig.replace(/,\n\s+resolve:\s*\{\n\s+alias:\s*\{\n\s+[^}]+\n\s+\},\n\s+\},/g, '');
+  viteConfig = viteConfig.replace(/import\s*\{\s*resolve\s*\}\s*from\s*"path";\n/g, '');
+  writeFileSync(viteConfigPath, viteConfig);
+}
+
 // Resolve @dyyz1993/rpc-core version from npm (latest published)
 let rpcCoreVersion = '1.0.0';
 try {
