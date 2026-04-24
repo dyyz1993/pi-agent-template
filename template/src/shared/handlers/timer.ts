@@ -19,7 +19,7 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
     let count = 0;
     timerId = setInterval(() => {
       count++;
-      server.emitEvent("timer.tick", { count, timestamp: Date.now() });
+      server.emitEvent("timer.tick", { count, timestamp: Date.now() }, { channel: "default" });
     }, 1000);
     return { started: true };
   });

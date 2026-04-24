@@ -81,8 +81,8 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
     };
     all.push(userMsg);
 
-    // 通过订阅推送 user 消息
-    server.emitEvent("chat.message", userMsg);
+    // 通过订阅推送 user 消息 — metadata 支持按 role 过滤
+    server.emitEvent("chat.message", userMsg, { role: userMsg.role });
 
     // 生成 assistant 回复
     const reply: ChatMessage = {
@@ -93,8 +93,8 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
     };
     all.push(reply);
 
-    // 通过订阅推送 assistant 回复
-    server.emitEvent("chat.message", reply);
+    // 通过订阅推送 assistant 回复 — metadata 支持按 role 过滤
+    server.emitEvent("chat.message", reply, { role: reply.role });
 
     // 持久化
     await saveMessages(all);

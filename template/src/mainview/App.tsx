@@ -1,5 +1,5 @@
-import { useEffect, useCallback, useRef } from "react";
-import { Wifi, Monitor } from "lucide-react";
+import { useEffect, useCallback, useRef, useState } from "react";
+import { Wifi, Monitor, MessageSquare, Rss } from "lucide-react";
 import { apiClient } from "./lib/api-client";
 import { useAppStore } from "./stores/use-app-store";
 import { useExplorerStore } from "./stores/use-explorer-store";
@@ -11,13 +11,17 @@ import { MobileTabBar } from "./components/activity-bar/MobileTabBar";
 import { ExplorerSidebar } from "./components/explorer/ExplorerSidebar";
 import { GitPanel } from "./components/git/GitPanel";
 import { ChatPanel } from "./components/chat/ChatPanel";
+import { FeedPanel } from "./components/feed/FeedPanel";
 import { FilePreviewOverlay } from "./components/file-preview/FilePreviewOverlay";
 import { DiffViewerPanel } from "./components/diff/DiffViewerPanel";
 import { DebugPanel } from "./components/debug/DebugPanel";
 
+type CenterTab = "chat" | "feed";
+
 function App() {
   const mode = useAppStore((s) => s.mode);
   const ready = useAppStore((s) => s.ready);
+  const [centerTab, setCenterTab] = useState<CenterTab>("chat");
   const initializeConnection = useAppStore((s) => s.initializeConnection);
   const addLog = useAppStore((s) => s.addLog);
 
@@ -206,9 +210,35 @@ function App() {
           </div>
         )}
 
-        {/* CENTER: Chat + File preview + Diff */}
+        {/* CENTER: Chat/Feed + File preview + Diff */}
         <div className="flex-1 flex flex-col overflow-hidden relative">
-          <ChatPanel />
+          {/* Center tab bar */}
+          <div className="flex items-center bg-gray-800 border-b border-gray-700 flex-shrink-0">
+            <button
+              onClick={() => setCenterTab("chat")}
+              className={`flex items-center gap-1.5 px-4 py-1.5 text-xs border-b-2 transition-colors ${
+                centerTab === "chat"
+                  ? "border-indigo-500 text-white"
+                  : "border-transparent text-gray-500 hover:text-gray-300"
+              }`}
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              Chat
+            </button>
+            <button
+              onClick={() => setCenterTab("feed")}
+              className={`flex items-center gap-1.5 px-4 py-1.5 text-xs border-b-2 transition-colors ${
+                centerTab === "feed"
+                  ? "border-indigo-500 text-white"
+                  : "border-transparent text-gray-500 hover:text-gray-300"
+              }`}
+            >
+              <Rss className="w-3.5 h-3.5" />
+              Feed + Subs
+            </button>
+          </div>
+
+          {centerTab === "chat" ? <ChatPanel /> : <FeedPanel />}
           {filePreview && (
             <FilePreviewOverlay
               preview={filePreview}
