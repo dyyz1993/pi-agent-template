@@ -1,0 +1,31 @@
+# Module: dashboard (main app layout)
+# Site: http://localhost:5174
+# Last updated: 2026-04-29
+
+main_layout:
+  url_pattern: "http://localhost:5174/"
+  root: "#root"
+  title_bar: ".h-8.bg-gray-800"
+  activity_bar: ".w-12.bg-gray-900"
+  sidebar_area: ".flex-1 .border-r"
+  main_content: ".flex-1.flex.overflow-hidden"
+
+activity_bar_buttons:
+  explorer: "button[title='Explorer']"
+  source_control: "button[title='Source Control']"
+  search: "button[title='Search']"
+  chat: "button[title='Chat']"
+  feed: "button[title='Feed + Subs']"
+
+chat_panel:
+  message_input: "textarea[placeholder='Type a message...']"
+  send_button: "button"  # near the input, text "Send"
+
+explorer_sidebar:
+  path_input: "input[placeholder='Path']"
+  list_button: "button"  # text "List directory"
+  unpin_button: "button[title='Unpin sidebar']"
+
+connection_status:
+  badge: ".bg-blue-600"  # Shows "Web (WebSocket)" or "Desktop (IPC)"
+  app_name: ".text-gray-400"  # Shows project name

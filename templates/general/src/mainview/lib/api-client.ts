@@ -90,13 +90,12 @@ class APIClientImpl {
 
   private getWebSocketUrl(): string {
     if (typeof window === "undefined") return `ws://localhost:3100?token=${AUTH_TOKEN}`;
-    // 优先级：URL query ?ws= > localStorage > 当前 hostname
     const customUrl = (
       new URLSearchParams(window.location.search).get("ws") ||
       localStorage.getItem("rpc-websocket-url")
     );
     if (customUrl) return customUrl.includes("token=") ? customUrl : `${customUrl}?token=${AUTH_TOKEN}`;
-    return `ws://${window.location.hostname}:3100?token=${AUTH_TOKEN}`;
+    return `ws://${window.location.host}/ws?token=${AUTH_TOKEN}`;
   }
 
   /**

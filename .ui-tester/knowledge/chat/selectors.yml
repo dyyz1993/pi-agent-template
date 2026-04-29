@@ -1,0 +1,21 @@
+# Module: chat (ChatPanel interaction)
+# Site: http://localhost:5174
+# Last updated: 2026-04-29
+
+chat_panel:
+  url_pattern: "http://localhost:5174/"
+  message_input: "textarea[placeholder='Type a message...']"
+  send_button: "button"  # text "Send", located next to textarea
+  message_area: ".flex-1.flex.flex-col"  # Chat messages container
+
+activity_bar_chat_button:
+  selector: "button[title='Chat']"
+  description: "Chat icon in ActivityBar to activate chat panel"
+
+chat_messages:
+  description: "Messages appear as text in the Messages section. User messages and bot responses both appear in the same flow."
+  snapshot_note: "Chat messages do NOT appear in snapshot -i output. Use 'get text body' or eval to extract."
+
+message_counter:
+  selector: "text containing 'Messages N'"
+  description: "Shows count of messages in chat, e.g. 'Messages2', 'Messages4'"

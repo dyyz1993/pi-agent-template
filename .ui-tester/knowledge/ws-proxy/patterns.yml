@@ -1,0 +1,63 @@
+# Module: ws-proxy
+# WebSocket proxy connection patterns and issues
+
+ws_connection_flow:
+  description: "WebSocket connects through Vite proxy without ?ws= param"
+  steps:
+    - action: open
+      url: "http://localhost:5177/"
+      description: "Open page without ?ws= parameter"
+    - action: wait
+      duration_ms: 4000
+      description: "Wait for WebSocket to auto-connect through proxy"
+    - action: verify
+      selector: "body text"
+      expected: "Should NOT show 'Connecting to RPC server...' spinner"
+  expected_result: "App fully loaded with 'Web (WebSocket)' mode indicator"
+
+ws_proxy_bug:
+  description: "FIXED: Vite proxy path mismatch - rewrite rule now applied"
+  issue: "Backend WebSocketServer configured with path:'/' but Vite proxies /ws path"
+  symptom: "Page stuck on 'Connecting to RPC server...' spinner forever"
+  root_cause: "ws-handler.ts line 20: new WebSocketServer({ server, path: '/' }) rejects /ws upgrade requests"
+  fix_applied: "rewrite: (path) => path.replace(/^/ws/, '/') in Vite proxy config"
+  status: "FIXED AND VERIFIED"
+
+chat_flow:
+  description: "Send chat message and get bot response via WebSocket"
+  steps:
+    - action: click
+      selector: "button[title='Chat']"
+      description: "Click Chat icon in ActivityBar"
+    - action: fill
+      selector: "textbox 'Type a message...'"
+      value: "hello"
+      description: "Type message in input"
+    - action: click
+      selector: "button 'Send'"
+      description: "Click Send button"
+    - action: wait
+      duration_ms: 2000
+      description: "Wait for bot response"
+  expected_result: "Bot responds with greeting message"
+
+proxy_verification:
+  description: "How to verify proxy is working"
+  steps:
+    - action: cmd
+      command: "websocat -v ws://localhost:{VITE_PORT}/ws?token={AUTH_TOKEN}"
+      description: "Should see 'Connected to ws' with Upgrade headers"
+    - action: cmd
+      command: "curl -s http://localhost:{VITE_PORT}/health"
+      description: "Should return {\"status\":\"ok\",\"clients\":N}"
+  notes:
+    - "websocat 'Invalid argument' error is expected (stdin issue), not a connection failure"
+    - "clients count increments when WS connects through proxy"
+
+tips:
+  - "Backend port is dynamic (auto-negotiates starting from 3100)"
+  - "Vite reads backend port from .server-port file at startup"
+  - "Multiple stale bun processes on ports 3100-3106 can cause port conflicts"
+  - "Auth token defaults to 'pi-agent-template-token' or 'test-proxy-token' depending on config"
+  - "Bot response varies: 'Hi! I'm your desktop assistant...' or 'Hey there! How can I help you today?'"
+  - "Messages count in header increments correctly (history + new messages)"

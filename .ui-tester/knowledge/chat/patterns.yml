@@ -1,0 +1,41 @@
+# Module: chat
+# Interaction patterns for ChatPanel
+
+send_chat_message:
+  description: "Send a message via the chat input and verify response"
+  steps:
+    - action: snapshot
+      description: "Get fresh refs for textarea and send button"
+    - action: fill
+      selector: "textarea[placeholder='Type a message...']"
+      description: "Type message into chat textarea"
+    - action: click
+      selector: "Send button"
+      description: "Click Send button to submit"
+    - action: wait
+      duration_ms: 2000
+      description: "Wait for RPC response"
+    - action: get_text
+      selector: "body"
+      description: "Extract full page text to verify messages appeared"
+  expected_result: "User message and bot response appear in chat area"
+
+verify_chat_messages:
+  description: "Chat messages are NOT visible in snapshot -i accessibility tree. Must use get text body or eval to extract."
+  extraction_method: "agent-browser get text body"
+  pattern: "Look for 'Messages N' counter and message text between 'Messages' and 'Send'"
+
+bot_responses:
+  description: "The chat handler is a smart demo assistant"
+  known_responses:
+    hello: "Hello! Great to see you. What would you like to know?"
+    ping: "That's an interesting question! I'm a demo assistant, so my knowledge is limited - but try asking about **time**, **math**, **files**, or **git**."
+  notes: "Bot responds to all messages with contextual replies"
+
+tips:
+  - "snapshot -i does NOT show chat message content - accessibility tree omits them"
+  - "Use 'get text body' to extract messages from the full page text"
+  - "Messages counter increments: Messages2 → Messages4 after 2 exchanges (1 user + 1 bot each)"
+  - "Chat panel is activated by clicking 'Chat' button in ActivityBar"
+  - "Chat shares main content area with Feed+Subs panel"
+  - "RPC works over WebSocket connection established via ?ws= URL param"

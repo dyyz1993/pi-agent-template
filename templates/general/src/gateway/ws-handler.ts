@@ -17,7 +17,7 @@ export interface WsHandlerDeps {
 
 export function createWsHandler(httpServer: Server, deps: WsHandlerDeps): WebSocketServer {
   const { config: cfg } = deps;
-  const wss = new WebSocketServer({ server: httpServer, path: "/" });
+  const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
 
   wss.on("connection", (ws: WebSocket, req) => {
     // Token 验证

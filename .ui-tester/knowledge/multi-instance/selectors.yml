@@ -1,0 +1,36 @@
+# Module: multi-instance
+# Site: Multiple localhost ports
+# Last updated: 2026-04-29
+
+instance_map:
+  instance_1:
+    name: "test-ui"
+    vite_url: "http://localhost:5174/"
+    backend_port: 3104
+    ws_url: "ws://localhost:3104?token=test-ui-token"
+    full_url: "http://localhost:5174/?ws=ws://localhost:3104?token=test-ui-token"
+    title: "TestUi"
+  instance_2:
+    name: "test-ui-2"
+    vite_url: "http://localhost:5176/"
+    backend_port: 3106
+    ws_url: "ws://localhost:3106?token=test-ui-2-token"
+    full_url: "http://localhost:5176/?ws=ws://localhost:3106?token=test-ui-2-token"
+    title: "TestUi-2"
+  instance_3:
+    name: "test-ui-3"
+    vite_url: "http://localhost:5175/"
+    backend_port: 3105
+    ws_url: "ws://localhost:3105?token=test-ui-3-token"
+    full_url: "http://localhost:5175/?ws=ws://localhost:3105?token=test-ui-3-token"
+    title: "TestUi-3"
+
+title_bar:
+  description: "Each instance shows its own name (TestUi, TestUi-2, TestUi-3) in title bar"
+  used_for: "Quick visual verification of which instance is loaded"
+
+all_selectors:
+  description: "Selectors are identical across all instances (same UI template)"
+  chat_button: "button[title='Chat']"
+  textarea: "textarea[placeholder='Type a message...']"
+  send_button: "button"  # with text "Send"

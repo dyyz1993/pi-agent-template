@@ -1,0 +1,27 @@
+# Module: dashboard
+# Interaction patterns for main app layout
+
+switch_panel:
+  description: "Click ActivityBar icon to switch sidebar/content panel"
+  steps:
+    - action: snapshot
+      description: "Get fresh refs"
+    - action: click
+      selector: "button[title='<Panel Name>']"
+      description: "Click target panel icon"
+  wait_after: 500
+  expected_result: "Sidebar/content area updates"
+
+verify_app_loaded:
+  description: "Verify the app has fully loaded (not stuck on spinner)"
+  checks:
+    - "No .animate-spin element present"
+    - "At least 5 buttons visible in ActivityBar"
+    - "Chat input textarea present"
+    - "Title bar with connection status visible"
+
+tips:
+  - "Initial load requires WebSocket connection; if stuck on spinner, check backend port"
+  - "The 'Unpin sidebar' button only appears when Explorer sidebar is open"
+  - "Chat panel shares main content area with Feed+Subs; they are tab-like"
+  - "RPC demo section (Call/Subscribe buttons) appears in the main content area"

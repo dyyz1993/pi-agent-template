@@ -1,0 +1,30 @@
+# Module: ws-proxy (WebSocket proxy connection)
+# Site: http://localhost:5177/ (Vite dev server)
+# Backend: dynamic port (read from .server-port)
+# Last updated: 2026-04-29
+
+ws_proxy_config:
+  vite_proxy_path: "/ws"
+  backend_wss_path: "/"
+  vite_proxy_rewrite: "path.replace(/^/ws/, '/')"
+  note: "FIXED: Vite proxy rewrites /ws → / to match backend WSS path"
+
+connection_indicator:
+  spinner_text: "Connecting to RPC server..."
+  loaded_mode_text: "Web (WebSocket)"
+  description: "Page shows spinner until WS connects, then shows mode indicator"
+
+ws_url_construction:
+  no_ws_param: "ws://{window.location.host}/ws?token={AUTH_TOKEN}"
+  with_ws_param: "value of ?ws= query param"
+  note: "Without ?ws=, app uses window.location.host + /ws path for proxy"
+
+chat_panel:
+  message_input: "textbox 'Type a message...'"
+  send_button: "button 'Send'"
+  chat_icon: "button 'Chat' (in ActivityBar)"
+
+rpc_panel:
+  method_dropdown: "combobox with options (system.ping, system.hello, system.echo, chat.send)"
+  call_button: "button 'Call'"
+  subscribe_button: "button 'Subscribe'"

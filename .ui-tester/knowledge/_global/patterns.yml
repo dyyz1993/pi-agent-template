@@ -1,0 +1,21 @@
+# Global Patterns
+# Site: http://localhost:5174
+
+ws_connection:
+  description: "WebSocket auto-connects through Vite proxy on /ws path. No URL hacks needed."
+  proxy_path: "/ws"
+  backend_port_file: ".server-port"  # in project root
+  note: "Vite proxy rewrites /ws → / to match backend WSS path. Works out of the box."
+
+app_loading:
+  description: "App shows spinner 'Connecting to RPC server...' until WebSocket connects. If stuck, backend is unreachable."
+  spinner_selector: ".animate-spin"
+  max_retries: 5
+  retry_interval_ms: 1000
+
+tips:
+  - "Backend port is dynamic, stored in .server-port file in project root"
+  - "Vite dev server proxies /health, /api, /ws to backend but WebSocket connects directly (not through proxy)"
+  - "ActivityBar icons switch sidebar panels; Chat and Feed+Subs switch main content area"
+  - "snapshot -i refs are stable within a session but invalidated on page navigation"
+  - "App uses @ref selectors well; CSS selectors also work for ActivityBar buttons"

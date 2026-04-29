@@ -1,0 +1,40 @@
+# Module: multi-instance
+# Patterns for testing multiple concurrent instances
+
+sequential_testing:
+  description: "Test each instance sequentially using a single browser session"
+  pattern:
+    - "Navigate to instance URL with ws param"
+    - "Wait 3s for WebSocket connection"
+    - "Interact with UI (chat, RPC, etc.)"
+    - "Navigate to about:blank to reset"
+    - "Move to next instance"
+  notes:
+    - "Single session is sufficient for sequential testing"
+    - "Each instance has identical UI selectors"
+    - "Title bar shows instance name for quick identification"
+
+data_isolation_verification:
+  description: "Verify no cross-contamination between instances"
+  pattern:
+    - "Send unique message to each instance (e.g., 'ping from instance N')"
+    - "Revisit first instance after testing all"
+    - "Check that only instance 1's messages appear in instance 1"
+  verification_method: "get text body — look for unique message text"
+  expected: "Each instance shows only its own messages"
+
+ws_connection:
+  description: "WebSocket URL must be passed as ?ws= query parameter"
+  format: "http://localhost:{vite_port}/?ws=ws://localhost:{backend_port}?token={token}"
+  notes:
+    - "Connection shows 'Web (WebSocket)' in title bar"
+    - "Logs show 'Web mode - WEBSOCKET' on connect"
+    - "History messages are loaded from backend on connect"
+
+tips:
+  - "Each instance has independent chat history stored on its own backend"
+  - "Instance names differ: TestUi, TestUi-2, TestUi-3"
+  - "Fresh instances show 'Start a conversation...' with 0 messages"
+  - "Instance with history shows 'Messages N' counter and loads history on connect"
+  - "Bot responses vary slightly — demo assistant has randomized responses"
+  - "3 second wait is needed for initial WebSocket connection"

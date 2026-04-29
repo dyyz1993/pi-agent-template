@@ -1,0 +1,21 @@
+# Global Selectors
+# Site: http://localhost:5177
+# Last updated: 2026-04-29
+
+title_bar:
+  selector: ".bg-gray-800.h-8"
+  description: "Top title bar showing connection status and app name"
+
+activity_bar:
+  selector: ".w-12.bg-gray-900.border-r"
+  description: "Left sidebar with icon buttons (48px wide)"
+  icons:
+    explorer: "button[title='Explorer']"
+    source_control: "button[title='Source Control']"
+    search: "button[title='Search']"
+    chat: "button[title='Chat']"
+    feed: "button[title='Feed + Subs']"
+
+main_content:
+  selector: ".flex-1.flex.overflow-hidden"
+  description: "Main content area below title bar"
