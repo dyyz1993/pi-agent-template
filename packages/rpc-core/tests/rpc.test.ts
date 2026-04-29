@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeEach } from 'bun:test';
-import { RPCServer, RPCClient, InMemoryTransport } from '../src/index';
+import { RPCServer, RPCClient, InMemoryTransport, StdioTransport } from '../src/index';
 import type { RPCEvent } from '../src/index';
 
 describe('InMemoryTransport', () => {
@@ -360,5 +360,170 @@ describe('Edge cases', () => {
     server.register('ns:method-name', async () => 'ok');
     const result = await client.call('ns:method-name');
     expect(result).toBe('ok');
+  });
+});
+
+describe('StdioTransport', () => {
+  function createMockStreams() {
+    const received: string[] = [];
+    let dataHandler: ((chunk: Buffer) => void) | null = null;
+    let endHandler: (() => void) | null = null;
+
+    const stdout = {
+      write: (data: string) => { received.push(data); },
+      getWritten: () => received.join(''),
+      getLastLine: () => {
+        const lines = received.join('').split('\n').filter(l => l.trim());
+        return lines.length > 0 ? lines[lines.length - 1] : null;
+      },
+    };
+
+    const stdin = {
+      on: (event: string, handler: (...args: unknown[]) => void) => {
+        if (event === 'data') dataHandler = handler as (chunk: Buffer) => void;
+        if (event === 'end') endHandler = handler as () => void;
+      },
+      resume: () => {},
+      simulateData: (data: string) => {
+        if (dataHandler) dataHandler(Buffer.from(data));
+      },
+      simulateEnd: () => {
+        if (endHandler) endHandler();
+      },
+    };
+
+    return { stdin, stdout };
+  }
+
+  test('send writes NDJSON to stdout', () => {
+    const { stdin, stdout } = createMockStreams();
+    const transport = new StdioTransport({ stdin, stdout });
+    transport.send({ type: 'request', id: '1', method: 'test' });
+
+    expect(stdout.getWritten()).toBe('{"type":"request","id":"1","method":"test"}\n');
+  });
+
+  test('send multiple messages produces separate lines', () => {
+    const { stdin, stdout } = createMockStreams();
+    const transport = new StdioTransport({ stdin, stdout });
+    transport.send({ a: 1 });
+    transport.send({ b: 2 });
+
+    const lines = stdout.getWritten().split('\n').filter(l => l.trim());
+    expect(lines.length).toBe(2);
+    expect(JSON.parse(lines[0])).toEqual({ a: 1 });
+    expect(JSON.parse(lines[1])).toEqual({ b: 2 });
+  });
+
+  test('connect and receive NDJSON from stdin', async () => {
+    const { stdin, stdout } = createMockStreams();
+    const transport = new StdioTransport({ stdin, stdout });
+    await transport.connect();
+
+    const received: unknown[] = [];
+    transport.onMessage((msg) => { received.push(msg); });
+
+    stdin.simulateData('{"type":"hello"}\n');
+    expect(received.length).toBe(1);
+    expect(received[0]).toEqual({ type: 'hello' });
+  });
+
+  test('handles multiple messages in one chunk', async () => {
+    const { stdin, stdout } = createMockStreams();
+    const transport = new StdioTransport({ stdin, stdout });
+    await transport.connect();
+
+    const received: unknown[] = [];
+    transport.onMessage((msg) => { received.push(msg); });
+
+    stdin.simulateData('{"a":1}\n{"b":2}\n{"c":3}\n');
+    expect(received.length).toBe(3);
+    expect(received[0]).toEqual({ a: 1 });
+    expect(received[1]).toEqual({ b: 2 });
+    expect(received[2]).toEqual({ c: 3 });
+  });
+
+  test('handles split chunk (message across multiple data events)', async () => {
+    const { stdin, stdout } = createMockStreams();
+    const transport = new StdioTransport({ stdin, stdout });
+    await transport.connect();
+
+    const received: unknown[] = [];
+    transport.onMessage((msg) => { received.push(msg); });
+
+    stdin.simulateData('{"hel');
+    stdin.simulateData('lo":"wo');
+    stdin.simulateData('rld"}\n');
+
+    expect(received.length).toBe(1);
+    expect(received[0]).toEqual({ hello: 'world' });
+  });
+
+  test('ignores empty lines', async () => {
+    const { stdin, stdout } = createMockStreams();
+    const transport = new StdioTransport({ stdin, stdout });
+    await transport.connect();
+
+    const received: unknown[] = [];
+    transport.onMessage((msg) => { received.push(msg); });
+
+    stdin.simulateData('\n\n{"a":1}\n\n\n');
+    expect(received.length).toBe(1);
+  });
+
+  test('invalid JSON triggers error handler', async () => {
+    const { stdin, stdout } = createMockStreams();
+    const transport = new StdioTransport({ stdin, stdout });
+    await transport.connect();
+
+    const errors: Error[] = [];
+    transport.onError((err) => { errors.push(err); });
+
+    stdin.simulateData('not-json\n');
+    expect(errors.length).toBe(1);
+  });
+
+  test('stdin end sets isConnected to false and triggers disconnect', async () => {
+    const { stdin, stdout } = createMockStreams();
+    const transport = new StdioTransport({ stdin, stdout });
+    await transport.connect();
+    expect(transport.isConnected()).toBe(true);
+
+    let disconnected = false;
+    transport.onDisconnect(() => { disconnected = true; });
+
+    stdin.simulateEnd();
+    expect(transport.isConnected()).toBe(false);
+    expect(disconnected).toBe(true);
+  });
+
+  test('close clears all handlers', async () => {
+    const { stdin, stdout } = createMockStreams();
+    const transport = new StdioTransport({ stdin, stdout });
+    await transport.connect();
+
+    let received = false;
+    transport.onMessage(() => { received = true; });
+
+    transport.close();
+    stdin.simulateData('{"a":1}\n');
+    expect(received).toBe(false);
+    expect(transport.isConnected()).toBe(false);
+  });
+
+  test('onMessage unsubscribe works', async () => {
+    const { stdin, stdout } = createMockStreams();
+    const transport = new StdioTransport({ stdin, stdout });
+    await transport.connect();
+
+    let count = 0;
+    const unsub = transport.onMessage(() => { count++; });
+
+    stdin.simulateData('{"a":1}\n');
+    expect(count).toBe(1);
+
+    unsub();
+    stdin.simulateData('{"b":2}\n');
+    expect(count).toBe(1);
   });
 });

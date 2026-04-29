@@ -3,6 +3,7 @@ export { RPCServer, type RPCServerOptions } from './server';
 export { IPCTransport, type IPCTransportOptions } from './transports/ipc';
 export { WebSocketTransport, type WebSocketTransportOptions } from './transports/websocket';
 export { InMemoryTransport, type InMemoryTransportOptions } from './transports/in-memory';
+export { StdioTransport, type StdioTransportOptions } from './transports/stdio';
 export { 
   createTypedServer, 
   createTypedClient,
