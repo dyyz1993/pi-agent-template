@@ -2,6 +2,19 @@
 # Root level lint (packages/ + scripts/)
 bun run lint
 
+# Type-check each package
+for pkg in packages/*/; do
+  if [ -f "${pkg}tsconfig.json" ]; then
+    echo "🔍 Type-checking ${pkg}..."
+    ERRORS=$(cd "$pkg" && npx tsc --noEmit 2>&1 | grep "error TS" || true)
+    if [ -n "$ERRORS" ]; then
+      echo "❌ ${pkg} type-check failed:"
+      echo "$ERRORS"
+      exit 1
+    fi
+  fi
+done
+
 # Template lint (含 RPC 规范规则）
 (cd template && bun run lint)
 (cd template && ERRORS=$(npx tsc --noEmit 2>&1 | grep "error TS" | grep -v "node_modules" || true) && if [ -n "$ERRORS" ]; then echo "$ERRORS" && exit 1; fi)
