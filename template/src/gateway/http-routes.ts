@@ -211,13 +211,14 @@ async function handleFileUpload(
     return;
   }
   try {
-    const chunks: Buffer[] = [];
+    const chunks: Uint8Array[] = [];
     for await (const chunk of req) {
-      chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+      const bytes = typeof chunk === "string" ? new TextEncoder().encode(chunk) : new Uint8Array(chunk as ArrayBuffer);
+      chunks.push(bytes);
     }
     const body = Buffer.concat(chunks);
     await mkdir(dirname(destPath), { recursive: true });
-    await writeFile(destPath, body);
+    await writeFile(destPath, body as unknown as string);
     log.info("File uploaded", { path: destPath, size: body.length });
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: true, path: destPath, size: body.length }));
