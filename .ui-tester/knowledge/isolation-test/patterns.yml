@@ -1,0 +1,37 @@
+# Module: isolation-test
+# Reusable operation patterns for pi-agent-template
+
+page_load:
+  description: "Vite + React app loads with WebSocket connection"
+  expected_elements:
+    - "Web (WebSocket) label"
+    - "Explorer sidebar"
+    - "Chat panel"
+    - "RPC Calls panel"
+    - "Logs panel"
+  load_time: "~5 seconds for full render"
+
+chat_send:
+  description: "Send a chat message via the input"
+  steps:
+    - action: fill
+      selector: "input[placeholder='Type a message...']"
+      description: "Fill message text"
+    - action: click
+      selector: "Send button"
+      description: "Click send"
+  notes:
+    - "Backend must be running for chat.send RPC to succeed"
+    - "If backend is down, get 'Request timeout: chat.send' error"
+    - "WebSocket connection requires backend on designated port"
+
+tips:
+  - "CRITICAL: agent-browser refs (@e1, etc.) do NOT persist between CLI invocations reliably"
+  - "Use CSS selectors via eval() instead of @ref selectors for reliability"
+  - "iso-3 (port 5174) auto-navigates to about:blank ~2-3s after load - possibly due to missing backend (3102)"
+  - "eval-based navigation (window.location.href=...) works better than agent-browser open for pages that redirect"
+  - "beforeunload handler can delay but not prevent programmatic navigation to about:blank"
+  - "Vite HMR may cause page reloads - the open --wait flag helps keep the page alive"
+  - "Check Vite ports (lsof) and backend ports before testing - servers may crash during testing"
+  - "snapshot -i works but refs become invalid between separate CLI calls"
+  - "Use find-based selectors (find role/label) as fallback when @refs fail"

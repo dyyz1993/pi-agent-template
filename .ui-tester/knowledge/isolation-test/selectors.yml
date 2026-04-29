@@ -1,0 +1,20 @@
+# Module: isolation-test
+# Site: pi-agent-template (3 concurrent instances)
+# Last updated: 2026-04-30
+
+app_layout:
+  chat_button: "button"  # text "Chat"
+  chat_input: "input[placeholder='Type a message...']"
+  send_button: "button"  # text "Send"
+  explorer_button: "button"  # text "Explorer"
+  feed_subs_button: "button"  # text "Feed + Subs"
+  
+rpc_panel:
+  method_combobox: "select/combobox for RPC method"
+  options: ["system.ping", "system.hello", "system.echo", "chat.send"]
+  call_button: "button"  # text "Call"
+  subscribe_button: "button"  # text "Subscribe"
+
+logs_panel:
+  container: "logs section at bottom"
+  websocket_indicator: "Web mode - WEBSOCKET"

@@ -1,36 +1,54 @@
 # Module: multi-instance
 # Site: Multiple localhost ports
-# Last updated: 2026-04-29
+# Last updated: 2026-04-30
 
-instance_map:
-  instance_1:
-    name: "test-ui"
+instance_map_latest:
+  description: "Latest test instance map (2026-04-30 01:53 final)"
+  iso_1:
+    name: "Iso-1"
     vite_url: "http://localhost:5174/"
-    backend_port: 3104
-    ws_url: "ws://localhost:3104?token=test-ui-token"
-    full_url: "http://localhost:5174/?ws=ws://localhost:3104?token=test-ui-token"
-    title: "TestUi"
-  instance_2:
-    name: "test-ui-2"
-    vite_url: "http://localhost:5176/"
-    backend_port: 3106
-    ws_url: "ws://localhost:3106?token=test-ui-2-token"
-    full_url: "http://localhost:5176/?ws=ws://localhost:3106?token=test-ui-2-token"
-    title: "TestUi-2"
-  instance_3:
-    name: "test-ui-3"
+    backend_port: 3101
+    title: "Iso-1"
+    app_type: "pi-agent-template"
+  iso_2:
+    name: "Iso-2"
     vite_url: "http://localhost:5175/"
-    backend_port: 3105
-    ws_url: "ws://localhost:3105?token=test-ui-3-token"
-    full_url: "http://localhost:5175/?ws=ws://localhost:3105?token=test-ui-3-token"
-    title: "TestUi-3"
+    backend_port: 3102
+    title: "Iso-2"
+    app_type: "pi-agent-template"
+  iso_3:
+    name: "Iso-3"
+    vite_url: "http://localhost:5176/"
+    backend_port: 3103
+    title: "Iso-3"
+    app_type: "pi-agent-template"
 
-title_bar:
-  description: "Each instance shows its own name (TestUi, TestUi-2, TestUi-3) in title bar"
-  used_for: "Quick visual verification of which instance is loaded"
+critical_bug_cross_wiring:
+  description: "Backend processes are cross-wired — CWD doesn't match expected instance"
+  discovered: "2026-04-30"
+  mapping:
+    backend_3100_cwd: "/private/tmp/iso-test/iso-3"  # Expected iso-1!
+    backend_3101_cwd: "/private/tmp/iso-test/iso-2"  # Correct
+    backend_3102_cwd: "/private/tmp/iso-test/iso-1"  # Expected iso-3!
+  effect: "Auth token mismatch causes WS 4001 Unauthorized for iso-1 and iso-3"
+  workaround: "Set AUTH_TOKEN env var explicitly when starting backends"
 
-all_selectors:
-  description: "Selectors are identical across all instances (same UI template)"
+pi_agent_template_selectors:
+  description: "Selectors for pi-agent-template (all instances same UI)"
+  title_bar: "Shows 'Web (WebSocket)Iso-N' when connected"
   chat_button: "button[title='Chat']"
-  textarea: "textarea[placeholder='Type a message...']"
-  send_button: "button"  # with text "Send"
+  chat_textarea: "textarea[placeholder='Type a message...']"
+  send_button: "button with text 'Send'"
+  explorer_button: "button[title='Explorer']"
+  rpc_dropdown: "combobox with options: system.ping, system.hello, system.echo, chat.send"
+  call_button: "button with text 'Call'"
+  subscribe_button: "button with text 'Subscribe'"
+  logs_section: "Logs area at bottom"
+
+ws_auth_flow:
+  description: "WS authentication flow"
+  frontend_connects: "ws://{host}/ws?token={AUTH_TOKEN}"
+  vite_proxy: "/ws → ws://localhost:{backendPort} (ws: true)"
+  backend_check: "ws-handler.ts compares url.searchParams.get('token') vs cfg.authToken"
+  failure_code: "4001 'Unauthorized'"
+  success_indicator: "backend /health returns clients > 0"

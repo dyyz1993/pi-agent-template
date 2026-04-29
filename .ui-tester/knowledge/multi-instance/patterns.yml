@@ -1,40 +1,75 @@
 # Module: multi-instance
 # Patterns for testing multiple concurrent instances
+# Last updated: 2026-04-30
 
 sequential_testing:
   description: "Test each instance sequentially using a single browser session"
   pattern:
-    - "Navigate to instance URL with ws param"
-    - "Wait 3s for WebSocket connection"
-    - "Interact with UI (chat, RPC, etc.)"
+    - "Navigate to instance Vite URL (NO query params)"
+    - "Wait 5s for WebSocket auto-connection"
+    - "Snapshot to verify app loaded (check for full element tree)"
+    - "Interact with UI (chat, etc.)"
     - "Navigate to about:blank to reset"
     - "Move to next instance"
   notes:
     - "Single session is sufficient for sequential testing"
-    - "Each instance has identical UI selectors"
-    - "Title bar shows instance name for quick identification"
+    - "5 second wait needed for WS auto-connection"
+    - "Use about:blank between instances to prevent cross-contamination"
+
+ws_auth_verification:
+  description: "Before testing chat, verify WS actually connects to backend"
+  pattern:
+    - "curl -s -H 'Authorization: Bearer {token}' http://localhost:{port}/health"
+    - "Check response: clients > 0 means WS connected"
+    - "If clients=0, check: lsof -i :{port} to find backend PID, then lsof -p PID | grep cwd"
+    - "If CWD doesn't match instance, auth token mismatch is the cause"
+  failure_symptoms:
+    - "UI shows 'Web (WebSocket)' (misleading — WS upgrade succeeds but auth fails)"
+    - "All RPC calls timeout after 30s"
+    - "Logs show 'Error: Request timeout' for all operations"
+    - "Backend health shows clients: 0"
+
+chat_flow:
+  description: "Standard chat test flow"
+  steps:
+    - action: snapshot
+      description: "Get fresh refs after page loads"
+    - action: fill
+      selector: "textarea[placeholder='Type a message...']"
+      description: "Type message in chat textarea"
+    - action: click
+      selector: "button 'Send'"
+      description: "Click Send button"
+    - action: wait
+      ms: 4000
+      description: "Wait for bot response"
+    - action: eval
+      description: "Check document.body.innerText for message and response"
+  expected_result: "User message + bot response visible in Messages section"
+
+instance_cross_wiring_check:
+  description: "Verify backend CWD matches frontend .server-port"
+  pattern:
+    - "Read .server-port from each instance directory"
+    - "For each backend port, get PID via lsof -i :{port} -t"
+    - "Check CWD via lsof -p {PID} | grep cwd"
+    - "Compare: if CWD basename ≠ instance dir basename, cross-wired"
+  discovered_issue: "Backend 3100 runs from iso-3, Backend 3102 runs from iso-1"
 
 data_isolation_verification:
   description: "Verify no cross-contamination between instances"
   pattern:
-    - "Send unique message to each instance (e.g., 'ping from instance N')"
+    - "Send unique message to each instance"
     - "Revisit first instance after testing all"
-    - "Check that only instance 1's messages appear in instance 1"
-  verification_method: "get text body — look for unique message text"
-  expected: "Each instance shows only its own messages"
-
-ws_connection:
-  description: "WebSocket URL must be passed as ?ws= query parameter"
-  format: "http://localhost:{vite_port}/?ws=ws://localhost:{backend_port}?token={token}"
-  notes:
-    - "Connection shows 'Web (WebSocket)' in title bar"
-    - "Logs show 'Web mode - WEBSOCKET' on connect"
-    - "History messages are loaded from backend on connect"
+    - "Use eval to search for each message in document.body.innerText"
+    - "Check for absence of other instances' messages"
+  result_2026_04_30: "No cross-contamination observed (beta and gamma NOT in iso-1)"
 
 tips:
-  - "Each instance has independent chat history stored on its own backend"
-  - "Instance names differ: TestUi, TestUi-2, TestUi-3"
-  - "Fresh instances show 'Start a conversation...' with 0 messages"
-  - "Instance with history shows 'Messages N' counter and loads history on connect"
-  - "Bot responses vary slightly — demo assistant has randomized responses"
-  - "3 second wait is needed for initial WebSocket connection"
+  - "Backend /health endpoint requires auth: -H 'Authorization: Bearer {token}'"
+  - "WS auth failure is SILENT in UI — title still shows 'Web (WebSocket)'"
+  - "Backend CWD determines auth token: process.env.AUTH_TOKEN || '{instance}-token'"
+  - "Only iso-2 had matching token (iso-2 ↔ backend 3101 from iso-2 dir)"
+  - "Chat messages visible in document.body.innerText, not always in snapshot -i"
+  - "Bot responses are from demo assistant — 'I can do math, tell you the time, explain features'"
+  - "Browser eval is more reliable than 'get text body' for full page content"
