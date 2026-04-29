@@ -1,61 +1,113 @@
-# React + Tailwind + Vite Electrobun Template
+# Pi Agent App
 
-A fast Electrobun desktop app template with React, Tailwind CSS, and Vite for hot module replacement (HMR).
+Desktop + Web application template built with Electrobun, React, Tailwind CSS, and RPC architecture.
 
 ## Getting Started
 
 ```bash
-# Install dependencies
 bun install
-
-# Development without HMR (uses bundled assets)
-bun run dev
 
 # Development with HMR (recommended)
 bun run dev:hmr
 
-# Build for production
-bun run build
+# Development without HMR
+bun run dev
 
-# Build for production release
-bun run build:prod
+# Build
+bun run build
 ```
 
-## How HMR Works
+## Transport 选型
 
-When you run `bun run dev:hmr`:
+本项目基于 `@dyyz1993/rpc-core`，提供 4 种 Transport 适配不同场景：
 
-1. **Vite dev server** starts on `http://localhost:5173` with HMR enabled
-2. **Electrobun** starts and detects the running Vite server
-3. The app loads from the Vite dev server instead of bundled assets
-4. Changes to React components update instantly without full page reload
+| Transport | 场景 | 通信方式 |
+|---|---|---|
+| `WebSocketTransport` | Web 端 | TCP → WebSocket 长连接 |
+| `IPCTransport` | Electrobun 桌面端 | macOS Mach Port 原生桥接 |
+| `InMemoryTransport` | 同进程（TUI / 测试） | 进程内函数直接调用 |
+| `StdioTransport` | 父子进程（CLI / TUI） | NDJSON over stdin/stdout |
 
-When you run `bun run dev` (without HMR):
+### 使用示例
 
-1. Electrobun starts and loads from `views://mainview/index.html`
-2. You need to rebuild (`bun run build`) to see changes
+```typescript
+// Web 端
+import { WebSocketTransport } from "@dyyz1993/rpc-core";
+const transport = new WebSocketTransport("ws://localhost:3100/ws?token=xxx");
+await transport.connect();
+
+// 桌面端 (Electrobun)
+import { IPCTransport } from "@dyyz1993/rpc-core";
+const transport = new IPCTransport();
+
+// 同进程 TUI / 测试
+import { InMemoryTransport } from "@dyyz1993/rpc-core";
+const { client, server } = InMemoryTransport.createPair();
+
+// 父子进程 CLI
+import { StdioTransport } from "@dyyz1993/rpc-core";
+const transport = new StdioTransport(); // 默认 process.stdin / process.stdout
+await transport.connect();
+```
+
+### 父子进程 STDIO 对接
+
+```typescript
+// 父进程：启动 TUI 子进程
+import { spawn } from "child_process";
+import { StdioTransport } from "@dyyz1993/rpc-core";
+
+const child = spawn("bun", ["tui.ts"], { stdio: ["pipe", "pipe", "inherit"] });
+const transport = new StdioTransport({
+  stdin: child.stdout,
+  stdout: child.stdin,
+});
+await transport.connect();
+```
 
 ## Project Structure
 
 ```
 ├── src/
 │   ├── bun/
-│   │   └── index.ts        # Main process (Electrobun/Bun)
-│   └── mainview/
-│       ├── App.tsx         # React app component
-│       ├── main.tsx        # React entry point
-│       ├── index.html      # HTML template
-│       └── index.css       # Tailwind CSS
-├── electrobun.config.ts    # Electrobun configuration
-├── vite.config.ts          # Vite configuration
-├── tailwind.config.js      # Tailwind configuration
-└── package.json
+│   │   └── index.ts          # Desktop entry (Electrobun main process)
+│   ├── server.ts             # Web entry (HTTP + WebSocket server)
+│   ├── gateway/
+│   │   ├── http-routes.ts    # HTTP endpoints
+│   │   ├── ws-handler.ts     # WebSocket RPC server
+│   │   └── ipc-transport.ts  # Electrobun IPC bridge
+│   ├── shared/
+│   │   ├── rpc-schema.ts     # Unified RPC type definitions
+│   │   ├── register-all-handlers.ts
+│   │   ├── modules/          # RPC method type definitions
+│   │   └── handlers/         # RPC handler implementations
+│   └── mainview/             # React frontend
+│       ├── App.tsx
+│       ├── components/
+│       │   ├── activity-bar/
+│       │   ├── chat/
+│       │   ├── explorer/
+│       │   ├── feed/
+│       │   ├── file-preview/
+│       │   ├── git/
+│       │   ├── search/       # File search across project
+│       │   └── debug/
+│       ├── stores/            # Zustand state management
+│       └── lib/
+│           └── api-client.ts  # Typed RPC client (auto-detects transport)
+├── eslint-plugin-rpc/        # Custom ESLint rules for RPC conventions
+├── electrobun.config.ts
+├── vite.config.ts
+└── tailwind.config.js
 ```
 
-## Customizing
+## RPC 模块列表
 
-- **React components**: Edit files in `src/mainview/`
-- **Tailwind theme**: Edit `tailwind.config.js`
-- **Vite settings**: Edit `vite.config.ts`
-- **Window settings**: Edit `src/bun/index.ts`
-- **App metadata**: Edit `electrobun.config.ts`
+| 模块 | 方法 | 事件 | 说明 |
+|---|---|---|---|
+| `system` | ping, hello, echo | - | 连通性测试 |
+| `file` | listDir, readFile, createFile, createDir, rename, delete, copy, findProjectRoot | - | 文件系统操作 |
+| `timer` | start, stop | timer.tick | 定时器 + 实时推送 |
+| `chat` | list, send | chat.message | 聊天（支持按 role 过滤） |
+| `git` | status, diff, log, branches, checkout, add, reset, commit, push, pull | - | Git 版本控制 |
+| `feed` | post, list | feed.update | Feed 流（支持 category 过滤） |

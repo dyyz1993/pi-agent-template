@@ -2,9 +2,18 @@ import type { Transport } from './core/transport';
 import type { RPCMessage, RPCEvent, EventHandler } from './core/types';
 import { generateId } from './core/utils';
 
+
+
+export interface RPCLogger {
+  debug: (message: string, ...args: unknown[]) => void;
+  info: (message: string, ...args: unknown[]) => void;
+  error: (message: string, ...args: unknown[]) => void;
+}
+
 export interface RPCClientOptions {
   transport: Transport;
   timeout?: number;
+  logger?: RPCLogger;
   onError?: (error: Error, context: string) => void;
 }
 
@@ -17,20 +26,22 @@ export class RPCClient {
   }> = new Map();
   private subscriptions: Map<string, { eventType: string; filter: Record<string, unknown>; handler: EventHandler }> = new Map();
   private subscriptionKeys: Map<string, string> = new Map();
+  private logger?: RPCClientOptions['logger'];
   private onError?: (error: Error, context: string) => void;
 
   constructor(options: RPCClientOptions) {
     this.transport = options.transport;
     this.timeout = options.timeout || 30000;
+    this.logger = options.logger;
     this.onError = options.onError;
     this.setupTransport();
   }
 
   private setupTransport(): void {
-    console.log('[RPCClient] setupTransport called, registering message handler');
+    this.logger?.info?.('setupTransport called, registering message handler');
     this.transport.onMessage((message) => {
       const msg = message as RPCMessage;
-      console.log('[RPCClient] Received message in handler:', msg.type, 'id:', msg.id);
+        this.logger?.info?.('Received message in handler:', msg.type, 'id:', msg.id);
       this.handleMessage(msg);
     });
   }
@@ -61,15 +72,15 @@ export class RPCClient {
   }
 
   private handleEvent(event: RPCEvent): void {
-    console.log('[RPCClient] handleEvent:', event.eventType, 'metadata:', event.metadata, 'subscriptions:', this.subscriptions.size);
+    this.logger?.info?.('handleEvent:', event.eventType, 'metadata:', event.metadata, 'subscriptions:', this.subscriptions.size);
     for (const [subId, sub] of this.subscriptions) {
-      console.log('[RPCClient] Checking subscription:', subId, 'eventType:', sub.eventType, 'filter:', sub.filter);
+      this.logger?.info?.('Checking subscription:', subId, 'eventType:', sub.eventType, 'filter:', sub.filter);
       if (sub.eventType !== event.eventType) continue;
       if (this.matchFilter(event, sub.filter)) {
-        console.log('[RPCClient] Matched! Calling handler for:', subId);
+        this.logger?.info?.('Matched! Calling handler for:', subId);
         sub.handler(event);
       } else {
-        console.log('[RPCClient] Filter not matched');
+        this.logger?.info?.('Filter not matched');
       }
     }
   }
@@ -141,7 +152,7 @@ export class RPCClient {
     
     const existingSubId = this.subscriptionKeys.get(subscriptionKey);
     if (existingSubId) {
-      console.log('[RPCClient] Reusing existing subscription:', existingSubId, 'for key:', subscriptionKey);
+      this.logger?.info?.('Reusing existing subscription:', existingSubId, 'for key:', subscriptionKey);
       const existing = this.subscriptions.get(existingSubId);
       if (existing) {
         this.subscriptions.set(existingSubId, { ...existing, handler });
@@ -161,9 +172,9 @@ export class RPCClient {
       filter,
     };
 
-    console.log('[RPCClient] Sending subscribe message:', message, 'key:', subscriptionKey);
+    this.logger?.info?.('Sending subscribe message:', message, 'key:', subscriptionKey);
     this.transport.send(message).catch(error => {
-      console.error('[RPCClient] Subscribe error:', error);
+      this.logger?.error?.('Subscribe error:', error);
       this.onError?.(error, 'subscribe');
     });
 

@@ -47,38 +47,35 @@ export class WebSocketTransport implements Transport {
     }
 
     return new Promise((resolve, reject) => {
-      console.log('[WebSocketTransport] Creating new WebSocket to:', this.url);
+      this.logger?.info?.('Creating new WebSocket to:', this.url);
       this.ws = new WebSocket(this.url);
 
       this.ws.onopen = () => {
         this._isConnected = true;
         this._isConnecting = false;
-        console.log('[WebSocketTransport] Connected, messageHandlers:', this.messageHandlers.size);
-        this.logger?.info?.('WebSocket connected');
+        this.logger?.info?.('Connected, messageHandlers:', this.messageHandlers.size);
         resolve();
       };
 
       this.ws.onmessage = (event) => {
-        console.log('[WebSocketTransport] onmessage triggered, data length:', event.data?.length);
+        this.logger?.info?.('onmessage triggered, data length:', event.data?.length);
         try {
           const message = JSON.parse(event.data);
-          console.log('[WebSocketTransport] Parsed message:', message.type, 'id:', message.id);
+          this.logger?.info?.('Parsed message:', message.type, 'id:', message.id);
           if (this.messageHandlers.size === 0) {
-            console.warn('[WebSocketTransport] WARNING: No message handlers registered!');
+            this.logger?.error?.('WARNING: No message handlers registered!');
           }
           for (const handler of this.messageHandlers) {
             handler(message);
           }
         } catch (error) {
-          console.error('[WebSocketTransport] Failed to parse message:', error);
-          this.logger?.error?.('Failed to parse message', error);
+          this.logger?.error?.('Failed to parse message:', error);
         }
       };
 
       this.ws.onerror = (error) => {
         this._isConnecting = false;
-        console.error('[WebSocketTransport] Error:', error);
-        this.logger?.error?.('WebSocket error', error);
+        this.logger?.error?.('Error:', error);
         reject(new Error('WebSocket connection failed'));
         for (const handler of this.errorHandlers) {
           handler(new Error('WebSocket error'));
@@ -88,14 +85,13 @@ export class WebSocketTransport implements Transport {
       this.ws.onclose = () => {
         this._isConnected = false;
         this._isConnecting = false;
-        console.log('[WebSocketTransport] Disconnected');
-        this.logger?.info?.('WebSocket disconnected');
+        this.logger?.info?.('Disconnected');
         
         if (this.reconnect) {
-          console.log('[WebSocketTransport] Will reconnect in', this.reconnectInterval, 'ms');
+          this.logger?.info?.('Will reconnect in', this.reconnectInterval, 'ms');
           setTimeout(() => {
-            console.log('[WebSocketTransport] Reconnecting...');
-            this.connect().catch(e => console.error('[WebSocketTransport] Reconnect failed:', e));
+            this.logger?.info?.('Reconnecting...');
+            this.connect().catch(e => { this.logger?.error?.('Reconnect failed:', e); });
           }, this.reconnectInterval);
         }
       };
@@ -111,9 +107,9 @@ export class WebSocketTransport implements Transport {
   }
 
   onMessage(handler: MessageHandler): () => void {
-    console.log('[WebSocketTransport] Adding message handler, current count:', this.messageHandlers.size);
+    this.logger?.info?.('Adding message handler, current count:', this.messageHandlers.size);
     this.messageHandlers.add(handler);
-    console.log('[WebSocketTransport] After adding, count:', this.messageHandlers.size);
+    this.logger?.info?.('After adding, count:', this.messageHandlers.size);
     return () => {
       this.messageHandlers.delete(handler);
     };
@@ -131,7 +127,7 @@ export class WebSocketTransport implements Transport {
   }
 
   close(): void {
-    console.log('[WebSocketTransport] Closing, messageHandlers:', this.messageHandlers.size);
+    this.logger?.info?.('Closing, messageHandlers:', this.messageHandlers.size);
     this.reconnect = false;
     if (this.ws) {
       this.ws.onopen = null;

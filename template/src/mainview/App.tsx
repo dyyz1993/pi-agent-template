@@ -15,6 +15,7 @@ import { FeedPanel } from "./components/feed/FeedPanel";
 import { FilePreviewOverlay } from "./components/file-preview/FilePreviewOverlay";
 import { DiffViewerPanel } from "./components/diff/DiffViewerPanel";
 import { DebugPanel } from "./components/debug/DebugPanel";
+import { SearchPanel } from "./components/search/SearchPanel";
 
 type CenterTab = "chat" | "feed";
 
@@ -175,9 +176,7 @@ function App() {
   ) : activePanel === "git" ? (
     <GitPanel hideOuterShell />
   ) : activePanel === "search" ? (
-    <div className="flex-1 flex items-center justify-center text-gray-500 text-xs p-4 text-center">
-      Search panel coming soon
-    </div>
+    <SearchPanel />
   ) : null;
 
   return (

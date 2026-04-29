@@ -29,8 +29,7 @@ export class RPCServer {
   private setupDisconnectHandler(): void {
     if (this.transport.onDisconnect) {
       this.disconnectCleanup = this.transport.onDisconnect(() => {
-        console.log('[RPCServer] Client disconnected, clearing all subscriptions');
-        this.logger?.debug?.('Client disconnected, clearing subscriptions');
+        this.logger?.info?.('Client disconnected, clearing all subscriptions');
         this.subscriptions.clear();
       });
     }
@@ -86,11 +85,9 @@ export class RPCServer {
     const eventType = message.eventType!;
     const filter = message.filter || {};
 
-    console.log('[RPCServer] handleSubscribe:', { subscriptionId, eventType, filter });
     this.subscriptions.set(subscriptionId, { eventType, filter });
-    console.log('[RPCServer] Total subscriptions:', this.subscriptions.size);
     
-    this.logger?.debug?.('Subscription added', { subscriptionId, eventType, filter });
+    this.logger?.info?.('Subscription added', { subscriptionId, eventType, filter, totalSubscriptions: this.subscriptions.size });
   }
 
   private handleUnsubscribe(message: RPCMessage): void {
@@ -122,23 +119,23 @@ export class RPCServer {
       timestamp: Date.now(),
     };
 
-    console.log('[RPCServer] emitEvent:', eventType, 'metadata:', metadata, 'subscriptions:', this.subscriptions.size);
+    this.logger?.info?.('Emitting event', { eventType, metadata, subscriptionCount: this.subscriptions.size });
 
     let hasMatchingSubscription = false;
     for (const [subId, sub] of this.subscriptions) {
-      console.log('[RPCServer] Checking subscription:', subId, 'eventType:', sub.eventType, 'filter:', sub.filter);
+      this.logger?.debug?.('Checking subscription', { subscriptionId: subId, eventType: sub.eventType, filter: sub.filter });
       if (sub.eventType !== eventType) continue;
       
       if (this.shouldSendEvent(event, sub.filter)) {
         hasMatchingSubscription = true;
         break;
       } else {
-        console.log('[RPCServer] Filter not matched, sub.filter:', sub.filter, 'event.metadata:', event.metadata);
+        this.logger?.debug?.('Filter not matched', { filter: sub.filter, eventMetadata: event.metadata });
       }
     }
 
     if (hasMatchingSubscription) {
-      console.log('[RPCServer] Sending event to client');
+      this.logger?.info?.('Sending event to client', { eventType });
       await this.transport.send(event);
     }
   }
@@ -178,7 +175,7 @@ export class RPCServer {
   }
 
   clearAllSubscriptions(): void {
-    console.log('[RPCServer] Clearing all subscriptions, count:', this.subscriptions.size);
+    this.logger?.info?.('Clearing all subscriptions', { count: this.subscriptions.size });
     this.subscriptions.clear();
   }
 }
