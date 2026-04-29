@@ -12,7 +12,7 @@ const TEMPLATES: TemplateInfo[] = [
     type: 'general',
     description: 'Full-featured template (File explorer, Git, Search, Chat, Timer, Feed)',
     available: true,
-    dir: 'template',
+    dir: 'templates/general',
   },
   {
     type: 'chat',

@@ -30,10 +30,10 @@ jobs:
         run: bun run lint
 
       - name: Install template dependencies
-        run: cd template && bun install
+        run: cd templates/general && bun install
 
       - name: Lint template
-        run: cd template && bun run lint
+        run: cd templates/general && bun run lint
 
   type-check:
     runs-on: ubuntu-latest
@@ -54,11 +54,11 @@ jobs:
         run: bun run type-check
 
       - name: Install template dependencies
-        run: cd template && bun install
+        run: cd templates/general && bun install
 
       - name: Type check (template)
         run: |
-          cd template
+          cd templates/general
           ERRORS=$(npx tsc --noEmit 2>&1 | grep "error TS" | grep -v "node_modules" || true)
           if [ -n "$ERRORS" ]; then
             echo "$ERRORS"

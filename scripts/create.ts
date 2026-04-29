@@ -5,7 +5,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 
 import { resolve, join } from 'path';
 import { execSync } from 'child_process';
 
-const TEMPLATE_DIR = resolve(import.meta.dir, '..', 'template');
+const TEMPLATE_DIR = resolve(import.meta.dir, '..', 'templates', 'general');
 const args = process.argv.slice(2);
 
 if (args.length === 0) {
