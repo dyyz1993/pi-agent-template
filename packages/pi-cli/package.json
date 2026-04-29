@@ -1,0 +1,9 @@
+{
+  "name": "@dyyz1993/pi-cli",
+  "version": "1.0.0",
+  "description": "Pi Agent project scaffolding CLI",
+  "bin": { "pi": "./src/cli.ts" },
+  "files": ["src/"],
+  "engines": { "bun": ">=1.0.0" },
+  "license": "MIT"
+}
