@@ -1,8 +1,27 @@
-import { Send, Play, Square, File } from "lucide-react";
+import { Send, Play, Square, File, ChevronRight, ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useAppStore } from "../../stores/use-app-store";
 import type { DemoMethod } from "../../types";
 
+const COLLAPSED_KEY = "debug-panel-collapsed";
+
+function readCollapsed(): boolean {
+  try {
+    return localStorage.getItem(COLLAPSED_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
 export function DebugPanel() {
+  const [collapsed, setCollapsed] = useState(readCollapsed);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(COLLAPSED_KEY, String(collapsed));
+    } catch { /* ignore */ }
+  }, [collapsed]);
+
   const method = useAppStore((s) => s.method);
   const result = useAppStore((s) => s.result);
   const logs = useAppStore((s) => s.logs);
@@ -15,8 +34,34 @@ export function DebugPanel() {
   const handleSubscribe = useAppStore((s) => s.handleSubscribe);
   const handleUnsubscribe = useAppStore((s) => s.handleUnsubscribe);
 
+  if (collapsed) {
+    return (
+      <div className="w-12 bg-gray-850 border-l border-gray-700 flex flex-col items-center justify-start pt-2 flex-shrink-0">
+        <button
+          onClick={() => setCollapsed(false)}
+          title="Expand Debug Panel"
+          className="w-10 h-6 flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors"
+        >
+          <ChevronRight className="w-3 h-3" />
+          Debug
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="w-72 bg-gray-850 border-l border-gray-700 flex flex-col flex-shrink-0 overflow-y-auto">
+      {/* Collapse toggle */}
+      <div className="flex items-center px-2 py-1.5 border-b border-gray-700">
+        <button
+          onClick={() => setCollapsed(true)}
+          title="Collapse Debug Panel"
+          className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-white transition-colors"
+        >
+          <ChevronDown className="w-3 h-3" />
+          Debug
+        </button>
+      </div>
       {/* RPC Calls */}
       <div className="p-3 border-b border-gray-700">
         <div className="flex items-center justify-between mb-2">

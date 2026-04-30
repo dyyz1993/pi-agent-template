@@ -35,7 +35,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@dyyz1993/rpc-core": resolve(__dirname, "packages", "rpc-core", "src", "index.ts"),
+      "@dyyz1993/rpc-core": resolve(__dirname, "..", "..", "packages", "rpc-core", "src", "index.ts"),
     },
   },
 });

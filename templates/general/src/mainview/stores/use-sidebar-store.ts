@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export type SidebarPanelId = "explorer" | "git" | "search";
+export type SidebarPanelId = "explorer" | "git" | "search" | "chat" | "feed" | "debug";
 export type Breakpoint = "mobile" | "tablet" | "desktop";
 
 const PINNED_KEY = "sidebar-pinned";

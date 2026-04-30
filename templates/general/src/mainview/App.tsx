@@ -177,6 +177,12 @@ function App() {
     <GitPanel hideOuterShell />
   ) : activePanel === "search" ? (
     <SearchPanel />
+  ) : activePanel === "chat" ? (
+    <ChatPanel />
+  ) : activePanel === "feed" ? (
+    <FeedPanel />
+  ) : activePanel === "debug" ? (
+    <DebugPanel />
   ) : null;
 
   return (

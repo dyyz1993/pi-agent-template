@@ -1,18 +1,12 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Circle, Clock, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, Circle, Clock, CheckCircle2, ListTodo } from "lucide-react";
 import { useTodoStore } from "../../stores/use-todo-store";
 import type { TodoStatus } from "../../../shared/modules/todo";
 
-const statusIcons: Record<TodoStatus, typeof Circle> = {
-  pending: Circle,
-  in_progress: Clock,
-  completed: CheckCircle2,
-};
-
-const statusColors: Record<TodoStatus, string> = {
-  pending: "text-gray-500",
-  in_progress: "text-yellow-400",
-  completed: "text-green-400",
+const statusConfig: Record<TodoStatus, { icon: typeof Circle; color: string; label: string; circleColor: string }> = {
+  pending: { icon: Circle, color: "text-gray-400", label: "pending", circleColor: "border-gray-500" },
+  in_progress: { icon: Clock, color: "text-yellow-400", label: "in progress", circleColor: "border-yellow-400 bg-yellow-400/20" },
+  completed: { icon: CheckCircle2, color: "text-green-400", label: "completed", circleColor: "border-green-400 bg-green-400/20" },
 };
 
 const nextStatus: Record<TodoStatus, TodoStatus> = {
@@ -20,6 +14,8 @@ const nextStatus: Record<TodoStatus, TodoStatus> = {
   in_progress: "completed",
   completed: "pending",
 };
+
+const statusFlow = ["pending", "in_progress", "completed"] as const;
 
 export function TodoPanel() {
   const [showInput, setShowInput] = useState(false);
@@ -80,34 +76,58 @@ export function TodoPanel() {
         </div>
       )}
 
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto p-3">
         {items.length === 0 ? (
-          <div className="p-4 text-gray-600 text-sm text-center">No tasks yet.</div>
+          <div className="flex flex-col items-center justify-center h-full text-gray-600">
+            <ListTodo className="w-12 h-12 mb-3 opacity-30" />
+            <span className="text-sm">No tasks yet</span>
+            <span className="text-xs mt-1">Click "Add Todo" to create one</span>
+          </div>
         ) : (
-          <div className="divide-y divide-gray-700">
+          <div className="space-y-2.5">
             {items.map((item) => {
-              const Icon = statusIcons[item.status];
+              const cfg = statusConfig[item.status];
+              const Icon = cfg.icon;
               return (
-                <div key={item.id} className="flex items-center gap-3 px-3 py-2 hover:bg-gray-800/50 group">
-                  <button
-                    onClick={() => updateItem(item.id, nextStatus[item.status])}
-                    className={`flex-shrink-0 ${statusColors[item.status]}`}
-                  >
-                    <Icon className="w-4 h-4" />
-                  </button>
-                  <span
-                    className={`flex-1 text-sm ${
-                      item.status === "completed" ? "text-gray-500 line-through" : "text-gray-200"
-                    }`}
-                  >
-                    {item.content}
-                  </span>
-                  <button
-                    onClick={() => removeItem(item.id)}
-                    className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 flex-shrink-0"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                <div
+                  key={item.id}
+                  className="group relative bg-gray-800/60 border border-gray-700/80 rounded-lg p-3 hover:bg-gray-800 hover:border-gray-600 transition-all"
+                >
+                  <div className="flex items-start gap-3">
+                    <button
+                      onClick={() => updateItem(item.id, nextStatus[item.status])}
+                      className={`flex-shrink-0 mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${cfg.circleColor} ${cfg.color} hover:scale-110`}
+                    >
+                      <Icon className="w-3 h-3" />
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm leading-relaxed ${
+                        item.status === "completed" ? "text-gray-500 line-through" : "text-gray-200"
+                      }`}>
+                        {item.content}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-2 text-[11px] text-gray-500">
+                        <span>Status:</span>
+                        {statusFlow.map((s) => {
+                          const sc = statusConfig[s];
+                          const isActive = s === item.status;
+                          return (
+                            <span key={s} className={`inline-flex items-center gap-0.5 ${isActive ? sc.color + " font-medium" : ""}`}>
+                              {isActive && <sc.icon className="w-2.5 h-2.5" />}
+                              {sc.label}
+                              {s !== "completed" && <span className="text-gray-700 mx-0.5">&rarr;</span>}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => removeItem(item.id)}
+                      className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 self-start mt-0.5"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               );
             })}

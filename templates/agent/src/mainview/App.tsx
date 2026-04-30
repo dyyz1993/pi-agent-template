@@ -213,11 +213,14 @@ function App() {
           <div className="bg-gray-850 border-r border-gray-700 flex flex-col flex-shrink-0 overflow-hidden relative"
             style={{ width: sidebarWidth }}>
             {sidebarContent}
-            {/* Resize handle */}
+            {/* Resize handle — 4px draggable divider */}
             <div
-              className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-indigo-500/50 active:bg-indigo-500 transition-colors z-10"
+              className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-indigo-500/50 active:bg-indigo-500 transition-colors z-10 group"
               onMouseDown={handleResizeStart}
-            />
+              style={{ width: 4, marginRight: -4 }}
+            >
+              <div className="absolute inset-y-0 left-1/2 w-0.5 bg-gray-700 group-hover:bg-indigo-400 transition-colors -translate-x-1/2" />
+            </div>
           </div>
         )}
 
