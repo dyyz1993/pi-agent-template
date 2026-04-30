@@ -16,14 +16,14 @@ const TEMPLATES: TemplateInfo[] = [
   },
   {
     type: 'chat',
-    description: 'Chat-focused template',
-    available: false,
+    description: 'Chat-focused template (Enhanced ChatPanel, Markdown, Session management)',
+    available: true,
     dir: 'templates/chat',
   },
   {
     type: 'agent',
-    description: 'Coding agent template',
-    available: false,
+    description: 'Coding agent template (Bash, Rules engine, Todo management)',
+    available: true,
     dir: 'templates/agent',
   },
 ];
