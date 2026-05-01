@@ -5,7 +5,6 @@ interface PortEntry {
   name: string;
   port: number;
   pid: number;
-  dir: string;
   startedAt: string;
 }
 
@@ -41,37 +40,51 @@ export async function runStatus(): Promise<void> {
     return;
   }
 
-  let entries: PortEntry[];
+  let registry: Record<string, PortEntry>;
   try {
     const raw = readFileSync(registryPath, 'utf-8');
-    entries = JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      registry = {};
+      for (const entry of parsed) {
+        const key = entry.dir || entry.name || String(entry.port);
+        registry[key] = entry;
+      }
+    } else {
+      registry = parsed;
+    }
   } catch {
     console.log('No active instances.\n');
     return;
   }
 
-  if (!Array.isArray(entries) || entries.length === 0) {
+  const allEntries = Object.entries(registry);
+  if (allEntries.length === 0) {
     console.log('No active instances.\n');
     return;
   }
 
-  const alive = entries.filter((e) => isPidAlive(e.pid));
-  const cleaned = alive.length < entries.length;
+  const aliveEntries = allEntries.filter(([, e]) => isPidAlive(e.pid));
+  const cleaned = aliveEntries.length < allEntries.length;
 
   if (cleaned) {
-    writeFileSync(registryPath, JSON.stringify(alive, null, 2) + '\n');
+    const cleanedRegistry: Record<string, PortEntry> = {};
+    for (const [key, entry] of aliveEntries) {
+      cleanedRegistry[key] = entry;
+    }
+    writeFileSync(registryPath, JSON.stringify(cleanedRegistry, null, 2) + '\n');
   }
 
-  if (alive.length === 0) {
+  if (aliveEntries.length === 0) {
     console.log('No active instances.\n');
     return;
   }
 
   console.log('Active pi-agent instances:\n');
-  for (const entry of alive) {
+  for (const [dir, entry] of aliveEntries) {
     const uptime = getUptime(entry.startedAt);
     console.log(`  ${entry.name.padEnd(16)} →  http://localhost:${entry.port}  (PID ${entry.pid}, up ${uptime})`);
-    console.log(`  ${entry.dir}`);
+    console.log(`  ${dir}`);
     console.log('');
   }
   console.log(`Registry: ${registryPath}\n`);

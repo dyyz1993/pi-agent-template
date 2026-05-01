@@ -3,11 +3,13 @@
 import { runCreate } from './commands/create.js';
 import { runList } from './commands/list.js';
 import { runStatus } from './commands/status.js';
+import { runWorkspace } from './commands/workspace.js';
 
 const COMMANDS = new Map<string, (args: string[]) => Promise<void>>([
   ['create', runCreate],
   ['list', runList],
   ['status', runStatus],
+  ['workspace', runWorkspace],
 ]);
 
 function printHelp(): void {
@@ -21,6 +23,7 @@ Commands:
   create <name>  Create a new project from template
   list           Show available template types
   status         Show active pi-agent instances
+  workspace add <name>  Create isolated workspace for parallel development
   update         Update project to latest template (coming soon)
 
 Options:
