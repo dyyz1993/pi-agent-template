@@ -1,3 +1,4 @@
+import { Bot } from "lucide-react";
 import type { ChatMessage } from "../../types";
 
 interface MessageBubbleProps {
@@ -16,6 +17,11 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} items-start gap-2`}>
+      {!isUser && (
+        <div className="flex-shrink-0 mt-1">
+          <Bot className="w-4 h-4 text-indigo-400" />
+        </div>
+      )}
       <div
         className={`max-w-[85%] px-3 py-2 rounded-lg text-sm whitespace-pre-wrap break-words ${
           isUser
