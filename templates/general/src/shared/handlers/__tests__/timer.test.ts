@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeEach } from "bun:test";
+import type { RPCServer } from "@dyyz1993/rpc-core";
 import { register } from "../timer";
 
 type Handler = (params: unknown) => Promise<unknown>;
@@ -26,7 +27,7 @@ describe("timer handler", () => {
 
   beforeEach(() => {
     server = createMockServer();
-    register(server as Record<string, unknown>, { platform: "desktop" });
+    register(server as unknown as RPCServer, { platform: "desktop" });
   });
 
   test("registers timer.start", () => {
@@ -69,7 +70,7 @@ describe("timer handler", () => {
     const tickEvents = server.getEvents().filter((e) => e.event === "timer.tick");
     const counts = tickEvents.map((e) => (e.payload as Record<string, unknown>).count);
     for (let i = 1; i < counts.length; i++) {
-      expect(counts[i]).toBeGreaterThan(counts[i - 1]);
+      expect(Number(counts[i])).toBeGreaterThan(Number(counts[i - 1]));
     }
   });
 

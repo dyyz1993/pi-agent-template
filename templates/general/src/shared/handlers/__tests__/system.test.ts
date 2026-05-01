@@ -1,4 +1,5 @@
 import { describe, test, expect } from "bun:test";
+import type { RPCServer } from "@dyyz1993/rpc-core";
 import { register } from "../system";
 
 type Handler = (params: unknown) => Promise<unknown>;
@@ -17,7 +18,7 @@ function createMockServer() {
 
 describe("system handler", () => {
   const server = createMockServer();
-  register(server as Record<string, unknown>, { platform: "desktop" });
+  register(server as unknown as RPCServer, { platform: "desktop" });
 
   test("registers system.ping", () => {
     expect(server.has("system.ping")).toBe(true);
@@ -44,7 +45,7 @@ describe("system handler", () => {
 
   test("system.ping respects platform option", async () => {
     const webServer = createMockServer();
-    register(webServer as Record<string, unknown>, { platform: "web" });
+    register(webServer as unknown as RPCServer, { platform: "web" });
     const result = await webServer.get("system.ping")!({}) as Record<string, unknown>;
     expect(result.platform).toBe("web");
   });
