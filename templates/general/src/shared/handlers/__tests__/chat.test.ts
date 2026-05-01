@@ -1,6 +1,6 @@
-import { describe, test, expect, beforeEach, mock, spyOn } from "bun:test";
+import { describe, test, expect, beforeEach } from "bun:test";
 import { register } from "../chat";
-import { readFile, writeFile, mkdir } from "fs/promises";
+import { writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { join, dirname } from "path";
 import { homedir } from "os";
@@ -36,7 +36,7 @@ async function clearHistory(): Promise<void> {
   } catch {}
 }
 
-async function writeHistory(messages: any[]): Promise<void> {
+async function writeHistory(messages: Record<string, unknown>[]): Promise<void> {
   const dir = dirname(STORAGE_PATH);
   if (!existsSync(dir)) {
     await mkdir(dir, { recursive: true });
@@ -49,7 +49,7 @@ describe("chat handler", () => {
 
   beforeEach(async () => {
     server = createMockServer();
-    register(server as any, { platform: "desktop" });
+    register(server as Record<string, unknown>, { platform: "desktop" });
     await clearHistory();
   });
 
@@ -62,7 +62,7 @@ describe("chat handler", () => {
   });
 
   test("chat.list returns empty when no history", async () => {
-    const result = await server.get("chat.list")!({}) as any;
+    const result = await server.get("chat.list")!({}) as Record<string, unknown>;
     expect(result.messages).toEqual([]);
     expect(result.hasMore).toBe(false);
   });
@@ -74,7 +74,7 @@ describe("chat handler", () => {
     ];
     await writeHistory(msgs);
 
-    const result = await server.get("chat.list")!({}) as any;
+    const result = await server.get("chat.list")!({}) as Record<string, unknown>;
     expect(result.messages.length).toBe(2);
     expect(result.hasMore).toBe(false);
   });
@@ -88,7 +88,7 @@ describe("chat handler", () => {
     }));
     await writeHistory(msgs);
 
-    const result = await server.get("chat.list")!({ limit: 10 }) as any;
+    const result = await server.get("chat.list")!({ limit: 10 }) as Record<string, unknown>;
     expect(result.messages.length).toBe(10);
     expect(result.hasMore).toBe(true);
     expect(result.messages[0].id).toBe("msg-90");
@@ -103,13 +103,13 @@ describe("chat handler", () => {
     }));
     await writeHistory(msgs);
 
-    const result = await server.get("chat.list")!({}) as any;
+    const result = await server.get("chat.list")!({}) as Record<string, unknown>;
     expect(result.messages.length).toBe(50);
     expect(result.hasMore).toBe(true);
   });
 
   test("chat.send returns { ok: true }", async () => {
-    const result = await server.get("chat.send")!({ content: "hello" }) as any;
+    const result = await server.get("chat.send")!({ content: "hello" }) as Record<string, unknown>;
     expect(result.ok).toBe(true);
   });
 
@@ -119,11 +119,11 @@ describe("chat handler", () => {
     const events = server.getEvents().filter((e) => e.event === "chat.message");
     expect(events.length).toBe(2);
 
-    const userEvent = events[0].payload as any;
+    const userEvent = events[0].payload as Record<string, unknown>;
     expect(userEvent.role).toBe("user");
     expect(userEvent.content).toBe("hi");
 
-    const assistantEvent = events[1].payload as any;
+    const assistantEvent = events[1].payload as Record<string, unknown>;
     expect(assistantEvent.role).toBe("assistant");
     expect(assistantEvent.content).toBeTruthy();
   });
@@ -131,7 +131,7 @@ describe("chat handler", () => {
   test("chat.send stores messages in history", async () => {
     await server.get("chat.send")!({ content: "hello world" });
 
-    const result = await server.get("chat.list")!({}) as any;
+    const result = await server.get("chat.list")!({}) as Record<string, unknown>;
     expect(result.messages.length).toBe(2);
     expect(result.messages[0].role).toBe("user");
     expect(result.messages[0].content).toBe("hello world");
@@ -142,7 +142,7 @@ describe("chat handler", () => {
     await server.get("chat.send")!({ content: "test" });
 
     const events = server.getEvents().filter((e) => e.event === "chat.message");
-    const userMsg = events[0].payload as any;
+    const userMsg = events[0].payload as Record<string, unknown>;
     expect(userMsg).toHaveProperty("id");
     expect(userMsg).toHaveProperty("role");
     expect(userMsg).toHaveProperty("content");
@@ -163,7 +163,7 @@ describe("chat handler", () => {
     await server.get("chat.send")!({ content: "hello" });
 
     const events = server.getEvents().filter((e) => e.event === "chat.message");
-    const reply = events[1].payload as any;
+    const reply = events[1].payload as Record<string, unknown>;
     expect(reply.content).toBeTruthy();
     expect(reply.role).toBe("assistant");
   });
@@ -172,7 +172,7 @@ describe("chat handler", () => {
     await server.get("chat.send")!({ content: "12 * 8" });
 
     const events = server.getEvents().filter((e) => e.event === "chat.message");
-    const reply = events[1].payload as any;
+    const reply = events[1].payload as Record<string, unknown>;
     expect(reply.content).toContain("96");
   });
 });
