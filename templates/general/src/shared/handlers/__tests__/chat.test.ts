@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeEach } from "bun:test";
+import type { RPCServer } from "@dyyz1993/rpc-core";
 import { register } from "../chat";
 import { writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
@@ -49,7 +50,7 @@ describe("chat handler", () => {
 
   beforeEach(async () => {
     server = createMockServer();
-    register(server as Record<string, unknown>, { platform: "desktop" });
+    register(server as unknown as RPCServer, { platform: "desktop" });
     await clearHistory();
   });
 
@@ -75,7 +76,8 @@ describe("chat handler", () => {
     await writeHistory(msgs);
 
     const result = await server.get("chat.list")!({}) as Record<string, unknown>;
-    expect(result.messages.length).toBe(2);
+    const messages = result.messages as Record<string, unknown>[];
+    expect(messages.length).toBe(2);
     expect(result.hasMore).toBe(false);
   });
 
@@ -89,9 +91,10 @@ describe("chat handler", () => {
     await writeHistory(msgs);
 
     const result = await server.get("chat.list")!({ limit: 10 }) as Record<string, unknown>;
-    expect(result.messages.length).toBe(10);
+    const messages = result.messages as Record<string, unknown>[];
+    expect(messages.length).toBe(10);
     expect(result.hasMore).toBe(true);
-    expect(result.messages[0].id).toBe("msg-90");
+    expect(messages[0].id).toBe("msg-90");
   });
 
   test("chat.list default limit is 50", async () => {
@@ -104,7 +107,8 @@ describe("chat handler", () => {
     await writeHistory(msgs);
 
     const result = await server.get("chat.list")!({}) as Record<string, unknown>;
-    expect(result.messages.length).toBe(50);
+    const messages = result.messages as Record<string, unknown>[];
+    expect(messages.length).toBe(50);
     expect(result.hasMore).toBe(true);
   });
 
@@ -132,10 +136,11 @@ describe("chat handler", () => {
     await server.get("chat.send")!({ content: "hello world" });
 
     const result = await server.get("chat.list")!({}) as Record<string, unknown>;
-    expect(result.messages.length).toBe(2);
-    expect(result.messages[0].role).toBe("user");
-    expect(result.messages[0].content).toBe("hello world");
-    expect(result.messages[1].role).toBe("assistant");
+    const messages = result.messages as Record<string, unknown>[];
+    expect(messages.length).toBe(2);
+    expect(messages[0].role).toBe("user");
+    expect(messages[0].content).toBe("hello world");
+    expect(messages[1].role).toBe("assistant");
   });
 
   test("chat.send message has correct shape", async () => {
