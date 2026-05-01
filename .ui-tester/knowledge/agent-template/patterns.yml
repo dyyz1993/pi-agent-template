@@ -1,0 +1,127 @@
+# Module: agent-template
+# Reusable operation sequences for agent template UI testing
+# Last updated: 2026-04-30 (session ui-test-1777524333)
+
+page_load:
+  description: "Navigate to agent template and wait for WS auto-connect"
+  steps:
+    - action: open
+      url: "http://localhost:5175/"
+    - action: wait
+      duration: 6000
+      description: "Wait for full load + WebSocket auto-connect"
+  expected_result: "Page fully loaded, no spinner, WS connected (badge visible)"
+
+chat_flow:
+  description: "Send a message via Chat panel"
+  steps:
+    - action: click
+      selector: 'button[aria-label="Chat"]'
+      description: "Switch to Chat panel"
+    - action: fill
+      selector: 'input[placeholder*="Type a message"]'
+      value: "<message>"
+      description: "Type message"
+    - action: click
+      selector: 'button:has-text("Send")'
+      description: "Click Send"
+    - action: wait
+      duration: 3000
+      description: "Wait for response"
+  expected_result: "Message appears in chat, response received"
+
+bash_execute_flow:
+  description: "Execute a bash command — CORE flow for A8/A9 tests"
+  steps:
+    - action: click
+      selector: 'button[aria-label="Bash"]'
+      description: "Switch to Bash panel"
+    - action: fill
+      selector: 'input[placeholder*="Enter command"]'
+      value: "<command>"
+      description: "Type command in input box"
+    - action: snapshot
+      description: "Re-snapshot to get enabled Run button ref"
+    - action: click
+      selector: 'button:has-text("Run"]'
+      description: "CLICK RUN BUTTON (critical step!)"
+    - action: wait
+      duration: 3000
+      description: "Wait for command execution and output to appear"
+  expected_result: "Output area shows command result, Kill button appears, PID button shown"
+  verification:
+    - "Check body text includes expected output string"
+    - "Kill button appears (process running indicator)"
+    - "PID N button appears for each executed command"
+
+bash_multi_command_flow:
+  description: "Execute multiple bash commands sequentially — output accumulates"
+  steps:
+    - action: fill
+      selector: 'input[placeholder*="Enter command"]'
+      value: "<command1>"
+      description: "Type first command"
+    - action: click
+      selector: 'button:has-text("Run"]'
+      description: "Run first command"
+    - action: wait
+      duration: 2000
+      description: "Wait for first command output"
+    - action: fill
+      selector: 'input[placeholder*="Enter command"]'
+      value: "<command2>"
+      description: "Type second command"
+    - action: click
+      selector: 'button:has-text("Run"]'
+      description: "Run second command"
+    - action: wait
+      duration: 2000
+      description: "Wait for second command output"
+  expected_result: "Output area shows both command outputs, multiple PID buttons"
+
+panel_switch_flow:
+  description: "Switch between ActivityBar panels"
+  steps:
+    - action: click
+      selector: "<panel_button_selector>"
+      description: "Click panel icon"
+    - action: wait
+      duration: 500
+      description: "Allow panel transition"
+  expected_result: "Panel content updates to show selected panel"
+
+rules_add_flow:
+  description: "Open Rules add form"
+  steps:
+    - action: click
+      selector: 'button[aria-label="Rules"]'
+      description: "Switch to Rules panel"
+    - action: click
+      selector: 'button:has-text("Add Rule")'
+      description: "Click Add Rule button"
+  expected_result: "Form appears with Rule name input, Glob pattern input, Save button (disabled until filled)"
+
+todo_add_flow:
+  description: "Open Todo add form"
+  steps:
+    - action: click
+      selector: 'button[aria-label="Todo"]'
+      description: "Switch to Todo panel"
+    - action: click
+      selector: 'button:has-text("Add Todo")'
+      description: "Click Add Todo button"
+  expected_result: "Todo add UI appears"
+
+tips:
+  - "WS auto-connects through Vite proxy — no manual connection needed"
+  - "Page title is 'React + Tailwind + Vite' — confirms correct template loaded"
+  - "Status bar shows 'Web (WebSocket)' text when connected — check via body.innerText"
+  - "ActivityBar has 8 icons: Explorer, Git, Search, Rules, Unpin, Chat, Feed+Subs, Bash, Todo"
+  - "Bash Run button is DISABLED when input is empty, ENABLED when text entered"
+  - "After bash execution: Kill button + PID N button(s) appear as process indicators"
+  - "Bash output accumulates — multiple commands show all outputs together"
+  - "No iframes, shadow DOM, or contenteditable elements on this page"
+  - "All panels use smooth transitions — always wait 500ms after clicking ActivityBar icons"
+  - "Chat RPC dropdown defaults to system.ping option; options: system.ping, system.hello, system.echo, chat.send"
+  - "After filling any input, always re-snapshot before clicking action buttons (refs may change)"
+  - "Bash command output visible in body text — use eval to verify specific strings"

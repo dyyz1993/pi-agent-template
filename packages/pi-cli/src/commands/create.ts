@@ -1,5 +1,5 @@
 import { resolve } from 'path';
-import { resolveTemplateDir, getMonorepoRoot } from '../lib/templates.js';
+import { resolveTemplateDir, getRootDir } from '../lib/templates.js';
 import { copyTemplate } from '../lib/copy.js';
 
 export async function runCreate(args: string[]): Promise<void> {
@@ -37,8 +37,8 @@ Examples:
 
   const sanitized = projectName.replace(/[^a-zA-Z0-9-_]/g, '-');
   const targetDir = customDir ? resolve(customDir) : resolve(process.cwd(), sanitized);
-  const monorepoRoot = getMonorepoRoot();
-  const templateDir = resolveTemplateDir(monorepoRoot, templateType);
+  const rootDir = getRootDir();
+  const templateDir = resolveTemplateDir(rootDir, templateType);
 
   await copyTemplate({
     projectName: sanitized,

@@ -1,4 +1,5 @@
 import { resolve } from 'path';
+import { existsSync } from 'fs';
 
 interface TemplateInfo {
   type: string;
@@ -47,6 +48,10 @@ export function resolveTemplateDir(monorepoRoot: string, type: string): string {
   return resolve(monorepoRoot, info.dir);
 }
 
-export function getMonorepoRoot(): string {
-  return resolve(import.meta.dir, '..', '..', '..', '..');
+export function getRootDir(): string {
+  const localRoot = resolve(import.meta.dir, '..', '..', '..', '..');
+  if (existsSync(resolve(localRoot, 'templates', 'general'))) {
+    return localRoot;
+  }
+  return resolve(import.meta.dir, '..', '..');
 }

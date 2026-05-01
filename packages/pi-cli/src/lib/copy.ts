@@ -106,7 +106,8 @@ function updatePackageJson(targetDir: string, _projectName: string): void {
 
 export async function copyTemplate(options: CopyOptions): Promise<void> {
   const { projectName, templateDir, targetDir } = options;
-  const monorepoRoot = resolve(import.meta.dir, '..', '..', '..', '..');
+  const localRoot = resolve(import.meta.dir, '..', '..', '..', '..');
+  const isMonorepo = existsSync(resolve(localRoot, 'templates', 'general'));
 
   if (existsSync(targetDir)) {
     throw new Error(`Directory "${targetDir}" already exists.`);
@@ -120,7 +121,9 @@ export async function copyTemplate(options: CopyOptions): Promise<void> {
   console.log('');
 
   copyAndReplace(templateDir, targetDir, projectName);
-  copyTraeRules(monorepoRoot, targetDir, projectName);
+  if (isMonorepo) {
+    copyTraeRules(localRoot, targetDir, projectName);
+  }
   cleanViteConfig(targetDir);
   updatePackageJson(targetDir, projectName);
 

@@ -11,6 +11,7 @@ export default tseslint.config(
       'build/**',
       '**/dist/**',
       'templates/**',
+      'packages/pi-cli/templates/**',
       '!eslint.config.mjs',
       '!**/.eslintrc*',
     ],

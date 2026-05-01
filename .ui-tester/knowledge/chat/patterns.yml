@@ -1,24 +1,25 @@
 # Module: chat
 # Interaction patterns for ChatPanel
+# Last updated: 2026-04-30
 
 send_chat_message:
   description: "Send a message via the chat input and verify response"
   steps:
     - action: snapshot
-      description: "Get fresh refs for textarea and send button"
+      description: "Get fresh refs for input and send button"
     - action: fill
-      selector: "textarea[placeholder='Type a message...']"
-      description: "Type message into chat textarea"
+      selector: "input[placeholder='Type a message...']"  # NOTE: <input> not <textarea>
+      description: "Type message into chat input field"
     - action: click
       selector: "Send button"
       description: "Click Send button to submit"
     - action: wait
-      duration_ms: 2000
-      description: "Wait for RPC response"
+      duration_ms: 3000
+      description: "Wait for RPC response (bot reply)"
     - action: get_text
       selector: "body"
       description: "Extract full page text to verify messages appeared"
-  expected_result: "User message and bot response appear in chat area"
+  expected_result: "User message and bot response appear in chat area, Messages counter increments by 2"
 
 verify_chat_messages:
   description: "Chat messages are NOT visible in snapshot -i accessibility tree. Must use get text body or eval to extract."
@@ -26,16 +27,46 @@ verify_chat_messages:
   pattern: "Look for 'Messages N' counter and message text between 'Messages' and 'Send'"
 
 bot_responses:
-  description: "The chat handler is a smart demo assistant"
+  description: "The chat handler is a smart demo assistant with contextual replies"
   known_responses:
-    hello: "Hello! Great to see you. What would you like to know?"
-    ping: "That's an interesting question! I'm a demo assistant, so my knowledge is limited - but try asking about **time**, **math**, **files**, or **git**."
-  notes: "Bot responds to all messages with contextual replies"
+    hello: "Hey there! How can I help you today?"
+    time_query: "It's currently **HH:MM AM/PM** on **Day, Month DD, YYYY**."
+    generic: "That's an interesting question! I'm a demo assistant..."
+  notes: "Bot responds to all messages with contextual replies including markdown formatting (**bold**)"
+
+layout:
+  description: "Clean chat-focused layout with minimal chrome"
+  activity_bar:
+    icons: ["Chat"]  # ONLY Chat icon — no Explorer, Git, Feed, Search, Debug
+    position: "left sidebar, narrow strip"
+  main_area:
+    header: "Messages [count] badge + Pi Chat subtitle"
+    content: "Message list area with user (right/blue) and bot (left/gray) bubbles"
+    footer: "Input field + Send button at bottom"
+  title_bar:
+    left_badge: "Web (WebSocket)" — blue pill badge indicating WS connection status
+    subtitle: "Pi Chat"
+
+input_history:
+  description: "Up/Down arrow key navigation in input field"
+  status: "NOT_IMPLEMENTED or NOT_TRIGGERED — pressing ArrowUp in input does not populate previous messages"
+  finding_date: "2026-04-30"
+  notes: "After sending messages, pressing Up arrow in input field leaves value empty. Input history feature may not be implemented in this template."
+
+ws_connection:
+  description: "WebSocket auto-connects through Vite proxy without ?ws= query param"
+  auto_connect: true
+  no_ws_param_needed: true
+  badge_shows: "Web (WebSocket)" in top-left corner
 
 tips:
   - "snapshot -i does NOT show chat message content - accessibility tree omits them"
   - "Use 'get text body' to extract messages from the full page text"
-  - "Messages counter increments: Messages2 → Messages4 after 2 exchanges (1 user + 1 bot each)"
-  - "Chat panel is activated by clicking 'Chat' button in ActivityBar"
-  - "Chat shares main content area with Feed+Subs panel"
-  - "RPC works over WebSocket connection established via ?ws= URL param"
+  - "The message input is an <input> element, NOT a <textarea> — use correct selector"
+  - "Messages counter increments by 2 per exchange (1 user + 1 bot): Messages2 → Messages4 after 2 exchanges"
+  - "ActivityBar has ONLY the Chat icon — this is a focused chat-only template"
+  - "No Explorer, Git, Feed, Search, or Debug panels present"
+  - "WS connects automatically via Vite proxy — no ?ws= URL param needed"
+  - "Bot responses include markdown formatting (e.g., **bold** text)"
+  - "User messages appear right-aligned in blue bubbles; bot responses left-aligned in gray"
+  - "Page document.title is 'React + Tailwind + Vite' but UI shows 'Web (WebSocket)' badge"

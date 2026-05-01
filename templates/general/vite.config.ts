@@ -24,6 +24,9 @@ export default defineConfig({
   server: {
     port: parseInt(process.env.VITE_PORT || "5173"),
     strictPort: false,
+    watch: {
+      ignored: [".workspace/**"],
+    },
     proxy: {
       "/health": { target: `http://localhost:${backendPort}`, changeOrigin: true },
       "/info": { target: `http://localhost:${backendPort}`, changeOrigin: true },
