@@ -25,7 +25,7 @@ const PORT = 3100;
 // so "pi-agent-template-token" becomes "e2e-app-token" in the created project.
 const PROJECT_NAME = "e2e-app";
 const TOKEN = `${PROJECT_NAME}-token`;
-const WS_URL = `ws://localhost:${PORT}/?token=${TOKEN}`;
+const WS_URL = `ws://localhost:${PORT}/ws?token=${TOKEN}`;
 const TIMEOUT_MS = 15_000;
 
 let projectDir: string;
@@ -185,7 +185,7 @@ async function main() {
   // Test 3: Auth rejection (WebSocket, wrong token)
   {
     const authResult = await new Promise<string>((resolve) => {
-      const ws = new WebSocket(`ws://localhost:${PORT}/?token=wrong-token`);
+      const ws = new WebSocket(`ws://localhost:${PORT}/ws?token=wrong-token`);
       const timer = setTimeout(() => resolve("timeout"), 5000);
       ws.onclose = (event: CloseEvent) => { clearTimeout(timer); resolve(`closed:${event.code}`); };
       ws.onerror = () => { clearTimeout(timer); resolve("error"); };
