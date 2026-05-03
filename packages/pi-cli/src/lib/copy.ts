@@ -38,11 +38,11 @@ function copyAndReplace(srcDir: string, destDir: string, projectName: string): v
       let content = readFileSync(srcPath, 'utf-8');
 
       content = content.replace(/pi-agent-template/g, projectName);
-      content = content.replace(/pi-agent/g, projectName);
+      content = content.replace(/Pi Agent Template/g, pascalName);
       content = content.replace(/Pi Agent/g, pascalName);
       content = content.replace(/com\.piagent\.template/g, identifier);
       content = content.replace(/com\.piagent/g, shortId);
-      content = content.replace(/@pi-agent\//g, `@chat-agent/`);
+      content = content.replace(/@pi-agent\//g, `@${projectName}/`);
 
       writeFileSync(destPath, content);
     }
@@ -147,7 +147,7 @@ export async function copyTemplate(options: CopyOptions): Promise<void> {
     [
       '#!/bin/sh',
       'bun run lint',
-      'ERRORS=$(npx tsc --noEmit 2>&1 | grep "error TS" | grep -v "node_modules" || true)',
+      'ERRORS=$(bunx tsc --noEmit 2>&1 | grep "error TS" | grep -v "node_modules" || true)',
       'if [ -n "$ERRORS" ]; then',
       '  echo "$ERRORS"',
       '  exit 1',

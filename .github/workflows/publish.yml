@@ -63,6 +63,21 @@ jobs:
             exit 1
           fi
 
+      - name: Install dependencies
+        run: |
+          npm install -g pnpm@9
+          pnpm install --frozen-lockfile
+
+      - name: Run tests
+        run: bun run test:rpc
+
+      - name: Sync templates
+        run: |
+          for t in general chat agent; do
+            rm -rf packages/pi-cli/templates/$t
+            cp -r templates/$t packages/pi-cli/templates/$t
+          done
+
       - name: Setup npm auth
         run: echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > packages/pi-cli/.npmrc
         env:

@@ -26,6 +26,7 @@ interface AppState {
   callRPC: (inputText: string) => Promise<void>;
   handleSubscribe: () => Promise<void>;
   handleUnsubscribe: () => Promise<void>;
+  clearDebug: () => void;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -129,5 +130,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (err) {
       addLog(`Unsubscribe error: ${err instanceof Error ? err.message : String(err)}`);
     }
+  },
+
+  clearDebug: () => {
+    set({ logs: [], result: null, tickEvents: [], tickCount: 0 });
   },
 }));

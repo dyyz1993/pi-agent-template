@@ -94,21 +94,46 @@ function generateReply(input: string): string {
     return `That would be **${niceResult}**! Need help with anything else?`;
   }
 
+  if (/file|files|browse|explorer|directory|folder|open file/i.test(lower)) {
+    return (
+      "I can help you explore files! While I can't directly browse files in this demo, " +
+      "here's what you can do:\n\n" +
+      "- Use the **Explorer** panel to browse your project files\n" +
+      "- Click any file to preview its contents\n" +
+      "- Use the search feature to find specific files\n\n" +
+      "Try asking about **time** or **math** for a live demo!"
+    );
+  }
+
+  if (/git|commit|branch|status|diff|push|pull/i.test(lower)) {
+    return (
+      "Git is a powerful version control system! Here's what I know:\n\n" +
+      "- **git status** - Check your current changes\n" +
+      "- **git branch** - See or switch branches\n" +
+      "- **git log** - View commit history\n" +
+      "- **git diff** - See what changed\n\n" +
+      "Check out the **Source Control** panel for a visual Git interface! " +
+      "Or try asking me about **time** or **math**."
+    );
+  }
+
   if (/^(help|commands|what can you|what do you|capabilities|features)/i.test(lower)) {
     return (
       "Here's what I can help with:\n\n" +
       "- **Greetings** - Say hi and I'll say hi back!\n" +
       "- **Time & Date** - Ask \"what time is it?\" or \"what's today's date?\"\n" +
       "- **Math** - Give me an expression like \"12 * 8\" or \"what is 100 / 4\"\n" +
+      "- **Files** - Ask about file browsing and the explorer\n" +
+      "- **Git** - Ask about version control commands\n" +
       "- **Help** - Show this message anytime!\n\n" +
       "This is a demo assistant - try different things to see what sticks!"
     );
   }
 
   const defaults = [
-    "That's an interesting question! I'm a demo assistant, so my knowledge is limited - but try asking about **time** or **math**.",
-    "I wish I could help with that! For now I can answer questions about time and do simple math. Type **help** to see what I can do.",
-    "Hmm, I'm not sure about that one. But I *can* do math and tell you the time. Give it a shot!",
+    "That's an interesting question! I'm a demo assistant, so my knowledge is limited - but try asking about **time**, **math**, **files**, or **git**.",
+    "I wish I could help with that! For now I can answer questions about time, math, files, and git. Type **help** to see what I can do.",
+    "Hmm, I'm not sure about that one. But I *can* do math, tell you the time, and talk about files and git. Give it a shot!",
   ];
   return defaults[Math.floor(Math.random() * defaults.length)];
 }

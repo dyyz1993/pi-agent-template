@@ -1,6 +1,7 @@
 import { resolve } from 'path';
 import { execSync } from 'child_process';
 import { existsSync, readFileSync, mkdirSync } from 'fs';
+import { createServer } from 'net';
 
 const PORT_REGISTRY = resolve(process.env.HOME || '~', '.pi-agent', 'ports.json');
 
@@ -19,15 +20,24 @@ function readRegistry(): Record<string, PortEntry> {
   }
 }
 
-function findFreePorts(entries: Record<string, PortEntry>): { backend: number; vite: number } {
+function isPortFree(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = createServer();
+    server.once('error', () => resolve(false));
+    server.once('listening', () => { server.close(); resolve(true); });
+    server.listen(port);
+  });
+}
+
+async function findFreePorts(entries: Record<string, PortEntry>): Promise<{ backend: number; vite: number }> {
   const usedPorts = new Set<number>();
   for (const entry of Object.values(entries)) {
     usedPorts.add(entry.port);
   }
   let backend = 3100;
-  while (usedPorts.has(backend)) backend++;
+  while (usedPorts.has(backend) || !(await isPortFree(backend))) backend++;
   let vite = 5173;
-  while (usedPorts.has(vite)) vite++;
+  while (usedPorts.has(vite) || !(await isPortFree(vite))) vite++;
   return { backend, vite };
 }
 
@@ -101,7 +111,7 @@ Examples:
   }
 
   const registry = readRegistry();
-  const ports = findFreePorts(registry);
+  const ports = await findFreePorts(registry);
 
   console.log(`  Backend port: ${ports.backend}`);
   console.log(`  Vite port:    ${ports.vite}`);

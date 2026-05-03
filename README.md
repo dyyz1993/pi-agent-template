@@ -75,42 +75,44 @@ pi status
 
 ## Adding RPC Modules
 
-RPC 模块通过 `defineModule` 定义，自动获得完整类型推导：
+RPC 模块通过 `defineRPC` builder 定义，自动获得完整类型推导：
 
 ```ts
-import { defineModule, defineRPC } from '@dyyz1993/rpc-core';
+import { defineRPC } from '@dyyz1993/rpc-core';
 
-const fileModule = defineModule('file', {
-  read: defineRPC<{ path: string }, { content: string }>(),
-  write: defineRPC<{ path: string; content: string }, void>(),
-});
-
-const definition = defineRPC({
-  file: fileModule,
-});
+const rpc = defineRPC()
+  .method<{ path: string }, { content: string }>('readFile', async ({ path }) => {
+    return { content: await readFile(path) };
+  })
+  .method<{ path: string; content: string }, void>('writeFile', async ({ path, content }) => {
+    await writeFile(path, content);
+  })
+  .event<{ count: number }>('fileChanged', { count: 0 });
 ```
 
-Server 端注册 handler：
+Server 端创建：
 
 ```ts
-import { createTypedServer } from '@dyyz1993/rpc-core';
+import { defineRPC } from '@dyyz1993/rpc-core';
 
-const server = createTypedServer(definition, {
-  file: {
-    read: async ({ path }) => ({ content: await readFile(path) }),
-    write: async ({ path, content }) => { await writeFile(path, content); },
-  },
-});
+const server = defineRPC()
+  .method('hello', async ({ name }: { name: string }) => ({ message: `Hello ${name}!` }))
+  .createServer(transport);
+
+server.emit('fileChanged', { count: 1 });
 ```
 
 Client 端获得完整类型提示：
 
 ```ts
-import { createTypedClient } from '@dyyz1993/rpc-core';
+import { defineRPC } from '@dyyz1993/rpc-core';
 
-const client = createTypedClient(definition, transport);
-const result = await client.file.read({ path: '/tmp/test.txt' });
-// result.content — fully typed
+const client = defineRPC()
+  .method('hello', async (params: unknown) => ({}))
+  .event('fileChanged', { count: 0 })
+  .createClient(transport);
+
+const result = await client.call('hello', { name: 'World' });
 ```
 
 支持的传输层：`IPCTransport`、`WebSocketTransport`、`StdioTransport`、`InMemoryTransport`。

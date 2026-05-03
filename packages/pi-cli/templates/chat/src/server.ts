@@ -74,7 +74,7 @@ async function start() {
     writePortFile(port);
     registerPort(PROJECT_ROOT, port, PROJECT_NAME);
     log.info(`HTTP + WebSocket server running on http://localhost:${port}`);
-    log.info(`WebSocket: ws://localhost:${port}?token=${config.authToken}`);
+    log.info(`WebSocket: ws://localhost:${port}/ws (auth required)`);
     log.info("Available RPC methods: system.ping, system.hello, system.echo, chat.list, chat.send");
     // eslint-disable-next-line no-console
     console.log("\n" + formatRegistryForOutput() + "\n");

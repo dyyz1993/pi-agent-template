@@ -218,7 +218,7 @@ async function handleFileUpload(
     }
     const body = Buffer.concat(chunks);
     await mkdir(dirname(destPath), { recursive: true });
-    await writeFile(destPath, body as unknown as string);
+    await writeFile(destPath, body);
     log.info("File uploaded", { path: destPath, size: body.length });
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ ok: true, path: destPath, size: body.length }));

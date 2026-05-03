@@ -29,11 +29,23 @@ jobs:
       - name: Lint root
         run: bun run lint
 
-      - name: Install template dependencies
+      - name: Install template dependencies (general)
         run: cd templates/general && bun install
 
-      - name: Lint template
+      - name: Lint template (general)
         run: cd templates/general && bun run lint
+
+      - name: Install template dependencies (chat)
+        run: cd templates/chat && bun install
+
+      - name: Lint template (chat)
+        run: cd templates/chat && bun run lint
+
+      - name: Install template dependencies (agent)
+        run: cd templates/agent && bun install
+
+      - name: Lint template (agent)
+        run: cd templates/agent && bun run lint
 
   type-check:
     runs-on: ubuntu-latest
@@ -53,12 +65,38 @@ jobs:
       - name: Type check (root)
         run: bun run type-check
 
-      - name: Install template dependencies
+      - name: Install template dependencies (general)
         run: cd templates/general && bun install
 
-      - name: Type check (template)
+      - name: Type check (general)
         run: |
           cd templates/general
+          ERRORS=$(npx tsc --noEmit 2>&1 | grep "error TS" | grep -v "node_modules" || true)
+          if [ -n "$ERRORS" ]; then
+            echo "$ERRORS"
+            exit 1
+          fi
+          echo "Template type check passed"
+
+      - name: Install template dependencies (chat)
+        run: cd templates/chat && bun install
+
+      - name: Type check (chat)
+        run: |
+          cd templates/chat
+          ERRORS=$(npx tsc --noEmit 2>&1 | grep "error TS" | grep -v "node_modules" || true)
+          if [ -n "$ERRORS" ]; then
+            echo "$ERRORS"
+            exit 1
+          fi
+          echo "Template type check passed"
+
+      - name: Install template dependencies (agent)
+        run: cd templates/agent && bun install
+
+      - name: Type check (agent)
+        run: |
+          cd templates/agent
           ERRORS=$(npx tsc --noEmit 2>&1 | grep "error TS" | grep -v "node_modules" || true)
           if [ -n "$ERRORS" ]; then
             echo "$ERRORS"

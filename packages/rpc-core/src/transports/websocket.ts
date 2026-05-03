@@ -143,52 +143,53 @@ export class WebSocketTransport implements Transport {
     this.errorHandlers.clear();
   }
 
+  private setupMock(ws: WebSocket, isConnected: boolean): void {
+    this.ws = ws;
+    this._isConnected = isConnected;
+  }
+
   static createPair(options?: WebSocketTransportOptions): { client: WebSocketTransport; server: WebSocketTransport } {
     const client = new WebSocketTransport({ ...options, url: 'mock://client', reconnect: false });
     const server = new WebSocketTransport({ ...options, url: 'mock://server', reconnect: false });
 
-    const mockWs = {
-      onopen: null as (() => void) | null,
-      onmessage: null as ((event: { data: string }) => void) | null,
-      onerror: null as ((error: unknown) => void) | null,
-      onclose: null as (() => void) | null,
-      close: () => {},
-    };
-
     const clientSend = (data: string) => {
       try {
         const message = JSON.parse(data);
-        for (const handler of (server as any).__messageHandlers) {
+        for (const handler of server.messageHandlers) {
           handler(message);
         }
-      } catch { /* ignore */ }
+      } catch { /* parse error */ }
     };
 
     const serverSend = (data: string) => {
       try {
         const message = JSON.parse(data);
-        for (const handler of (client as any).__messageHandlers) {
+        for (const handler of client.messageHandlers) {
           handler(message);
         }
-      } catch { /* ignore */ }
+      } catch { /* parse error */ }
     };
 
-    const clientWs = { ...mockWs, send: clientSend };
-    const serverWs = { ...mockWs, send: serverSend };
+    const clientWs = {
+      onopen: null as (() => void) | null,
+      onmessage: null as ((event: { data: string }) => void) | null,
+      onerror: null as ((error: unknown) => void) | null,
+      onclose: null as (() => void) | null,
+      close: () => {},
+      send: clientSend,
+    };
 
-    (client as any).ws = clientWs;
-    (server as any).ws = serverWs;
-    (client as any)._isConnected = true;
-    (server as any)._isConnected = true;
+    const serverWs = {
+      onopen: null as (() => void) | null,
+      onmessage: null as ((event: { data: string }) => void) | null,
+      onerror: null as ((error: unknown) => void) | null,
+      onclose: null as (() => void) | null,
+      close: () => {},
+      send: serverSend,
+    };
 
-    Object.defineProperty(client, '__messageHandlers', {
-      get: () => client['messageHandlers'],
-      enumerable: true,
-    });
-    Object.defineProperty(server, '__messageHandlers', {
-      get: () => server['messageHandlers'],
-      enumerable: true,
-    });
+    client.setupMock(clientWs as unknown as WebSocket, true);
+    server.setupMock(serverWs as unknown as WebSocket, true);
 
     return { client, server };
   }

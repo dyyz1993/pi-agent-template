@@ -1,6 +1,6 @@
 import type { Transport } from './core/transport';
 import type { RPCMessage, RPCHandler, RPCEvent, RPCLogger, DefaultEventMetadata } from './core/types';
-import { generateId } from './core/utils';
+import { generateId, matchFilter } from './core/utils';
 
 export interface RPCServerOptions {
   logger?: RPCLogger;
@@ -126,7 +126,7 @@ export class RPCServer {
       this.logger?.debug?.('Checking subscription', { subscriptionId: subId, eventType: sub.eventType, filter: sub.filter });
       if (sub.eventType !== eventType) continue;
       
-      if (this.shouldSendEvent(event, sub.filter)) {
+      if (matchFilter(event, sub.filter)) {
         hasMatchingSubscription = true;
         break;
       } else {
@@ -138,31 +138,6 @@ export class RPCServer {
       this.logger?.info?.('Sending event to client', { eventType });
       await this.transport.send(event);
     }
-  }
-
-  private shouldSendEvent<Metadata>(event: RPCEvent<Metadata>, filter: Record<string, unknown>): boolean {
-    return this.matchFilter(event, filter);
-  }
-
-  private matchFilter<Metadata>(event: RPCEvent<Metadata>, filter: Record<string, unknown>): boolean {
-    if (!filter || Object.keys(filter).length === 0) {
-      return true;
-    }
-
-    if (!event.metadata) {
-      return false;
-    }
-
-    for (const key in filter) {
-      const filterValue = filter[key];
-      const eventValue = (event.metadata as Record<string, unknown>)[key];
-      
-      if (filterValue !== undefined && eventValue !== filterValue) {
-        return false;
-      }
-    }
-
-    return true;
   }
 
   close(): void {

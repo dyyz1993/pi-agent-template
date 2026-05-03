@@ -1,4 +1,4 @@
-import { Send, Play, Square, File, ChevronRight, ChevronDown } from "lucide-react";
+import { Send, Play, Square, File, ChevronRight, ChevronDown, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAppStore } from "../../stores/use-app-store";
 import type { DemoMethod } from "../../types";
@@ -33,6 +33,7 @@ export function DebugPanel() {
   const callRPC = useAppStore((s) => s.callRPC);
   const handleSubscribe = useAppStore((s) => s.handleSubscribe);
   const handleUnsubscribe = useAppStore((s) => s.handleUnsubscribe);
+  const clearDebug = useAppStore((s) => s.clearDebug);
 
   if (collapsed) {
     return (
@@ -52,7 +53,7 @@ export function DebugPanel() {
   return (
     <div className="w-72 bg-gray-850 border-l border-gray-700 flex flex-col flex-shrink-0 overflow-y-auto">
       {/* Collapse toggle */}
-      <div className="flex items-center px-2 py-1.5 border-b border-gray-700">
+      <div className="flex items-center justify-between px-2 py-1.5 border-b border-gray-700">
         <button
           onClick={() => setCollapsed(true)}
           title="Collapse Debug Panel"
@@ -60,6 +61,14 @@ export function DebugPanel() {
         >
           <ChevronDown className="w-3 h-3" />
           Debug
+        </button>
+        <button
+          onClick={clearDebug}
+          title="Clear all debug data"
+          className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-red-400 transition-colors"
+        >
+          <Trash2 className="w-3 h-3" />
+          Clear
         </button>
       </div>
       {/* RPC Calls */}

@@ -1,14 +1,8 @@
 import type { Transport } from './core/transport';
-import type { RPCMessage, RPCEvent, EventHandler } from './core/types';
-import { generateId } from './core/utils';
+import type { RPCMessage, RPCEvent, EventHandler, RPCLogger } from './core/types';
+import { generateId, matchFilter } from './core/utils';
 
-
-
-export interface RPCLogger {
-  debug: (message: string, ...args: unknown[]) => void;
-  info: (message: string, ...args: unknown[]) => void;
-  error: (message: string, ...args: unknown[]) => void;
-}
+export type { RPCLogger };
 
 export interface RPCClientOptions {
   transport: Transport;
@@ -18,7 +12,8 @@ export interface RPCClientOptions {
 }
 
 export class RPCClient {
-  private transport: Transport;
+  private _transport: Transport;
+  get transport(): Transport { return this._transport; }
   private timeout: number;
   private pendingRequests: Map<string, {
     resolve: (value: unknown) => void;
@@ -30,7 +25,7 @@ export class RPCClient {
   private onError?: (error: Error, context: string) => void;
 
   constructor(options: RPCClientOptions) {
-    this.transport = options.transport;
+    this._transport = options.transport;
     this.timeout = options.timeout || 30000;
     this.logger = options.logger;
     this.onError = options.onError;
@@ -39,7 +34,7 @@ export class RPCClient {
 
   private setupTransport(): void {
     this.logger?.info?.('setupTransport called, registering message handler');
-    this.transport.onMessage((message) => {
+    this._transport.onMessage((message) => {
       const msg = message as RPCMessage;
         this.logger?.info?.('Received message in handler:', msg.type, 'id:', msg.id);
       this.handleMessage(msg);
@@ -76,34 +71,13 @@ export class RPCClient {
     for (const [subId, sub] of this.subscriptions) {
       this.logger?.info?.('Checking subscription:', subId, 'eventType:', sub.eventType, 'filter:', sub.filter);
       if (sub.eventType !== event.eventType) continue;
-      if (this.matchFilter(event, sub.filter)) {
+      if (matchFilter(event, sub.filter)) {
         this.logger?.info?.('Matched! Calling handler for:', subId);
         sub.handler(event);
       } else {
         this.logger?.info?.('Filter not matched');
       }
     }
-  }
-
-  private matchFilter(event: RPCEvent, filter: Record<string, unknown>): boolean {
-    if (!filter || Object.keys(filter).length === 0) {
-      return true;
-    }
-
-    if (!event.metadata) {
-      return false;
-    }
-
-    for (const key in filter) {
-      const filterValue = filter[key];
-      const eventValue = (event.metadata as Record<string, unknown>)[key];
-      
-      if (filterValue !== undefined && eventValue !== filterValue) {
-        return false;
-      }
-    }
-
-    return true;
   }
 
   async call<T = unknown>(method: string, params: unknown): Promise<T> {
@@ -132,7 +106,7 @@ export class RPCClient {
         },
       });
 
-      this.transport.send(message).catch(error => {
+      this._transport.send(message).catch(error => {
         this.pendingRequests.delete(id);
         clearTimeout(timeoutId);
         reject(error);
@@ -173,7 +147,7 @@ export class RPCClient {
     };
 
     this.logger?.info?.('Sending subscribe message:', message, 'key:', subscriptionKey);
-    this.transport.send(message).catch(error => {
+    this._transport.send(message).catch(error => {
       this.logger?.error?.('Subscribe error:', error);
       this.onError?.(error, 'subscribe');
     });
@@ -195,7 +169,7 @@ export class RPCClient {
       subscriptionId,
     };
 
-    this.transport.send(message).catch(error => {
+    this._transport.send(message).catch(error => {
       this.onError?.(error, 'unsubscribe');
     });
   }
@@ -204,7 +178,7 @@ export class RPCClient {
     this.pendingRequests.clear();
     this.subscriptions.clear();
     this.subscriptionKeys.clear();
-    this.transport.close();
+    this._transport.close();
   }
 
   isConnected(): boolean {
