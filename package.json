@@ -22,6 +22,9 @@
     "packages/rpc-core/src/**/*.ts": [
       "eslint --fix"
     ],
+    "packages/pi-cli/src/**/*.ts": [
+      "eslint --fix"
+    ],
     "scripts/**/*.ts": [
       "eslint --fix"
     ]

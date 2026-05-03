@@ -33,10 +33,10 @@ export class RPCClient {
   }
 
   private setupTransport(): void {
-    this.logger?.info?.('setupTransport called, registering message handler');
+    this.logger?.debug?.('setupTransport called, registering message handler');
     this._transport.onMessage((message) => {
       const msg = message as RPCMessage;
-        this.logger?.info?.('Received message in handler:', msg.type, 'id:', msg.id);
+        this.logger?.debug?.('Received message in handler:', msg.type, 'id:', msg.id);
       this.handleMessage(msg);
     });
   }
@@ -67,15 +67,15 @@ export class RPCClient {
   }
 
   private handleEvent(event: RPCEvent): void {
-    this.logger?.info?.('handleEvent:', event.eventType, 'metadata:', event.metadata, 'subscriptions:', this.subscriptions.size);
+    this.logger?.debug?.('handleEvent:', event.eventType, 'metadata:', event.metadata, 'subscriptions:', this.subscriptions.size);
     for (const [subId, sub] of this.subscriptions) {
-      this.logger?.info?.('Checking subscription:', subId, 'eventType:', sub.eventType, 'filter:', sub.filter);
+      this.logger?.debug?.('Checking subscription:', subId, 'eventType:', sub.eventType, 'filter:', sub.filter);
       if (sub.eventType !== event.eventType) continue;
       if (matchFilter(event, sub.filter)) {
-        this.logger?.info?.('Matched! Calling handler for:', subId);
+        this.logger?.debug?.('Matched! Calling handler for:', subId);
         sub.handler(event);
       } else {
-        this.logger?.info?.('Filter not matched');
+        this.logger?.debug?.('Filter not matched');
       }
     }
   }
@@ -126,7 +126,7 @@ export class RPCClient {
     
     const existingSubId = this.subscriptionKeys.get(subscriptionKey);
     if (existingSubId) {
-      this.logger?.info?.('Reusing existing subscription:', existingSubId, 'for key:', subscriptionKey);
+      this.logger?.debug?.('Reusing existing subscription:', existingSubId, 'for key:', subscriptionKey);
       const existing = this.subscriptions.get(existingSubId);
       if (existing) {
         this.subscriptions.set(existingSubId, { ...existing, handler });
@@ -146,7 +146,7 @@ export class RPCClient {
       filter,
     };
 
-    this.logger?.info?.('Sending subscribe message:', message, 'key:', subscriptionKey);
+    this.logger?.debug?.('Sending subscribe message:', message, 'key:', subscriptionKey);
     this._transport.send(message).catch(error => {
       this.logger?.error?.('Subscribe error:', error);
       this.onError?.(error, 'subscribe');

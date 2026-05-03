@@ -20,7 +20,7 @@ import { tmpdir } from "os";
 import { join, resolve } from "path";
 import { RPCClient, WebSocketTransport } from "../packages/rpc-core/src/index";
 
-const PORT = 3100;
+const PORT = Number(process.env.PORT || '3100');
 // Note: create.ts replaces "pi-agent-template" with project name,
 // so "pi-agent-template-token" becomes "e2e-app-token" in the created project.
 const PROJECT_NAME = "e2e-app";

@@ -39,12 +39,7 @@ async function main(): Promise<void> {
   const command = args[0];
   const rest = args.slice(1);
 
-  if (!command || ((command === '-h' || command === '--help') && args.length === 1)) {
-    printHelp();
-    process.exit(0);
-  }
-
-  if (command === '-h' || command === '--help') {
+  if (!command || command === '-h' || command === '--help') {
     printHelp();
     process.exit(0);
   }

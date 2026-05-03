@@ -2,15 +2,9 @@ import { resolve } from 'path';
 import { execSync } from 'child_process';
 import { existsSync, readFileSync, mkdirSync } from 'fs';
 import { createServer } from 'net';
+import type { PortEntry } from '../lib/types.js';
 
 const PORT_REGISTRY = resolve(process.env.HOME || '~', '.pi-agent', 'ports.json');
-
-interface PortEntry {
-  port: number;
-  pid: number;
-  startedAt: string;
-  name: string;
-}
 
 function readRegistry(): Record<string, PortEntry> {
   try {

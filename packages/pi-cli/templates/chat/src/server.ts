@@ -12,6 +12,7 @@ import { createHttpHandler } from "./gateway/http-routes";
 import { createWsHandler } from "./gateway/ws-handler";
 import { createLogger, configureLogDir } from "./shared/lib/logger";
 import { registerPort, unregisterPort, formatRegistryForOutput } from "./shared/lib/port-registry";
+import { discoverMethodNames } from "./shared/register-all-handlers";
 
 configureLogDir(config.logDir);
 const log = createLogger("server");
@@ -75,7 +76,8 @@ async function start() {
     registerPort(PROJECT_ROOT, port, PROJECT_NAME);
     log.info(`HTTP + WebSocket server running on http://localhost:${port}`);
     log.info(`WebSocket: ws://localhost:${port}/ws (auth required)`);
-    log.info("Available RPC methods: system.ping, system.hello, system.echo, chat.list, chat.send");
+    log.info(`Available RPC methods: ${discoverMethodNames().join(", ")}`);
+    log.info("File endpoints: GET /file/{path}, GET /info/{path}");
     // eslint-disable-next-line no-console
     console.log("\n" + formatRegistryForOutput() + "\n");
   });

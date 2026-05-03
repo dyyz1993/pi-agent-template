@@ -1,12 +1,6 @@
 import { readFileSync, existsSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
-
-interface PortEntry {
-  name: string;
-  port: number;
-  pid: number;
-  startedAt: string;
-}
+import type { PortEntry } from '../lib/types.js';
 
 function isPidAlive(pid: number): boolean {
   try {

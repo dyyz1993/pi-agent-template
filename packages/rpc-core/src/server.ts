@@ -140,6 +140,10 @@ export class RPCServer {
     }
   }
 
+  getRegisteredMethods(): string[] {
+    return Array.from(this.handlers.keys());
+  }
+
   close(): void {
     if (this.disconnectCleanup) {
       this.disconnectCleanup();
