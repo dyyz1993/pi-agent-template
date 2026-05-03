@@ -113,4 +113,51 @@ export class StdioTransport implements Transport {
     this.disconnectHandlers.clear();
     this.buffer = '';
   }
+
+  static createPair(options?: StdioTransportOptions): { client: StdioTransport; server: StdioTransport } {
+    let clientDataHandler: ((chunk: Buffer) => void) | null = null;
+    let _clientEndHandler: (() => void) | null = null;
+    let _clientErrorHandler: ((err: Error) => void) | null = null;
+    let serverDataHandler: ((chunk: Buffer) => void) | null = null;
+    let _serverEndHandler: (() => void) | null = null;
+    let _serverErrorHandler: ((err: Error) => void) | null = null;
+
+    const clientStdin = {
+      on: (event: string, handler: (...args: unknown[]) => void) => {
+        if (event === 'data') clientDataHandler = handler as (chunk: Buffer) => void;
+        if (event === 'end') _clientEndHandler = handler as () => void;
+        if (event === 'error') _clientErrorHandler = handler as (err: Error) => void;
+      },
+      resume: () => {},
+    };
+
+    const clientStdout = {
+      write: (data: string) => {
+        if (serverDataHandler) serverDataHandler(Buffer.from(data));
+      },
+    };
+
+    const serverStdin = {
+      on: (event: string, handler: (...args: unknown[]) => void) => {
+        if (event === 'data') serverDataHandler = handler as (chunk: Buffer) => void;
+        if (event === 'end') _serverEndHandler = handler as () => void;
+        if (event === 'error') _serverErrorHandler = handler as (err: Error) => void;
+      },
+      resume: () => {},
+    };
+
+    const serverStdout = {
+      write: (data: string) => {
+        if (clientDataHandler) clientDataHandler(Buffer.from(data));
+      },
+    };
+
+    const client = new StdioTransport({ ...options, stdin: clientStdin, stdout: clientStdout });
+    const server = new StdioTransport({ ...options, stdin: serverStdin, stdout: serverStdout });
+
+    client.connect();
+    server.connect();
+
+    return { client, server };
+  }
 }

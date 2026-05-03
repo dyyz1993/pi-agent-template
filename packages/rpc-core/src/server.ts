@@ -22,7 +22,7 @@ export class RPCServer {
 
   private setupTransport(): void {
     this.transport.onMessage((message) => {
-      this.handleMessage(message as RPCMessage);
+      this.handleMessage(message as RPCMessage).catch(() => {});
     });
   }
 
