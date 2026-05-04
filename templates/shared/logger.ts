@@ -1,14 +1,13 @@
 import { appendFile, mkdir as mkdirAsync, readdir as readdirAsync, unlink as unlinkAsync, stat as statAsync } from "fs/promises";
-import { mkdirSync, existsSync } from "fs";
+import { existsSync } from "fs";
 import { join } from "path";
 
-export type LogModule = "server" | "gateway" | "system" | "chat" | "file" | "timer" | "git" | "feed";
-type LogLevel = "debug" | "info" | "warn" | "error";
+export type LogLevel = "debug" | "info" | "warn" | "error";
 
 interface LogEntry {
   timestamp: string;
   level: LogLevel;
-  module: LogModule;
+  module: string;
   message: string;
   data?: Record<string, unknown>;
 }
@@ -16,22 +15,22 @@ interface LogEntry {
 let _logDir: string | null = null;
 let _maxAgeDays = 30;
 
-export async function configureLogDir(dir: string, options?: { maxAgeDays?: number }): Promise<void> {
+export function configureLogDir(dir: string, options?: { maxAgeDays?: number }): void {
   _logDir = dir;
   if (options?.maxAgeDays !== undefined) {
     _maxAgeDays = options.maxAgeDays;
   }
   if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
+    require("fs").mkdirSync(dir, { recursive: true });
   }
-  await cleanOldLogs(dir, _maxAgeDays);
+  cleanOldLogs(dir, _maxAgeDays);
 }
 
 function getLogDir(): string {
   if (!_logDir) {
     _logDir = "logs";
     if (!existsSync(_logDir)) {
-      mkdirSync(_logDir, { recursive: true });
+      require("fs").mkdirSync(_logDir, { recursive: true });
     }
   }
   return _logDir;
@@ -73,14 +72,10 @@ function writeToFile(line: string): void {
   });
 }
 
-export function flushLogs(): Promise<void> {
-  return writeQueue;
-}
-
 export class Logger {
-  private readonly module: LogModule;
+  private readonly module: string;
 
-  constructor(module: LogModule) {
+  constructor(module: string) {
     this.module = module;
   }
 
@@ -125,6 +120,10 @@ export class Logger {
   }
 }
 
-export function createLogger(module: LogModule): Logger {
+export function createLogger(module: string): Logger {
   return new Logger(module);
+}
+
+export function flushLogs(): Promise<void> {
+  return writeQueue;
 }
