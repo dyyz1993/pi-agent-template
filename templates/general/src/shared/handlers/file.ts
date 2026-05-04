@@ -3,8 +3,9 @@ import type { MethodParams, MethodResult } from "@dyyz1993/rpc-core";
 import type { RPCMethods, HandlerOptions } from "../rpc-schema";
 import { readdir, stat, writeFile, readFile, mkdir, rename, rm, cp } from "fs/promises";
 import { existsSync } from "fs";
-import { join, dirname, resolve } from "path";
+import { join, dirname } from "path";
 import { createLogger } from "../lib/logger";
+import { validatePath } from "../lib/path-security";
 
 const log = createLogger("file");
 
@@ -30,7 +31,7 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
   });
 
   r("file.listDir", async (params) => {
-    const basePath = resolve(params.path || process.cwd());
+    const basePath = validatePath(params.path || process.cwd());
     const entries: { name: string; path: string; type: "file" | "directory"; size?: number }[] = [];
     try {
       const files = await readdir(basePath);
@@ -55,30 +56,35 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
   });
 
   r("file.createFile", async (params) => {
-    const filePath = join(params.dirPath, params.name);
+    const dirPath = validatePath(params.dirPath);
+    const filePath = join(dirPath, params.name);
     await writeFile(filePath, "");
     return { path: filePath };
   });
 
   r("file.createDir", async (params) => {
-    const dirPath = join(params.dirPath, params.name);
-    await mkdir(dirPath, { recursive: true });
-    return { path: dirPath };
+    const dirPath = validatePath(params.dirPath);
+    const fullDirPath = join(dirPath, params.name);
+    await mkdir(fullDirPath, { recursive: true });
+    return { path: fullDirPath };
   });
 
   r("file.rename", async (params) => {
-    const newPath = join(dirname(params.oldPath), params.newName);
-    await rename(params.oldPath, newPath);
+    const oldPath = validatePath(params.oldPath);
+    const newPath = join(dirname(oldPath), params.newName);
+    await rename(oldPath, newPath);
     return { newPath };
   });
 
   r("file.delete", async (params) => {
-    await rm(params.path, { recursive: true, force: true });
+    const safePath = validatePath(params.path);
+    await rm(safePath, { recursive: true, force: true });
     return { ok: true };
   });
 
   r("file.copy", async (params) => {
-    const { srcPath, destDir } = params;
+    const srcPath = validatePath(params.srcPath);
+    const destDir = validatePath(params.destDir);
     const name = srcPath.split("/").pop() || srcPath;
     const destPath = join(destDir, name);
     await cp(srcPath, destPath, { recursive: true });
@@ -86,7 +92,7 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
   });
 
   r("file.readFile", async (params) => {
-    const filePath = resolve(params.path);
+    const filePath = validatePath(params.path);
     const content = await readFile(filePath);
     return { content: content.toString(), size: content.length };
   });

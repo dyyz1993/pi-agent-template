@@ -1,6 +1,7 @@
 import type { RPCServer } from "@dyyz1993/rpc-core";
 import type { MethodParams, MethodResult } from "@dyyz1993/rpc-core";
 import type { RPCMethods, HandlerOptions } from "../rpc-schema";
+import { validateCommand, setCommandPolicy } from "../lib/bash-security";
 
 type RegisterFn = <K extends keyof RPCMethods & string>(
   method: K,
@@ -17,17 +18,33 @@ const processes = new Map<number, TrackedProcess>();
 let pidCounter = 1;
 
 export function register(server: RPCServer, _options: HandlerOptions): void {
+  setCommandPolicy({
+    enabled: _options.enableBash !== false,
+    blockedPatterns: [
+      /rm\s+-rf\s+(.*\s)?\/($|\s)/,
+      /rm\s+-rf\s+--no-preserve-root/,
+      /mkfs/,
+      /dd\s+if=/,
+      />\s*\/dev\//,
+      /:()\s*\{.*\|.*&\s*\}/,
+      /shutdown/,
+      /reboot/,
+    ],
+    allowedCommands: null,
+  });
+
   const r: RegisterFn = (method, handler) => {
     server.register(method, handler as (params: unknown) => Promise<unknown>);
   };
 
   r("bash.execute", async (params) => {
+    const safeCommand = validateCommand(params.command);
     const pid = pidCounter++;
-    const proc: TrackedProcess = { pid, command: params.command, running: true };
+    const proc: TrackedProcess = { pid, command: safeCommand, running: true };
     processes.set(pid, proc);
 
     try {
-      const subprocess = Bun.spawn(params.command.split(" "), {
+      const subprocess = Bun.spawn(safeCommand.split(" "), {
         cwd: params.cwd || process.cwd(),
         stdout: "pipe",
         stderr: "pipe",
