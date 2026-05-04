@@ -1,11 +1,12 @@
 import { Send, Play, Square, File } from "lucide-react";
 import { useAppStore } from "../../stores/use-app-store";
+import { useLogStore } from "../../stores/use-log-store";
 import type { DemoMethod } from "../../types";
 
 export function DebugPanel() {
   const method = useAppStore((s) => s.method);
   const result = useAppStore((s) => s.result);
-  const logs = useAppStore((s) => s.logs);
+  const logs = useLogStore((s) => s.logs);
   const tickEvents = useAppStore((s) => s.tickEvents);
   const tickCount = useAppStore((s) => s.tickCount);
   const subscriptionId = useAppStore((s) => s.subscriptionId);

@@ -1,5 +1,5 @@
 import { Wifi, Monitor, MessageSquare, Rss, Terminal, ListTodo } from "lucide-react";
-import { useAppStore } from "../../stores/use-app-store";
+import { useConnectionStore } from "../../stores/use-connection-store";
 import { useExplorerStore } from "../../stores/use-explorer-store";
 import { useSidebarStore } from "../../stores/use-sidebar-store";
 import { ActivityBar } from "../activity-bar/ActivityBar";
@@ -31,7 +31,7 @@ export function AppLayout({
   sidebarWidth,
   handleResizeStart,
 }: AppLayoutProps) {
-  const mode = useAppStore((s) => s.mode);
+  const mode = useConnectionStore((s) => s.mode);
   const filePreview = useExplorerStore((s) => s.filePreview);
   const loadingFile = useExplorerStore((s) => s.loadingFile);
   const closePreview = useExplorerStore((s) => s.closePreview);

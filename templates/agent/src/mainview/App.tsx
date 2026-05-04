@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useAppStore } from "./stores/use-app-store";
+import { useConnectionStore } from "./stores/use-connection-store";
 import { useBreakpointSync } from "./hooks/use-breakpoint";
 import { useRpcInit } from "./hooks/use-rpc-init";
 import { useSidebarResize } from "./hooks/use-sidebar-resize";
 import { AppLayout, type CenterTab } from "./components/layout/AppLayout";
 
 function App() {
-  const ready = useAppStore((s) => s.ready);
+  const ready = useConnectionStore((s) => s.ready);
   const [centerTab, setCenterTab] = useState<CenterTab>("chat");
 
   useBreakpointSync();

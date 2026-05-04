@@ -1,13 +1,14 @@
 import { useEffect } from "react";
-import { useAppStore } from "../stores/use-app-store";
+import { useConnectionStore } from "../stores/use-connection-store";
+import { useLogStore } from "../stores/use-log-store";
 import { useExplorerStore } from "../stores/use-explorer-store";
 import { useChatStore } from "../stores/use-chat-store";
 import { apiClient } from "../lib/api-client";
 
 export function useRpcInit() {
-  const ready = useAppStore((s) => s.ready);
-  const addLog = useAppStore((s) => s.addLog);
-  const initializeConnection = useAppStore((s) => s.initializeConnection);
+  const ready = useConnectionStore((s) => s.ready);
+  const addLog = useLogStore((s) => s.addLog);
+  const initializeConnection = useConnectionStore((s) => s.initializeConnection);
   const listRootDir = useExplorerStore((s) => s.listRootDir);
 
   useEffect(() => {

@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { Rss, Send } from "lucide-react";
 import { apiClient } from "../../lib/api-client";
-import { useAppStore } from "../../stores/use-app-store";
+import { useLogStore } from "../../stores/use-log-store";
+import { useConnectionStore } from "../../stores/use-connection-store";
 import { useFeedStore, useEventStreamStore, type SubEventType } from "../../stores/use-feed-store";
 import type { FeedCategory } from "../../../shared/modules/feed";
 
@@ -31,8 +32,8 @@ export function FeedPanel() {
   const createPost = useFeedStore((s) => s.createPost);
   const loadPosts = useFeedStore((s) => s.loadPosts);
   const addPost = useFeedStore((s) => s.addPost);
-  const addLog = useAppStore((s) => s.addLog);
-  const ready = useAppStore((s) => s.ready);
+  const addLog = useLogStore((s) => s.addLog);
+  const ready = useConnectionStore((s) => s.ready);
 
   // Event stream state
   const entries = useEventStreamStore((s) => s.entries);

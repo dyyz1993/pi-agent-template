@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { apiClient } from "../lib/api-client";
-import { useAppStore } from "./use-app-store";
+import { useLogStore } from "./use-log-store";
 
 export interface GitFileChange {
   path: string;
@@ -87,7 +87,7 @@ export const useGitStore = create<GitState>((set, get) => ({
   },
 
   fetchStatus: async (repoPath) => {
-    const addLog = useAppStore.getState().addLog;
+    const addLog = useLogStore.getState().addLog;
     try {
       const res = await apiClient.call("git.status", { repoPath });
       set({
@@ -104,7 +104,7 @@ export const useGitStore = create<GitState>((set, get) => ({
   },
 
   fetchDiff: async (repoPath, filePath, staged) => {
-    const addLog = useAppStore.getState().addLog;
+    const addLog = useLogStore.getState().addLog;
     addLog(`Git diff: ${filePath}`);
     set({ loadingDiff: true });
     try {
@@ -123,7 +123,7 @@ export const useGitStore = create<GitState>((set, get) => ({
       const res = await apiClient.call("git.log", { repoPath, maxCount: 50 });
       set({ commits: res.commits, loadingCommits: false });
     } catch (err) {
-      const addLog = useAppStore.getState().addLog;
+      const addLog = useLogStore.getState().addLog;
       addLog(`Git log error: ${err instanceof Error ? err.message : String(err)}`);
       set({ loadingCommits: false });
     }
@@ -153,7 +153,7 @@ export const useGitStore = create<GitState>((set, get) => ({
         const res = await apiClient.call("git.commitFiles", { repoPath, hash });
         set({ commitFiles: { ...get().commitFiles, [hash]: res.files } });
       } catch (err) {
-        const addLog = useAppStore.getState().addLog;
+        const addLog = useLogStore.getState().addLog;
         addLog(`Git commitFiles error: ${err instanceof Error ? err.message : String(err)}`);
       } finally {
         const loading = new Set(get().loadingCommitFiles);
@@ -164,7 +164,7 @@ export const useGitStore = create<GitState>((set, get) => ({
   },
 
   fetchCommitFileDiff: async (repoPath, hash, filePath) => {
-    const addLog = useAppStore.getState().addLog;
+    const addLog = useLogStore.getState().addLog;
     addLog(`Git commit diff: ${hash.slice(0, 7)} ${filePath}`);
     set({ loadingDiff: true });
     try {
@@ -182,14 +182,14 @@ export const useGitStore = create<GitState>((set, get) => ({
       const res = await apiClient.call("git.branches", { repoPath });
       set({ branches: res.branches, loadingBranches: false });
     } catch (err) {
-      const addLog = useAppStore.getState().addLog;
+      const addLog = useLogStore.getState().addLog;
       addLog(`Git branches error: ${err instanceof Error ? err.message : String(err)}`);
       set({ loadingBranches: false });
     }
   },
 
   checkout: async (repoPath, branch) => {
-    const addLog = useAppStore.getState().addLog;
+    const addLog = useLogStore.getState().addLog;
     set({ loadingAction: "checkout" });
     try {
       await apiClient.call("git.checkout", { repoPath, branch });
@@ -203,7 +203,7 @@ export const useGitStore = create<GitState>((set, get) => ({
   },
 
   stageFiles: async (repoPath, paths) => {
-    const addLog = useAppStore.getState().addLog;
+    const addLog = useLogStore.getState().addLog;
     set({ loadingAction: "stage" });
     try {
       await apiClient.call("git.add", { repoPath, paths });
@@ -217,7 +217,7 @@ export const useGitStore = create<GitState>((set, get) => ({
   },
 
   unstageFiles: async (repoPath, paths) => {
-    const addLog = useAppStore.getState().addLog;
+    const addLog = useLogStore.getState().addLog;
     set({ loadingAction: "unstage" });
     try {
       await apiClient.call("git.reset", { repoPath, paths });
@@ -231,7 +231,7 @@ export const useGitStore = create<GitState>((set, get) => ({
   },
 
   commit: async (repoPath, message) => {
-    const addLog = useAppStore.getState().addLog;
+    const addLog = useLogStore.getState().addLog;
     set({ loadingAction: "commit" });
     try {
       const res = await apiClient.call("git.commit", { repoPath, message });
@@ -245,7 +245,7 @@ export const useGitStore = create<GitState>((set, get) => ({
   },
 
   push: async (repoPath) => {
-    const addLog = useAppStore.getState().addLog;
+    const addLog = useLogStore.getState().addLog;
     set({ loadingAction: "push" });
     try {
       await apiClient.call("git.push", { repoPath });
@@ -259,7 +259,7 @@ export const useGitStore = create<GitState>((set, get) => ({
   },
 
   pull: async (repoPath) => {
-    const addLog = useAppStore.getState().addLog;
+    const addLog = useLogStore.getState().addLog;
     set({ loadingAction: "pull" });
     try {
       await apiClient.call("git.pull", { repoPath });
@@ -277,7 +277,7 @@ export const useGitStore = create<GitState>((set, get) => ({
       const res = await apiClient.call("git.worktreeList", { repoPath });
       set({ worktrees: res.worktrees });
     } catch (err) {
-      const addLog = useAppStore.getState().addLog;
+      const addLog = useLogStore.getState().addLog;
       addLog(`Git worktreeList error: ${err instanceof Error ? err.message : String(err)}`);
     }
   },
