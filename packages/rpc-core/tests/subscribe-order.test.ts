@@ -22,8 +22,7 @@ describe("Subscribe parameter order consistency", () => {
   });
 
   test("client.subscribe accepts (eventType, handler) without filter", () => {
-    client.subscribe("test.event", () => {
-    });
+    const subId = client.subscribe("test.event", () => {});
 
     expect(subId).toBeTruthy();
     expect(typeof subId).toBe("string");

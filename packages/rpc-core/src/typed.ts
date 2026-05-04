@@ -77,9 +77,9 @@ export function createTypedClient<Methods, Events>(
       handler: (payload: EventPayloadType<Events, K>, metadata: EventMetadataType<Events, K>) => void,
       filter: Record<string, unknown> = {}
     ): string => {
-      return client.subscribe(event as string, filter, (e: RPCEvent) => {
+      return client.subscribe(event as string, (e: RPCEvent) => {
         handler(e.payload as EventPayloadType<Events, K>, e.metadata as EventMetadataType<Events, K>);
-      });
+      }, filter);
     },
 
     unsubscribe: (subscriptionId) => {
@@ -201,9 +201,9 @@ class RPCBuilderImpl implements RPCBuilder {
         return client.call(method, params);
       },
       subscribe: (event, handler, filter = {}) => {
-        return client.subscribe(event, filter, (e: RPCEvent) => {
+        return client.subscribe(event, (e: RPCEvent) => {
           handler(e.payload, e.metadata);
-        });
+        }, filter);
       },
       unsubscribe: (subscriptionId) => {
         client.unsubscribe(subscriptionId);

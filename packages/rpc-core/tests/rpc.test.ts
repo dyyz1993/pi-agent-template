@@ -200,7 +200,7 @@ describe('RPCServer event emission', () => {
   test('subscribe and receive event', async () => {
     const events: unknown[] = [];
 
-    client.subscribe('test-event', {}, (event) => {
+    client.subscribe('test-event', (event) => {
       events.push(event);
     });
 
@@ -218,9 +218,9 @@ describe('RPCServer event emission', () => {
   test('subscribe with filter', async () => {
     const events: unknown[] = [];
 
-    client.subscribe('filtered', { region: 'us' }, (event) => {
+    client.subscribe('filtered', (event) => {
       events.push(event);
-    });
+    }, { region: 'us' });
 
     await new Promise(r => setTimeout(r, 10));
 
@@ -236,7 +236,7 @@ describe('RPCServer event emission', () => {
   test('unsubscribe stops events', async () => {
     const events: unknown[] = [];
 
-    const subId = client.subscribe('unsub-test', {}, (event) => {
+    const subId = client.subscribe('unsub-test', (event) => {
       events.push(event);
     });
 
@@ -259,7 +259,7 @@ describe('RPCServer event emission', () => {
     const events1: unknown[] = [];
     const events2: unknown[] = [];
 
-    client.subscribe('multi', {}, (event) => { events1.push(event); });
+    client.subscribe('multi', (event) => { events1.push(event); });
 
     await new Promise(r => setTimeout(r, 10));
 
@@ -279,7 +279,7 @@ describe('RPCServer event emission', () => {
 
   test('event includes timestamp', async () => {
     const events: unknown[] = [];
-    client.subscribe('ts-test', {}, (event) => { events.push(event); });
+    client.subscribe('ts-test', (event) => { events.push(event); });
     await new Promise(r => setTimeout(r, 10));
 
     const before = Date.now();

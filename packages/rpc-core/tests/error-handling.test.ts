@@ -90,11 +90,11 @@ describe("RPC Error Handling", () => {
       // Subscribe both handlers with empty filters (same key, so second replaces first)
       // Use two separate client instances to get independent subscriptions
       // OR: send raw event directly to bypass server-side filter matching
-      client.subscribe("test.event", {}, handler1);
+      client.subscribe("test.event", handler1);
 
       // Second client on same transport pair
       const client2 = new RPCClient({ transport: clientTransport, timeout: 5000 });
-      client2.subscribe("test.event", {}, handler2);
+      client2.subscribe("test.event", handler2);
 
       await new Promise((r) => setTimeout(r, 10));
 
@@ -120,7 +120,7 @@ describe("RPC Error Handling", () => {
       void new RPCServer(serverTransport);
       const client = new RPCClient({ transport: clientTransport, timeout: 5000, onError });
 
-      client.subscribe("test.event", {}, () => {
+      client.subscribe("test.event", () => {
         throw new Error("subscriber error");
       });
 

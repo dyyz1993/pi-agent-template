@@ -215,7 +215,7 @@ export function runTransportSuite(name: string, factory: TransportFactory) {
       test('订阅并接收事件', async () => {
         const events: unknown[] = [];
 
-        client.subscribe('test-event', {}, (event) => {
+        client.subscribe('test-event', (event) => {
           events.push(event);
         });
 
@@ -232,7 +232,7 @@ export function runTransportSuite(name: string, factory: TransportFactory) {
 
       test('事件包含 timestamp', async () => {
         const events: unknown[] = [];
-        client.subscribe('ts-test', {}, (event) => { events.push(event); });
+        client.subscribe('ts-test', (event) => { events.push(event); });
         await new Promise(r => setTimeout(r, TICK));
 
         const before = Date.now();
@@ -252,7 +252,7 @@ export function runTransportSuite(name: string, factory: TransportFactory) {
 
       test('多次 emit 同一事件', async () => {
         const events: unknown[] = [];
-        client.subscribe('multi-emit', {}, (event) => { events.push(event); });
+        client.subscribe('multi-emit', (event) => { events.push(event); });
         await new Promise(r => setTimeout(r, TICK));
 
         for (let i = 0; i < 5; i++) {
@@ -271,9 +271,9 @@ export function runTransportSuite(name: string, factory: TransportFactory) {
       test('filter 匹配 - 只收到匹配的事件', async () => {
         const events: unknown[] = [];
 
-        client.subscribe('filtered', { region: 'us' }, (event) => {
+        client.subscribe('filtered', (event) => {
           events.push(event);
-        });
+        }, { region: 'us' });
 
         await new Promise(r => setTimeout(r, TICK));
 
@@ -292,9 +292,9 @@ export function runTransportSuite(name: string, factory: TransportFactory) {
       test('filter 多字段匹配', async () => {
         const events: unknown[] = [];
 
-        client.subscribe('multi-filter', { type: 'alert', level: 'high' }, (event) => {
+        client.subscribe('multi-filter', (event) => {
           events.push(event);
-        });
+        }, { type: 'alert', level: 'high' });
 
         await new Promise(r => setTimeout(r, TICK));
 
@@ -313,7 +313,7 @@ export function runTransportSuite(name: string, factory: TransportFactory) {
       test('空 filter 匹配所有', async () => {
         const events: unknown[] = [];
 
-        client.subscribe('no-filter', {}, (event) => {
+        client.subscribe('no-filter', (event) => {
           events.push(event);
         });
 
@@ -332,8 +332,8 @@ export function runTransportSuite(name: string, factory: TransportFactory) {
         const eventsA: unknown[] = [];
         const eventsB: unknown[] = [];
 
-        client.subscribe('type-a', {}, (event) => { eventsA.push(event); });
-        client.subscribe('type-b', {}, (event) => { eventsB.push(event); });
+        client.subscribe('type-a', (event) => { eventsA.push(event); });
+        client.subscribe('type-b', (event) => { eventsB.push(event); });
 
         await new Promise(r => setTimeout(r, TICK));
 
@@ -352,7 +352,7 @@ export function runTransportSuite(name: string, factory: TransportFactory) {
       test('unsubscribe 后不再收到事件', async () => {
         const events: unknown[] = [];
 
-        const subId = client.subscribe('unsub-test', {}, (event) => {
+        const subId = client.subscribe('unsub-test', (event) => {
           events.push(event);
         });
 
@@ -373,8 +373,8 @@ export function runTransportSuite(name: string, factory: TransportFactory) {
         const eventsA: unknown[] = [];
         const eventsB: unknown[] = [];
 
-        const subA = client.subscribe('multi-sub', { tag: 'a' }, (event) => { eventsA.push(event); });
-        client.subscribe('multi-sub', { tag: 'b' }, (event) => { eventsB.push(event); });
+        const subA = client.subscribe('multi-sub', (event) => { eventsA.push(event); }, { tag: 'a' });
+        client.subscribe('multi-sub', (event) => { eventsB.push(event); }, { tag: 'b' });
 
         await new Promise(r => setTimeout(r, TICK));
 
@@ -467,7 +467,7 @@ export function runTransportSuite(name: string, factory: TransportFactory) {
 
         server.register('getData', async () => ({ value: 42 }));
 
-        client.subscribe('data-changed', {}, (event) => {
+        client.subscribe('data-changed', (event) => {
           events.push(event);
         });
 
@@ -491,7 +491,7 @@ export function runTransportSuite(name: string, factory: TransportFactory) {
           return { done: true };
         });
 
-        client.subscribe('progress', {}, (event) => {
+        client.subscribe('progress', (event) => {
           events.push(event);
         });
 
@@ -513,7 +513,7 @@ export function runTransportSuite(name: string, factory: TransportFactory) {
 
         server.register('status', async () => 'active');
 
-        const subId = client.subscribe('status-change', {}, (event) => {
+        const subId = client.subscribe('status-change', (event) => {
           events.push(event);
         });
 
@@ -613,7 +613,7 @@ export function runTransportSuite(name: string, factory: TransportFactory) {
       test('client close 清空 pending 和 subscriptions', async () => {
         const pair = await factory();
         const c = new RPCClient({ transport: pair.client });
-        c.subscribe('test', {}, () => {});
+        c.subscribe('test', () => {});
         c.close();
         expect(c.isConnected()).toBe(false);
       });
