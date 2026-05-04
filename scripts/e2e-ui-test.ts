@@ -6,7 +6,7 @@ import { existsSync, mkdtempSync, rmSync, readFileSync } from "fs";
 import { tmpdir } from "os";
 import { join, resolve } from "path";
 
-const MAX_WAIT_MS = 15_000;
+const MAX_WAIT_MS = 30_000;
 const POLL_MS = 200;
 
 let backendProc: ReturnType<typeof spawn> | null = null;
@@ -93,13 +93,24 @@ async function main() {
   log("server", `Backend ready on port ${backendPort}`);
 
   log("vite", "Starting Vite dev server...");
-  viteProc = spawn("npx", ["vite"], {
+  viteProc = spawn("npx", ["vite", "--host", "0.0.0.0"], {
     cwd: projectDir,
     stdio: ["pipe", "pipe", "pipe"],
+    env: { ...process.env, VITE_PORT: "5173" },
   });
   viteProc.on("error", (err) => {
     console.error("Vite failed:", err.message);
     cleanup(1);
+  });
+  viteProc.stdout?.on("data", (data: Buffer) => {
+    data.toString().split("\n").filter(Boolean).forEach((line) => {
+      log("vite", line);
+    });
+  });
+  viteProc.stderr?.on("data", (data: Buffer) => {
+    data.toString().split("\n").filter(Boolean).forEach((line) => {
+      log("vite", line);
+    });
   });
 
   await waitForUrl("http://localhost:5173", MAX_WAIT_MS);
