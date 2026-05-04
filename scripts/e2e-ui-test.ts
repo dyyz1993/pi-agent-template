@@ -124,11 +124,11 @@ async function main() {
 
   log("test", "Running Playwright E2E UI tests...");
   try {
-    execSync("npx playwright test", {
+    execSync("npx playwright test --reporter=list", {
       cwd: rootDir,
       stdio: "inherit",
       env: { ...process.env },
-      timeout: 120_000,
+      timeout: 90_000,
     });
     log("test", "Playwright tests PASSED");
   } catch {
@@ -138,6 +138,7 @@ async function main() {
   }
 
   cleanup(0);
+  process.exit(0);
 }
 
 main().catch((err) => {
