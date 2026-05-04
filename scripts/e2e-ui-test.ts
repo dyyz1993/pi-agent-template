@@ -10,7 +10,7 @@ const MAX_WAIT_MS = 30_000;
 const POLL_MS = 200;
 
 let backendProc: ReturnType<typeof spawn> | null = null;
-let viteProc: ReturnType<typeof spawn> | null = null;
+let staticProc: ReturnType<typeof spawn> | null = null;
 let projectDir: string;
 let autoCreated = false;
 
@@ -19,7 +19,7 @@ function log(tag: string, msg: string) {
 }
 
 function cleanup(code: number) {
-  if (viteProc && !viteProc.killed) viteProc.kill("SIGTERM");
+  if (staticProc && !staticProc.killed) staticProc.kill("SIGTERM");
   if (backendProc && !backendProc.killed) backendProc.kill("SIGTERM");
   if (autoCreated && projectDir && existsSync(projectDir)) {
     try { rmSync(projectDir, { recursive: true, force: true }); } catch { /* ignore cleanup error */ }
@@ -92,29 +92,35 @@ async function main() {
   const backendPort = await waitForFile(portFile, 10_000);
   log("server", `Backend ready on port ${backendPort}`);
 
-  log("vite", "Starting Vite dev server...");
-  viteProc = spawn("npx", ["vite", "--host", "0.0.0.0"], {
+  log("build", "Building frontend...");
+  try {
+    execSync("npx vite build", { cwd: projectDir, stdio: "pipe", timeout: 60_000 });
+  } catch (err) {
+    console.error("Build failed:", (err as Error).message);
+    cleanup(1);
+    return;
+  }
+  log("build", "Frontend built successfully");
+
+  const distDir = join(projectDir, "dist");
+  if (!existsSync(distDir)) {
+    console.error("FAIL: dist directory not found");
+    cleanup(1);
+    return;
+  }
+
+  log("serve", "Starting static server on port 5173...");
+  staticProc = spawn("npx", ["serve", distDir, "-l", "5173", "-s"], {
     cwd: projectDir,
     stdio: ["pipe", "pipe", "pipe"],
-    env: { ...process.env, VITE_PORT: "5173" },
   });
-  viteProc.on("error", (err) => {
-    console.error("Vite failed:", err.message);
+  staticProc.on("error", (err) => {
+    console.error("Static server failed:", err.message);
     cleanup(1);
-  });
-  viteProc.stdout?.on("data", (data: Buffer) => {
-    data.toString().split("\n").filter(Boolean).forEach((line) => {
-      log("vite", line);
-    });
-  });
-  viteProc.stderr?.on("data", (data: Buffer) => {
-    data.toString().split("\n").filter(Boolean).forEach((line) => {
-      log("vite", line);
-    });
   });
 
   await waitForUrl("http://localhost:5173", MAX_WAIT_MS);
-  log("vite", "Vite dev server ready");
+  log("serve", "Static server ready on http://localhost:5173");
 
   log("test", "Running Playwright E2E UI tests...");
   try {
