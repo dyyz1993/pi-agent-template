@@ -1,7 +1,6 @@
 import { useState, useCallback } from "react";
 import { Folder, RefreshCw, File, FolderPlus, Pencil, Trash2, Copy } from "lucide-react";
-import type { TreeNode, EditingNode } from "../../types";
-import type { DropEntry } from "../../utils/drop-handler";
+import { useExplorerStore } from "../../stores/use-explorer-store";
 import { readDropItems } from "../../utils/drop-handler";
 import { TreeNodeItem } from "./TreeNodeItem";
 import { ContextMenu, type MenuItem } from "./ContextMenu";
@@ -9,54 +8,38 @@ import { ConfirmDialog } from "./ConfirmDialog";
 import { InlineInput } from "./InlineInput";
 import { PinButton } from "../sidebar/PinButton";
 
-interface ExplorerSidebarProps {
-  treeNodes: TreeNode[];
-  currentPath: string;
-  selectedPath: string | null;
-  editingNode: EditingNode | null;
-  onPathChange: (path: string) => void;
-  onRefresh: () => void;
-  onToggle: (path: string) => void;
-  onOpenFile: (node: TreeNode) => void;
-  onCreateFile: (dirPath: string, name: string) => Promise<void>;
-  onCreateDir: (dirPath: string, name: string) => Promise<void>;
-  onRenameNode: (oldPath: string, newName: string) => Promise<void>;
-  onDeleteNode: (path: string) => Promise<void>;
-  onStartEditing: (path: string, type: EditingNode["type"]) => void;
-  onCancelEditing: () => void;
-  onImportFiles: (entries: DropEntry[], destDir: string) => Promise<number>;
-  hideOuterShell?: boolean;
-}
-
 interface ContextMenuState {
   x: number;
   y: number;
-  node: TreeNode | null;
+  node: import("../../types").TreeNode | null;
 }
 
-export function ExplorerSidebar({
-  treeNodes,
-  currentPath,
-  selectedPath,
-  editingNode,
-  onPathChange,
-  onRefresh,
-  onToggle,
-  onOpenFile,
-  onCreateFile,
-  onCreateDir,
-  onRenameNode,
-  onDeleteNode,
-  onStartEditing,
-  onCancelEditing,
-  onImportFiles,
-  hideOuterShell,
-}: ExplorerSidebarProps) {
+interface ExplorerSidebarProps {
+  hideOuterShell?: boolean;
+}
+
+export function ExplorerSidebar({ hideOuterShell }: ExplorerSidebarProps) {
+  const treeNodes = useExplorerStore((s) => s.treeNodes);
+  const currentPath = useExplorerStore((s) => s.currentPath);
+  const selectedPath = useExplorerStore((s) => s.selectedPath);
+  const editingNode = useExplorerStore((s) => s.editingNode);
+  const setCurrentPath = useExplorerStore((s) => s.setCurrentPath);
+  const listRootDir = useExplorerStore((s) => s.listRootDir);
+  const toggleNode = useExplorerStore((s) => s.toggleNode);
+  const openFile = useExplorerStore((s) => s.openFile);
+  const createFile = useExplorerStore((s) => s.createFile);
+  const createDir = useExplorerStore((s) => s.createDir);
+  const renameNode = useExplorerStore((s) => s.renameNode);
+  const deleteNode = useExplorerStore((s) => s.deleteNode);
+  const startEditing = useExplorerStore((s) => s.startEditing);
+  const cancelEditing = useExplorerStore((s) => s.cancelEditing);
+  const importFiles = useExplorerStore((s) => s.importFiles);
+
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
-  const handleContextMenu = useCallback((e: React.MouseEvent, node: TreeNode | null) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent, node: import("../../types").TreeNode | null) => {
     e.preventDefault();
     e.stopPropagation();
     setContextMenu({ x: e.clientX, y: e.clientY, node });
@@ -84,54 +67,52 @@ export function ExplorerSidebar({
     const entries = await readDropItems(e.dataTransfer);
     if (entries.length > 0) {
       try {
-        await onImportFiles(entries, currentPath);
+        await importFiles(entries, currentPath);
       } catch { /* error logged in store */ }
     }
-  }, [onImportFiles, currentPath]);
+  }, [importFiles, currentPath]);
 
   const buildMenuItems = useCallback((): MenuItem[] => {
     if (!contextMenu) return [];
     const node = contextMenu.node;
 
     if (!node) {
-      // Blank area — root context menu
       return [
-        { label: "New File", icon: <File className="w-3 h-3" />, onClick: () => onStartEditing(currentPath, "newFile") },
-        { label: "New Folder", icon: <FolderPlus className="w-3 h-3" />, onClick: () => onStartEditing(currentPath, "newDir") },
-        { label: "Refresh", icon: <RefreshCw className="w-3 h-3" />, onClick: onRefresh, divider: true },
+        { label: "New File", icon: <File className="w-3 h-3" />, onClick: () => startEditing(currentPath, "newFile") },
+        { label: "New Folder", icon: <FolderPlus className="w-3 h-3" />, onClick: () => startEditing(currentPath, "newDir") },
+        { label: "Refresh", icon: <RefreshCw className="w-3 h-3" />, onClick: () => listRootDir(), divider: true },
       ];
     }
 
     const items: MenuItem[] = [];
     if (node.type === "directory") {
       items.push(
-        { label: "New File", icon: <File className="w-3 h-3" />, onClick: () => onStartEditing(node.path, "newFile") },
-        { label: "New Folder", icon: <FolderPlus className="w-3 h-3" />, onClick: () => onStartEditing(node.path, "newDir") },
+        { label: "New File", icon: <File className="w-3 h-3" />, onClick: () => startEditing(node.path, "newFile") },
+        { label: "New Folder", icon: <FolderPlus className="w-3 h-3" />, onClick: () => startEditing(node.path, "newDir") },
       );
     }
     items.push(
-      { label: "Rename", icon: <Pencil className="w-3 h-3" />, onClick: () => onStartEditing(node.path, "rename"), divider: items.length > 0 },
+      { label: "Rename", icon: <Pencil className="w-3 h-3" />, onClick: () => startEditing(node.path, "rename"), divider: items.length > 0 },
       { label: "Delete", icon: <Trash2 className="w-3 h-3" />, onClick: () => setPendingDelete(node.path), danger: true },
       { label: "Copy Path", icon: <Copy className="w-3 h-3" />, onClick: () => navigator.clipboard.writeText(node.path) },
     );
     return items;
-  }, [contextMenu, currentPath, onRefresh, onStartEditing]);
+  }, [contextMenu, currentPath, listRootDir, startEditing]);
 
   const handleSubmitEdit = useCallback(
     (value: string) => {
       if (!editingNode) return;
       if (editingNode.type === "rename") {
-        onRenameNode(editingNode.path, value);
+        renameNode(editingNode.path, value);
       } else if (editingNode.type === "newFile") {
-        onCreateFile(editingNode.path, value);
+        createFile(editingNode.path, value);
       } else if (editingNode.type === "newDir") {
-        onCreateDir(editingNode.path, value);
+        createDir(editingNode.path, value);
       }
     },
-    [editingNode, onRenameNode, onCreateFile, onCreateDir],
+    [editingNode, renameNode, createFile, createDir],
   );
 
-  // Is root-level editing?
   const isRootEditing =
     editingNode &&
     editingNode.path === currentPath &&
@@ -155,13 +136,13 @@ export function ExplorerSidebar({
           <input
             type="text"
             value={currentPath}
-            onChange={(e) => onPathChange(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && onRefresh()}
+            onChange={(e) => setCurrentPath(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && listRootDir()}
             placeholder="Path"
             className="flex-1 px-2 py-1 text-xs bg-gray-700 rounded text-white border border-gray-600 focus:border-indigo-500 focus:outline-none"
           />
           <button
-            onClick={onRefresh}
+            onClick={() => listRootDir()}
             className="px-2 py-1 text-xs bg-indigo-600 hover:bg-indigo-700 rounded transition-colors"
             title="List directory"
           >
@@ -188,18 +169,18 @@ export function ExplorerSidebar({
                   depth={0}
                   selectedPath={selectedPath}
                   editingNode={editingNode}
-                  onToggle={onToggle}
-                  onOpenFile={onOpenFile}
+                  onToggle={(p) => toggleNode(p)}
+                  onOpenFile={(n) => openFile(n)}
                   onContextMenu={handleContextMenu}
                   onSubmitEdit={handleSubmitEdit}
-                  onCancelEdit={onCancelEditing}
+                  onCancelEdit={() => cancelEditing()}
                 />
               ))}
               {isRootEditing && (
                 <InlineInput
                   depth={0}
                   onSubmit={handleSubmitEdit}
-                  onCancel={onCancelEditing}
+                  onCancel={() => cancelEditing()}
                 />
               )}
             </ul>
@@ -221,7 +202,7 @@ export function ExplorerSidebar({
           title="Confirm Delete"
           message={`Are you sure you want to delete "${pendingDelete.split("/").pop()}"? This action cannot be undone.`}
           onConfirm={() => {
-            onDeleteNode(pendingDelete);
+            deleteNode(pendingDelete);
             setPendingDelete(null);
           }}
           onCancel={() => setPendingDelete(null)}

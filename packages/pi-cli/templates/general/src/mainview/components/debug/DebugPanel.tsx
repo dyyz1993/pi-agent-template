@@ -1,6 +1,7 @@
 import { Send, Play, Square, File, ChevronRight, ChevronDown, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useAppStore } from "../../stores/use-app-store";
+import { useLogStore } from "../../stores/use-log-store";
 import type { DemoMethod } from "../../types";
 
 const COLLAPSED_KEY = "debug-panel-collapsed";
@@ -24,7 +25,7 @@ export function DebugPanel() {
 
   const method = useAppStore((s) => s.method);
   const result = useAppStore((s) => s.result);
-  const logs = useAppStore((s) => s.logs);
+  const logs = useLogStore((s) => s.logs);
   const tickEvents = useAppStore((s) => s.tickEvents);
   const tickCount = useAppStore((s) => s.tickCount);
   const subscriptionId = useAppStore((s) => s.subscriptionId);

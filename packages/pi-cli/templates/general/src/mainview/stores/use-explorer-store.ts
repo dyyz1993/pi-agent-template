@@ -4,7 +4,8 @@ import type { RPCMethods } from "../lib/api-client";
 import type { TreeNode, FilePreview, EditingNode } from "../types";
 import { isTextFile, isImageFile, formatSize } from "../utils/file-utils";
 import { MAX_PREVIEW_SIZE } from "../utils/constants";
-import { useAppStore } from "./use-app-store";
+import { useLogStore } from "./use-log-store";
+import { useConnectionStore } from "./use-connection-store";
 import { uploadEntriesWeb, importFilesDesktop, type DropEntry } from "../utils/drop-handler";
 
 interface ExplorerState {
@@ -44,7 +45,7 @@ function entriesToTreeNodes(entries: RPCMethods["file.listDir"]["result"]["entri
 }
 
 function getFileUrl(filePath: string): string {
-  const mode = useAppStore.getState().mode;
+  const mode = useConnectionStore.getState().mode;
   if (mode === "desktop") return `file://${filePath}`;
   const baseUrl = apiClient.getBaseUrl();
   const token = apiClient.getAuthToken();
@@ -111,7 +112,7 @@ export const useExplorerStore = create<ExplorerState>((set, get) => ({
 
   listRootDir: async () => {
     const { currentPath } = get();
-    const addLog = useAppStore.getState().addLog;
+    const addLog = useLogStore.getState().addLog;
     addLog(`ListDir: ${currentPath}`);
     try {
       const res = await apiClient.call("file.listDir", { path: currentPath });
@@ -128,7 +129,7 @@ export const useExplorerStore = create<ExplorerState>((set, get) => ({
 
   toggleNode: async (nodePath: string) => {
     const { treeNodes } = get();
-    const addLog = useAppStore.getState().addLog;
+    const addLog = useLogStore.getState().addLog;
     const target = findNode(treeNodes, nodePath);
     if (!target) return;
 
@@ -151,7 +152,7 @@ export const useExplorerStore = create<ExplorerState>((set, get) => ({
 
   openFile: async (node: TreeNode) => {
     if (node.type === "directory") return;
-    const addLog = useAppStore.getState().addLog;
+    const addLog = useLogStore.getState().addLog;
     set({ selectedPath: node.path, loadingFile: true });
 
     const fileSize = node.size || 0;
@@ -167,7 +168,7 @@ export const useExplorerStore = create<ExplorerState>((set, get) => ({
     };
 
     try {
-      const mode = useAppStore.getState().mode;
+  const mode = useConnectionStore.getState().mode;
 
       if (preview.isImage) {
         preview.imageUrl = getFileUrl(node.path);
@@ -212,7 +213,7 @@ export const useExplorerStore = create<ExplorerState>((set, get) => ({
   closePreview: () => set({ filePreview: null, selectedPath: null }),
 
   createFile: async (dirPath: string, name: string) => {
-    const addLog = useAppStore.getState().addLog;
+    const addLog = useLogStore.getState().addLog;
     try {
       await apiClient.call("file.createFile", { dirPath, name });
       addLog(`Created file: ${name}`);
@@ -225,7 +226,7 @@ export const useExplorerStore = create<ExplorerState>((set, get) => ({
   },
 
   createDir: async (dirPath: string, name: string) => {
-    const addLog = useAppStore.getState().addLog;
+    const addLog = useLogStore.getState().addLog;
     try {
       await apiClient.call("file.createDir", { dirPath, name });
       addLog(`Created directory: ${name}`);
@@ -239,7 +240,7 @@ export const useExplorerStore = create<ExplorerState>((set, get) => ({
 
   renameNode: async (oldPath: string, newName: string) => {
     const { treeNodes } = get();
-    const addLog = useAppStore.getState().addLog;
+    const addLog = useLogStore.getState().addLog;
     try {
       const res = await apiClient.call("file.rename", { oldPath, newName });
       addLog(`Renamed to: ${newName}`);
@@ -256,7 +257,7 @@ export const useExplorerStore = create<ExplorerState>((set, get) => ({
 
   deleteNode: async (path: string) => {
     const { treeNodes } = get();
-    const addLog = useAppStore.getState().addLog;
+    const addLog = useLogStore.getState().addLog;
     try {
       await apiClient.call("file.delete", { path });
       addLog(`Deleted: ${path}`);
@@ -278,7 +279,7 @@ export const useExplorerStore = create<ExplorerState>((set, get) => ({
 
   refreshDir: async (dirPath: string) => {
     const { treeNodes, currentPath } = get();
-    const addLog = useAppStore.getState().addLog;
+    const addLog = useLogStore.getState().addLog;
     // If refreshing root
     if (dirPath === currentPath) {
       await get().listRootDir();
@@ -297,8 +298,8 @@ export const useExplorerStore = create<ExplorerState>((set, get) => ({
   cancelEditing: () => set({ editingNode: null }),
 
   importFiles: async (entries, destDir) => {
-    const addLog = useAppStore.getState().addLog;
-    const mode = useAppStore.getState().mode;
+    const addLog = useLogStore.getState().addLog;
+    const mode = useConnectionStore.getState().mode;
     try {
       const count = mode === "desktop"
         ? await importFilesDesktop(entries, destDir)

@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { Wifi, Monitor } from "lucide-react";
 import { apiClient } from "./lib/api-client";
-import { useAppStore } from "./stores/use-app-store";
+import { useConnectionStore } from "./stores/use-connection-store";
+import { useLogStore } from "./stores/use-log-store";
 import { useChatStore } from "./stores/use-chat-store";
 import { useSidebarStore } from "./stores/use-sidebar-store";
 import { useBreakpointSync } from "./hooks/use-breakpoint";
@@ -10,10 +11,10 @@ import { MobileTabBar } from "./components/activity-bar/MobileTabBar";
 import { ChatPanel } from "./components/chat/ChatPanel";
 
 function App() {
-  const mode = useAppStore((s) => s.mode);
-  const ready = useAppStore((s) => s.ready);
-  const initializeConnection = useAppStore((s) => s.initializeConnection);
-  const addLog = useAppStore((s) => s.addLog);
+  const mode = useConnectionStore((s) => s.mode);
+  const ready = useConnectionStore((s) => s.ready);
+  const initializeConnection = useConnectionStore((s) => s.initializeConnection);
+  const addLog = useLogStore((s) => s.addLog);
 
   const breakpoint = useSidebarStore((s) => s.breakpoint);
 
