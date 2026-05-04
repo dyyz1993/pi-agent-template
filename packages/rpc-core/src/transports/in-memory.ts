@@ -1,3 +1,4 @@
+import { BaseTransport } from './base-transport';
 import type { Transport, MessageHandler, ErrorHandler } from '../core/transport';
 import type { RPCLogger } from '../core/types';
 
@@ -5,14 +6,11 @@ export interface InMemoryTransportOptions {
   logger?: RPCLogger;
 }
 
-export class InMemoryTransport implements Transport {
+export class InMemoryTransport extends BaseTransport implements Transport {
   private peer: InMemoryTransport | null = null;
-  private messageHandlers: Set<MessageHandler> = new Set();
-  private errorHandlers: Set<ErrorHandler> = new Set();
-  private _isConnected: boolean = false;
 
   constructor(_options?: InMemoryTransportOptions) {
-    // options reserved for future use (e.g. logger)
+    super();
   }
 
   static createPair(options?: InMemoryTransportOptions): { client: InMemoryTransport; server: InMemoryTransport } {
@@ -42,21 +40,15 @@ export class InMemoryTransport implements Transport {
   }
 
   onMessage(handler: MessageHandler): () => void {
-    this.messageHandlers.add(handler);
-    return () => {
-      this.messageHandlers.delete(handler);
-    };
+    return super.onMessage(handler);
   }
 
   onError(handler: ErrorHandler): () => void {
-    this.errorHandlers.add(handler);
-    return () => {
-      this.errorHandlers.delete(handler);
-    };
+    return super.onError(handler);
   }
 
   isConnected(): boolean {
-    return this._isConnected;
+    return super.isConnected();
   }
 
   close(): void {
@@ -65,13 +57,10 @@ export class InMemoryTransport implements Transport {
       this.peer._isConnected = false;
       this.peer = null;
     }
-    this.messageHandlers.clear();
-    this.errorHandlers.clear();
+    this.clearHandlers();
   }
 
   simulateError(error: Error): void {
-    for (const handler of this.errorHandlers) {
-      handler(error);
-    }
+    this.emitError(error);
   }
 }

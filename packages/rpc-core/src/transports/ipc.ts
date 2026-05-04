@@ -1,3 +1,4 @@
+import { BaseTransport } from './base-transport';
 import type { Transport, MessageHandler, ErrorHandler } from '../core/transport';
 import type { RPCLogger } from '../core/types';
 
@@ -5,14 +6,12 @@ export interface IPCTransportOptions {
   logger?: RPCLogger;
 }
 
-export class IPCTransport implements Transport {
-  private messageHandlers: Set<MessageHandler> = new Set();
-  private errorHandlers: Set<ErrorHandler> = new Set();
+export class IPCTransport extends BaseTransport implements Transport {
   private logger?: IPCTransportOptions['logger'];
   private peer: IPCTransport | null = null;
-  private _isConnected: boolean = false;
 
   constructor(options?: IPCTransportOptions) {
+    super();
     this.logger = options?.logger;
   }
 
@@ -45,21 +44,15 @@ export class IPCTransport implements Transport {
   }
 
   onMessage(handler: MessageHandler): () => void {
-    this.messageHandlers.add(handler);
-    return () => {
-      this.messageHandlers.delete(handler);
-    };
+    return super.onMessage(handler);
   }
 
   onError(handler: ErrorHandler): () => void {
-    this.errorHandlers.add(handler);
-    return () => {
-      this.errorHandlers.delete(handler);
-    };
+    return super.onError(handler);
   }
 
   isConnected(): boolean {
-    return this._isConnected;
+    return super.isConnected();
   }
 
   close(): void {
@@ -68,13 +61,10 @@ export class IPCTransport implements Transport {
       this.peer._isConnected = false;
       this.peer = null;
     }
-    this.messageHandlers.clear();
-    this.errorHandlers.clear();
+    this.clearHandlers();
   }
 
   simulateMessage(message: unknown): void {
-    for (const handler of this.messageHandlers) {
-      handler(message);
-    }
+    this.emitMessage(message);
   }
 }
