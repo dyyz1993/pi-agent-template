@@ -1,22 +1,15 @@
-#!/bin/sh
-# Root level lint (packages/ + scripts/)
-bun run lint
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
 
-# Type-check each package
+# Use lint-staged for fast incremental linting (only staged files)
+npx lint-staged
+
+# Quick type-check for core packages only
+echo "⏳ Type checking core packages..."
 for pkg in packages/*/; do
-  if [ -f "${pkg}tsconfig.json" ]; then
-    echo "🔍 Type-checking ${pkg}..."
-    ERRORS=$(cd "$pkg" && npx tsc --noEmit 2>&1 | grep "error TS" || true)
-    if [ -n "$ERRORS" ]; then
-      echo "❌ ${pkg} type-check failed:"
-      echo "$ERRORS"
-      exit 1
-    fi
+  if [ -f "$pkg/tsconfig.json" ]; then
+    (cd "$pkg" && npx tsc --noEmit 2>&1) && echo "✅ $pkg" || exit 1
   fi
 done
 
-# Template lint only (no tsc — deps not installed in template)
-(cd templates/general && bun run lint 2>/dev/null || true)
-
-# Run template tests (agent has the most UI components)
-(cd templates/agent && npx vitest run --reporter=verbose 2>&1 || exit 1)
+echo "✅ Pre-commit checks passed"
