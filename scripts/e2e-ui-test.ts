@@ -93,7 +93,7 @@ async function main() {
   log("server", `Backend ready on port ${backendPort}`);
 
   log("vite", "Starting Vite dev server...");
-  viteProc = spawn("vite", [], {
+  viteProc = spawn("npx", ["vite"], {
     cwd: projectDir,
     stdio: ["pipe", "pipe", "pipe"],
   });

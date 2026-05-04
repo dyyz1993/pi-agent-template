@@ -6,6 +6,7 @@ interface ProcessInfo {
   command: string;
   output: string;
   running: boolean;
+  exitCode?: number | null;
 }
 
 interface BashState {
