@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach } from "bun:test";
+import { describe, test, expect, beforeEach } from "vitest";
 import type { RPCServer } from "@dyyz1993/rpc-core";
 import { register } from "../chat";
 import { writeFile, mkdir } from "fs/promises";

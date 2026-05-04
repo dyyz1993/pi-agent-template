@@ -10,6 +10,8 @@ export default defineConfig({
     setupFiles: ["./src/mainview/__tests__/setup.ts"],
     include: [
       "src/mainview/**/*.{test,spec}.{ts,tsx}",
+      "src/shared/**/*.{test,spec}.{ts,tsx}",
+      "src/__tests__/**/*.{test,spec}.{ts,tsx}",
     ],
     css: false,
     coverage: {

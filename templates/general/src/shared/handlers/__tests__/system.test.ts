@@ -1,4 +1,4 @@
-import { describe, test, expect } from "bun:test";
+import { describe, test, expect } from "vitest";
 import type { RPCServer } from "@dyyz1993/rpc-core";
 import { register } from "../system";
 
