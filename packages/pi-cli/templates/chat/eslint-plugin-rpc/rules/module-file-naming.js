@@ -1,18 +1,9 @@
 /**
  * @fileoverview 强制 RPC 模块文件的命名和导出规范
- *
- * 1. modules/ 下的文件必须导出 <Name>Methods 接口
- * 2. 如果有事件，必须导出 <Name>Events 接口
- * 3. 方法 key 必须以文件名（模块名）开头
- * 4. 不允许存在不在 modules/ 下的模块定义
  */
 
 "use strict";
 
-/**
- * 从文件路径提取模块名
- * e.g. "/path/to/modules/file.ts" → "file"
- */
 function getModuleName(filename) {
   const match = filename.match(/\/modules\/([^/]+)\.[jt]sx?$/);
   return match ? match[1] : null;
@@ -42,7 +33,6 @@ module.exports = {
     const moduleName = getModuleName(filename);
     if (!moduleName) return {};
 
-    // 将文件名转为 PascalCase: "file-system" → "FileSystem", "file" → "File"
     const moduleNamePascal = moduleName
       .split(/[-_]/)
       .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
@@ -54,11 +44,9 @@ module.exports = {
       TSInterfaceDeclaration(node) {
         const name = node.id.name;
 
-        // 检查是否导出了 <Module>Methods
         if (name === `${moduleNamePascal}Methods`) {
           hasMethodsExport = true;
 
-          // 检查方法 key 是否以模块名开头
           if (node.body && node.body.body) {
             for (const member of node.body.body) {
               if (member.type === "TSPropertySignature" && member.key) {
@@ -76,7 +64,6 @@ module.exports = {
           }
         }
 
-        // 检查事件 key 是否以模块名开头
         if (name === `${moduleNamePascal}Events`) {
           if (node.body && node.body.body) {
             for (const member of node.body.body) {

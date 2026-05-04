@@ -1,8 +1,5 @@
 /**
  * @fileoverview rpc-schema.ts 只允许合并，禁止直接定义方法
- *
- * RPCMethods 和 RPCEvents 接口必须是空的 extends 合并体，
- * 不允许直接在其中定义方法属性。
  */
 
 "use strict";
@@ -25,20 +22,16 @@ module.exports = {
   create(context) {
     const filename = context.getFilename();
 
-    // 只检查 rpc-schema.ts
     if (!filename.endsWith("rpc-schema.ts") && !filename.endsWith("rpc-schema.tsx")) return {};
 
-    // 已知的合并接口名
     const schemaInterfaces = new Set(["RPCMethods", "RPCEvents"]);
 
     return {
       TSInterfaceDeclaration(node) {
         if (!schemaInterfaces.has(node.id.name)) return;
 
-        // 检查 interface body 中是否有直接定义的属性
         if (node.body && node.body.body) {
           for (const member of node.body.body) {
-            // TSPropertySignature 表示直接定义的属性
             if (member.type === "TSPropertySignature" && member.key) {
               const keyName =
                 member.key.type === "Identifier"

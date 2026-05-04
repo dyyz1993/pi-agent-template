@@ -1,8 +1,5 @@
 /**
  * @fileoverview server.register() 只允许在 shared/handlers/ 目录内使用
- *
- * Handler 定义集中在 src/shared/handlers/ 中，入口文件（bun/index.ts、server.ts）
- * 和其他 src/ 文件禁止直接调用 server.register()，必须通过 registerAllHandlers() 统一注册。
  */
 
 "use strict";
@@ -28,13 +25,10 @@ module.exports = {
   create(context) {
     const filename = context.getFilename();
 
-    // 只检查 src/ 下的 .ts/.tsx 文件
     if (!/src\/.*\.[jt]sx?$/.test(filename)) return {};
 
-    // 允许在 shared/handlers/ 目录内使用 register
     if (filename.includes("shared/handlers/")) return {};
 
-    // 判断是否为入口文件
     const isEntryPoint =
       filename.endsWith("bun/index.ts") || filename.endsWith("server.ts");
 
@@ -42,7 +36,6 @@ module.exports = {
       CallExpression(node) {
         const { callee } = node;
 
-        // 检测 xxx.register("...", ...) 模式
         if (
           callee.type === "MemberExpression" &&
           callee.property.type === "Identifier" &&
@@ -51,7 +44,6 @@ module.exports = {
         ) {
           const objectName = callee.object.name;
 
-          // 禁止的模式：server.register(), rpcServer.register() 等
           const serverVarNames = [
             "server",
             "rpcServer",

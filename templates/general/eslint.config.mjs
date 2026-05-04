@@ -1,6 +1,6 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
-import rpcPlugin from './eslint-plugin-rpc/index.js';
+import rpcPlugin from '@dyyz1993/eslint-plugin-rpc';
 
 export default tseslint.config(
   js.configs.recommended,
@@ -10,7 +10,6 @@ export default tseslint.config(
       'node_modules/**',
       'build/**',
       'dist/**',
-      'eslint-plugin-rpc/**',
       'postcss.config.js',
       'tailwind.config.js',
     ],
