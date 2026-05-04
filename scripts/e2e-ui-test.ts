@@ -110,7 +110,7 @@ async function main() {
   }
 
   log("serve", "Starting static server on port 5173...");
-  staticProc = spawn("npx", ["serve", distDir, "-l", "5173", "-s"], {
+  staticProc = spawn("npx", ["serve", distDir, "-l", "5173"], {
     cwd: projectDir,
     stdio: ["pipe", "pipe", "pipe"],
   });
