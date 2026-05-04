@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 import { RPCServer, RPCClient, SSETransport } from '../src/index';
 import type { RPCEvent } from '../src/index';
@@ -336,5 +337,156 @@ describe('[HTTP+SSE] 断线重连测试', () => {
       server.close();
       client.close();
     });
+  });
+});
+
+describe('SSE Auto Reconnect', () => {
+  test('should auto-reconnect when reader loop exits unexpectedly', async () => {
+    const pair = await SSETransport.createPair({
+      reconnect: true,
+      reconnectInterval: 50,
+      maxReconnectAttempts: 3,
+    });
+    const serverT = pair.server as SSETransport;
+    const clientT = pair.client as SSETransport;
+
+    expect(clientT.isConnected()).toBe(true);
+
+    serverT.simulateDisconnect(clientT);
+    expect(clientT.isConnected()).toBe(false);
+
+    await new Promise((r) => setTimeout(r, 300));
+
+    expect(clientT.isConnected()).toBe(true);
+
+    serverT.close();
+    clientT.close();
+  });
+
+  test('should use exponential backoff for reconnection', async () => {
+    const pair = await SSETransport.createPair({
+      reconnect: true,
+      reconnectInterval: 30,
+      maxReconnectInterval: 500,
+      maxReconnectAttempts: 5,
+    });
+    const serverT = pair.server as SSETransport;
+    const clientT = pair.client as SSETransport;
+
+    const delays: number[] = [];
+    const origSetTimeout = globalThis.setTimeout;
+    const realSetTimeout = origSetTimeout.bind(globalThis);
+
+    (globalThis as any).setTimeout = (fn: (...args: any[]) => void, ms: number, ...args: any[]) => {
+      if (ms > 0 && ms <= 500) delays.push(ms);
+      return realSetTimeout(fn, ms, ...args);
+    };
+
+    serverT.simulateDisconnect(clientT);
+
+    await new Promise((r) => realSetTimeout(r, 600));
+
+    (globalThis as any).setTimeout = origSetTimeout;
+
+    expect(delays.length).toBeGreaterThanOrEqual(2);
+    expect(delays[1]).toBeGreaterThan(delays[0]);
+
+    serverT.close();
+    clientT.close();
+  });
+
+  test('should stop after max reconnect attempts', async () => {
+    const pair = await SSETransport.createPair({
+      reconnect: true,
+      reconnectInterval: 20,
+      maxReconnectAttempts: 2,
+    });
+    const serverT = pair.server as SSETransport;
+    const clientT = pair.client as SSETransport;
+
+    (clientT as any).doReconnect = async () => {
+      throw new Error('always fails');
+    };
+
+    serverT.simulateDisconnect(clientT);
+
+    await new Promise((r) => setTimeout(r, 500));
+
+    const attempts = (clientT as any).reconnectAttempts || 0;
+    expect(attempts).toBeLessThanOrEqual(2);
+
+    serverT.close();
+    clientT.close();
+  });
+
+  test('should clean up reconnect timer on close', async () => {
+    const pair = await SSETransport.createPair({
+      reconnect: true,
+      reconnectInterval: 100,
+      maxReconnectAttempts: 10,
+    });
+    const serverT = pair.server as SSETransport;
+    const clientT = pair.client as SSETransport;
+
+    serverT.simulateDisconnect(clientT);
+    clientT.close();
+
+    await new Promise((r) => setTimeout(r, 300));
+
+    expect(clientT.isConnected()).toBe(false);
+    expect((clientT as any).reconnectTimer).toBeNull();
+
+    serverT.close();
+  });
+
+  test('should set isConnected to false on unexpected disconnect (reconnect disabled)', async () => {
+    const pair = await SSETransport.createPair({
+      reconnect: false,
+    });
+    const serverT = pair.server as SSETransport;
+    const clientT = pair.client as SSETransport;
+
+    expect(clientT.isConnected()).toBe(true);
+
+    serverT.simulateDisconnect(clientT);
+
+    expect(clientT.isConnected()).toBe(false);
+
+    await new Promise((r) => setTimeout(r, 100));
+    expect(clientT.isConnected()).toBe(false);
+
+    serverT.close();
+    clientT.close();
+  });
+
+  test('should reconnect and restore subscription after auto-reconnect', async () => {
+    const pair = await SSETransport.createPair({
+      reconnect: true,
+      reconnectInterval: 50,
+      maxReconnectAttempts: 5,
+    });
+    const serverT = pair.server as SSETransport;
+    const clientT = pair.client as SSETransport;
+    const srv = new RPCServer(serverT);
+    const cli = new RPCClient({ transport: clientT, timeout: 2000 });
+
+    const events: unknown[] = [];
+    cli.subscribe('evt', {}, (e) => { events.push(e); });
+    await new Promise((r) => setTimeout(r, TICK));
+
+    srv.emitEvent('evt', { v: 1 });
+    await new Promise((r) => setTimeout(r, TICK));
+    expect(events.length).toBe(1);
+
+    serverT.simulateDisconnect(clientT);
+    await new Promise((r) => setTimeout(r, 300));
+    expect(clientT.isConnected()).toBe(true);
+
+    srv.emitEvent('evt', { v: 2 });
+    await new Promise((r) => setTimeout(r, TICK));
+    expect(events.length).toBe(2);
+
+    srv.close();
+    cli.close();
   });
 });

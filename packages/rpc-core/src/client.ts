@@ -73,7 +73,11 @@ export class RPCClient {
       if (sub.eventType !== event.eventType) continue;
       if (matchFilter(event, sub.filter)) {
         this.logger?.debug?.('Matched! Calling handler for:', subId);
-        sub.handler(event);
+        try {
+          sub.handler(event);
+        } catch (err) {
+          this.onError?.(err instanceof Error ? err : new Error(String(err)), 'handleEvent');
+        }
       } else {
         this.logger?.debug?.('Filter not matched');
       }
@@ -121,7 +125,7 @@ export class RPCClient {
     return `${eventType}:${filterStr}`;
   }
 
-  subscribe(eventType: string, filter: Record<string, unknown>, handler: EventHandler): string {
+  subscribe(eventType: string, handler: EventHandler, filter: Record<string, unknown> = {}): string {
     const subscriptionKey = this.generateSubscriptionKey(eventType, filter);
     
     const existingSubId = this.subscriptionKeys.get(subscriptionKey);

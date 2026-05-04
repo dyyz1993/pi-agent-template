@@ -4,6 +4,7 @@ import { generateId, matchFilter } from './core/utils';
 
 export interface RPCServerOptions {
   logger?: RPCLogger;
+  onError?: (error: unknown) => void;
 }
 
 export class RPCServer {
@@ -11,18 +12,22 @@ export class RPCServer {
   private handlers: Map<string, RPCHandler> = new Map();
   private subscriptions: Map<string, { eventType: string; filter: Record<string, unknown> }> = new Map();
   private logger?: RPCServerOptions['logger'];
+  private onError?: (error: unknown) => void;
   private disconnectCleanup: (() => void) | null = null;
 
   constructor(transport: Transport, options?: RPCServerOptions) {
     this.transport = transport;
     this.logger = options?.logger;
+    this.onError = options?.onError;
     this.setupTransport();
     this.setupDisconnectHandler();
   }
 
   private setupTransport(): void {
     this.transport.onMessage((message) => {
-      this.handleMessage(message as RPCMessage).catch(() => {});
+      this.handleMessage(message as RPCMessage).catch((err) => {
+        this.onError?.(err);
+      });
     });
   }
 
@@ -36,7 +41,11 @@ export class RPCServer {
   }
 
   private async handleMessage(message: RPCMessage): Promise<void> {
-    switch (message.type) {
+    if (!message || typeof message !== 'object') return;
+    const msg = message as unknown as Record<string, unknown>;
+    if (!msg.type || typeof msg.type !== 'string') return;
+
+    switch (msg.type) {
       case 'request':
         await this.handleRequest(message);
         break;
@@ -69,14 +78,19 @@ export class RPCServer {
         result,
       });
     } catch (error) {
-      await this.transport.send({
-        id: message.id,
-        type: 'response',
-        error: { 
-          code: 500, 
-          message: error instanceof Error ? error.message : 'Internal server error' 
-        },
-      });
+      this.onError?.(error);
+      try {
+        await this.transport.send({
+          id: message.id,
+          type: 'response',
+          error: { 
+            code: 500, 
+            message: error instanceof Error ? error.message : 'Internal server error' 
+          },
+        });
+      } catch (sendError) {
+        this.onError?.(sendError);
+      }
     }
   }
 

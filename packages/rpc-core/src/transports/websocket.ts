@@ -1,4 +1,4 @@
-import type { Transport, MessageHandler, ErrorHandler } from '../core/transport';
+import type { Transport, MessageHandler, ErrorHandler, DisconnectHandler } from '../core/transport';
 import type { RPCLogger } from '../core/types';
 
 export interface WebSocketTransportOptions {
@@ -6,6 +6,10 @@ export interface WebSocketTransportOptions {
   logger?: RPCLogger;
   reconnect?: boolean;
   reconnectInterval?: number;
+  maxReconnectInterval?: number;
+  maxReconnectAttempts?: number;
+  heartbeatInterval?: number;
+  heartbeatTimeout?: number;
 }
 
 export class WebSocketTransport implements Transport {
@@ -13,21 +17,104 @@ export class WebSocketTransport implements Transport {
   private ws: WebSocket | null = null;
   private messageHandlers: Set<MessageHandler> = new Set();
   private errorHandlers: Set<ErrorHandler> = new Set();
+  private disconnectHandlers: Set<DisconnectHandler> = new Set();
   private logger?: WebSocketTransportOptions['logger'];
   private reconnect: boolean;
   private reconnectInterval: number;
+  private maxReconnectIntervalMs: number;
+  private maxReconnectAttempts: number;
+  private heartbeatIntervalMs: number;
+  private heartbeatTimeoutMs: number;
   private _isConnected: boolean = false;
   private _isConnecting: boolean = false;
 
+  private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private lastPongTime: number = 0;
+  private reconnectAttempts: number = 0;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
   constructor(urlOrOptions: string | WebSocketTransportOptions) {
+    const opts = typeof urlOrOptions === 'object' ? urlOrOptions : {};
     if (typeof urlOrOptions === 'string') {
       this.url = urlOrOptions;
     } else {
       this.url = urlOrOptions.url || '';
     }
-    this.logger = typeof urlOrOptions === 'object' ? urlOrOptions.logger : undefined;
-    this.reconnect = typeof urlOrOptions === 'object' ? (urlOrOptions.reconnect ?? true) : true;
-    this.reconnectInterval = typeof urlOrOptions === 'object' ? (urlOrOptions.reconnectInterval ?? 3000) : 3000;
+    this.logger = opts.logger;
+    this.reconnect = opts.reconnect ?? true;
+    this.reconnectInterval = opts.reconnectInterval ?? 3000;
+    this.maxReconnectIntervalMs = opts.maxReconnectInterval ?? 30000;
+    this.maxReconnectAttempts = opts.maxReconnectAttempts ?? 10;
+    this.heartbeatIntervalMs = opts.heartbeatInterval ?? 0;
+    this.heartbeatTimeoutMs = opts.heartbeatTimeout ?? 30000;
+  }
+
+  private startHeartbeat(): void {
+    this.stopHeartbeat();
+    this.lastPongTime = Date.now();
+
+    if (this.ws) {
+      (this.ws as any).onpong = () => {
+        this.lastPongTime = Date.now();
+      };
+    }
+
+    this.heartbeatTimer = setInterval(() => {
+      if (!this.ws || (this.ws as any).readyState !== 1) return;
+
+      if (Date.now() - this.lastPongTime > this.heartbeatTimeoutMs * 2) {
+        this.stopHeartbeat();
+        this._isConnected = false;
+
+        for (const handler of this.disconnectHandlers) {
+          handler();
+        }
+
+        if (this.ws) {
+          (this.ws as any).onclose = null;
+          this.ws.close();
+        }
+
+        if (this.reconnect) {
+          this.scheduleReconnect();
+        }
+        return;
+      }
+
+      if (typeof (this.ws as any).ping === 'function') {
+        (this.ws as any).ping();
+      }
+    }, this.heartbeatIntervalMs || 30000);
+  }
+
+  private stopHeartbeat(): void {
+    if (this.heartbeatTimer) {
+      clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+  }
+
+  private scheduleReconnect(): void {
+    if (!this.reconnect) return;
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      this.logger?.error?.('Max reconnect attempts reached');
+      return;
+    }
+
+    const delay = Math.min(
+      this.reconnectInterval * Math.pow(2, this.reconnectAttempts),
+      this.maxReconnectIntervalMs,
+    );
+
+    this.reconnectAttempts++;
+    this.reconnectTimer = setTimeout(async () => {
+      try {
+        await this.connect();
+        this.reconnectAttempts = 0;
+      } catch {
+        this.scheduleReconnect();
+      }
+    }, delay);
   }
 
   async connect(): Promise<void> {
@@ -38,10 +125,11 @@ export class WebSocketTransport implements Transport {
     this._isConnecting = true;
 
     if (this.ws) {
-      this.ws.onopen = null;
-      this.ws.onmessage = null;
-      this.ws.onerror = null;
-      this.ws.onclose = null;
+      (this.ws as any).onopen = null;
+      (this.ws as any).onmessage = null;
+      (this.ws as any).onerror = null;
+      (this.ws as any).onclose = null;
+      (this.ws as any).onpong = null;
       this.ws.close();
       this.ws = null;
     }
@@ -53,7 +141,11 @@ export class WebSocketTransport implements Transport {
       this.ws.onopen = () => {
         this._isConnected = true;
         this._isConnecting = false;
+        this.reconnectAttempts = 0;
         this.logger?.info?.('Connected, messageHandlers:', this.messageHandlers.size);
+        if (this.heartbeatIntervalMs > 0) {
+          this.startHeartbeat();
+        }
         resolve();
       };
 
@@ -85,14 +177,15 @@ export class WebSocketTransport implements Transport {
       this.ws.onclose = () => {
         this._isConnected = false;
         this._isConnecting = false;
+        this.stopHeartbeat();
         this.logger?.info?.('Disconnected');
-        
+
+        for (const handler of this.disconnectHandlers) {
+          handler();
+        }
+
         if (this.reconnect) {
-          this.logger?.info?.('Will reconnect in', this.reconnectInterval, 'ms');
-          setTimeout(() => {
-            this.logger?.info?.('Reconnecting...');
-            this.connect().catch(e => { this.logger?.error?.('Reconnect failed:', e); });
-          }, this.reconnectInterval);
+          this.scheduleReconnect();
         }
       };
     });
@@ -122,6 +215,13 @@ export class WebSocketTransport implements Transport {
     };
   }
 
+  onDisconnect(handler: DisconnectHandler): () => void {
+    this.disconnectHandlers.add(handler);
+    return () => {
+      this.disconnectHandlers.delete(handler);
+    };
+  }
+
   isConnected(): boolean {
     return this._isConnected;
   }
@@ -129,11 +229,17 @@ export class WebSocketTransport implements Transport {
   close(): void {
     this.logger?.info?.('Closing, messageHandlers:', this.messageHandlers.size);
     this.reconnect = false;
+    this.stopHeartbeat();
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
     if (this.ws) {
-      this.ws.onopen = null;
-      this.ws.onmessage = null;
-      this.ws.onerror = null;
-      this.ws.onclose = null;
+      (this.ws as any).onopen = null;
+      (this.ws as any).onmessage = null;
+      (this.ws as any).onerror = null;
+      (this.ws as any).onclose = null;
+      (this.ws as any).onpong = null;
       this.ws.close();
       this.ws = null;
     }
@@ -141,6 +247,7 @@ export class WebSocketTransport implements Transport {
     this._isConnecting = false;
     this.messageHandlers.clear();
     this.errorHandlers.clear();
+    this.disconnectHandlers.clear();
   }
 
   private setupMock(ws: WebSocket, isConnected: boolean): void {
