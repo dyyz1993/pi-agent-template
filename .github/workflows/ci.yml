@@ -119,6 +119,30 @@ jobs:
       - name: Run rpc-core tests
         run: bun run test:rpc
 
+  template-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install template dependencies (agent)
+        run: cd templates/agent && bun install
+
+      - name: Run agent template tests
+        run: cd templates/agent && npx vitest run
+
+      - name: Install template dependencies (chat)
+        run: cd templates/chat && bun install
+
+      - name: Run chat template tests
+        run: cd templates/chat && npx vitest run
+
+      - name: Install template dependencies (general)
+        run: cd templates/general && bun install
+
+      - name: Run general template tests
+        run: cd templates/general && npx vitest run
+
   build-verify:
     runs-on: ubuntu-latest
     steps:
@@ -139,3 +163,35 @@ jobs:
 
       - name: Run E2E integration test
         run: bun run scripts/e2e-test.ts
+
+  e2e-ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E UI tests
+        run: bun run test:e2e-ui
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-ui-results
+          path: e2e-ui-results/
+          retention-days: 7
+
+  notify-on-failure:
+    runs-on: ubuntu-latest
+    needs: [lint, type-check, test, template-test, build-verify, integration-test, e2e-ui]
+    if: failure()
+    steps:
+      - name: Send Bark notification
+        run: |
+          BRANCH="${GITHUB_REF_NAME:-unknown}"
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          MSG="CI%E5%A4%B1%E8%B4%A5%20${GITHUB_REPOSITORY}%20${BRANCH}%20${RUN_URL}"
+          curl -s "https://api.day.app/PpdrqL9LsYaJc83YW5ZQj5/${MSG}" || true

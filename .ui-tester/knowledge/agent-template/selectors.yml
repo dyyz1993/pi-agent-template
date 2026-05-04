@@ -1,6 +1,8 @@
 # Module: agent-template
-# Site: http://localhost:5175/
-# Last updated: 2026-04-30 (session ui-test-1777524333)
+# Site: http://localhost:5190/
+# Version: 4
+# Last updated: 2026-05-03 (session ui-test-iso-1777787095)
+# Updated in round: r4
 
 activity_bar:
   explorer_button: 'button[aria-label="Explorer"]'
@@ -27,32 +29,57 @@ git_panel:
 
 chat_panel:
   message_input: 'input[placeholder*="Type a message"]'
-  send_button: 'button:has-text("Send"]'
+  send_button: 'button:has-text("Send")'
   rpc_dropdown: 'select, [role="combobox"]'
-  call_button: 'button:has-text("Call"]'
-  subscribe_button: 'button:has-text("Subscribe"]'
+  call_button: 'button:has-text("Call")'
+  subscribe_button: 'button:has-text("Subscribe")'
 
 bash_panel:
   command_input: 'input[placeholder*="Enter command"]'
-  run_button: 'button:has-text("Run"]'
-  kill_button: 'button:has-text("Kill"]'
+  run_button: 'button:has-text("Run")'
+  kill_button: 'button:has-text("Kill")'
   # After execution, PID buttons appear as: button "PID N"
   pid_button_pattern: 'button:has-text("PID ")'
 
 rules_panel:
-  add_rule_button: 'button:has-text("Add Rule"]'
+  add_rule_button: 'button:has-text("Add Rule")'
   rule_name_input: 'input[placeholder*="Rule name"]'
   glob_pattern_input: 'input[placeholder*="Glob pattern"]'
-  save_button: 'button:has-text("Save"]'
+  save_button: 'button:has-text("Save")'
+  # Rule card: div.cursor-pointer with inner text containing rule name
+  # Status toggle icon: SVG with lucide-circle-check (enabled/green) or lucide-circle (disabled/gray)
+  # Delete button: small button with class text-gray-600 text-red-400, opacity-0 by default
+  rule_card: 'div.cursor-pointer'
+  rule_status_enabled_icon: 'svg.lucide-circle-check'
+  rule_status_disabled_icon: 'svg.lucide-circle'
+  rule_delete_button: 'button.text-gray-600.text-red-400'
 
 todo_panel:
-  add_todo_button: 'button:has-text("Add Todo"]'
+  add_todo_button: 'button:has-text("Add Todo")'
+  todo_input: 'input[placeholder*="What needs to be done"]'
+  add_button: 'button:has-text("Add")'
+  # Status dot: button.rounded-full within card div.group.relative
+  # Colors: gray-500 (pending), yellow-400 (in_progress), green-400 (completed)
+  # Icons: lucide-circle (pending), lucide-clock (in_progress), lucide-circle-check (completed)
+  # Strikethrough: text-decoration line-through on p element when completed
+  todo_card: 'div.group.relative'
+  status_dot: 'button.rounded-full'
+
+feed_panel:
+  author_input: 'input[placeholder*="Author"]'
+  category_dropdown: 'select, [role="combobox"]'
+  # Categories: tech, news, general
+  content_input: 'input[placeholder*="Write a post"]'
+  post_button: 'button:has-text("Post")'
+  filter_dropdown: 'button:has-text("no filter")'
 
 search_panel:
   search_input: 'input[placeholder*="Search in files"]'
-  match_case_button: 'button:has-text("Match Case"]'
-  match_word_button: 'button:has-text("Match Whole Word"]'
-  regex_button: 'button:has-text("Use Regular Expression"]'
+  match_case_button: 'button:has-text("Match Case")'
+  match_word_button: 'button:has-text("Match Whole Word")'
+  regex_button: 'button:has-text("Use Regular Expression")'
+  # Results grouped by file with match counts
+  # Shows "N results in M files (K files searched)"
 
 status_bar:
   ws_badge: '[class*=badge], [title*="WebSocket"]'

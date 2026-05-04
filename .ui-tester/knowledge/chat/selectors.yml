@@ -1,26 +1,66 @@
 # Module: chat (ChatPanel interaction)
-# Site: http://localhost:5174/
-# Last updated: 2026-04-30
+# Site: http://localhost:5180/
+# Version: 3
+# Last updated: 2026-05-03
+# Updated in round: r3
 
 chat_panel:
-  url_pattern: "http://localhost:5174/"
+  url_pattern: "http://localhost:5180/"
   message_input: "input[placeholder='Type a message...']"  # NOTE: It's an <input>, NOT <textarea>
   send_button: "button"  # text "Send", located next to input
   message_area: ".flex-1.flex.flex-col"  # Chat messages container
+  scroll_container: ".overflow-y-auto"  # Scrollable message list
 
 activity_bar_chat_button:
   selector: "button[title='Chat']"
   description: "Chat icon in ActivityBar to activate chat panel"
 
 chat_messages:
-  description: "Messages appear as text in the Messages section. User messages (right, blue) and bot responses (left, gray) both appear in the same flow."
+  description: "Messages appear as text in the Messages section. User messages (right, indigo) and bot responses (left, gray) both appear in the same flow."
   snapshot_note: "Chat messages do NOT appear in snapshot -i output. Use 'get text body' or eval to extract."
+  user_message:
+    selector: ".bg-indigo-600"
+    bg_color: "rgb(79, 70, 229)"
+    alignment: "justify-end (right side)"
+  bot_message:
+    selector: ".bg-gray-700"
+    bg_color: "rgb(55, 65, 81)"
+    alignment: "justify-start (left side)"
+    icon: "SVG lucide-bot icon with text-indigo-400"
+  timestamp:
+    selector: ".text-xs.text-gray-400, .text-[10px].text-gray-400"
+    format: "HH:MM (24h format)"
 
 message_counter:
-  selector: "text containing 'Messages N'"
-  description: "Shows count of messages in chat, e.g. 'Messages2', 'Messages4'. Badge appears next to 'Messages' header."
+  description: "Shows count of messages in chat header. 'Messages' text followed by number on next line."
+  extraction: "Parse body text for 'Messages' line, then next line is the count number"
 
 page_title:
   expected: "React + Tailwind + Vite"  # document.title
-  ws_badge: "Web (WebSocket)"  # visible in top-left of UI
+  ws_badge: "Web (WebSocket)"  # visible in top-left of UI (desktop only)
   subtitle: "Pi Chat"  # visible next to WS badge
+
+responsive_layout:
+  breakpoint_hook: "use-breakpoint.ts uses ResizeObserver on document.documentElement"
+  breakpoints:
+    mobile: "width < 768px"
+    tablet: "768px <= width < 1024px"
+    desktop: "width >= 1024px"
+  desktop_layout:
+    title_bar: "h-8 bg-gray-800 with WS badge"
+    activity_bar: "w-12 left sidebar with Chat icon"
+    no_bottom_bar: true
+  mobile_layout:
+    no_title_bar: true
+    no_activity_bar: true
+    bottom_tab_bar: "h-14 with Chat icon and justify-around"
+  note: "Use 'agent-browser set viewport WxH' to test responsive, but this causes page to go blank - must re-navigate after viewport change"
+
+markdown_rendering:
+  description: "Bot messages render markdown via HTML conversion"
+  supported:
+    - "strong (bold) via <strong> tags"
+    - "ul/li lists"
+    - "p paragraphs"
+    - "em emphasis"
+  check_method: "Inspect root.innerHTML for HTML tags like <strong>, <ul>, <li>"

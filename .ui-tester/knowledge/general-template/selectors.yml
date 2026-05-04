@@ -1,0 +1,58 @@
+# Module: general-template
+# Site: http://localhost:5173/
+# Version: 2
+# Last updated: 2026-05-03
+# Updated in round: r1
+
+activity_bar:
+  explorer_button: 'button[title="Explorer"]'
+  git_button: 'button[title="Source Control"]'
+  search_button: 'button[title="Search"]'
+  chat_button: 'button[title="Chat"]'
+  feed_button: 'button[title="Feed"]'
+  debug_button: 'button[title="Debug"]'
+  unpin_button: 'button[title="Unpin sidebar"]'
+
+explorer_panel:
+  path_input: 'input[placeholder*="Path"]'
+  list_dir_button: 'button[title="List directory"]'
+
+git_panel:
+  pull_button: 'button:has-text("Pull")'
+  push_button: 'button:has-text("Push")'
+  refresh_button: 'button:has-text("Refresh")'
+  branch_button: 'button:has-text("master")'
+  commits_button: 'button:has-text("Commits")'
+
+chat_panel:
+  message_input: 'input[placeholder*="Type a message"]'
+  send_button: 'button:has-text("Send")'
+
+feed_panel:
+  author_input: 'input[placeholder*="Author"]'
+  category_select: 'select'  # tech/news/general options
+  post_content_input: 'input[placeholder*="Write a post"]'
+  post_button: 'button:has-text("Post")'
+  event_type_select: 'select[nth=1]'  # feed.update/chat.message/timer.tick
+  subscribe_button: 'button:has-text("Subscribe")'
+  unsubscribe_button: 'button:has-text("Unsubscribe")'
+
+search_panel:
+  search_input: 'input[placeholder*="Search in files"]'
+  match_case_button: 'button[title="Match Case"]'
+  match_word_button: 'button[title="Match Whole Word"]'
+  regex_button: 'button[title="Use Regular Expression"]'
+
+debug_panel:
+  collapse_button: 'button[title="Collapse Debug Panel"]'
+  expand_button: 'button[title="Expand Debug Panel"]'
+  rpc_dropdown: 'select'  # system.ping/system.hello/system.echo/chat.send
+  call_button: 'button:has-text("Call")'
+  subscribe_button: 'button:has-text("Subscribe")'
+
+title_bar:
+  ws_badge: 'contains "Web (WebSocket)"'
+  message_count_badge: 'span[class*="bg-indigo"]'  # badge showing count
+
+status_bar:
+  ws_indicator: 'text "Web (WebSocket)"'

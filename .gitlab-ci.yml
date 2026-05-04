@@ -1,0 +1,117 @@
+stages:
+  - lint
+  - type-check
+  - test
+  - build-verify
+  - integration-test
+  - e2e-ui
+
+variables:
+  BUN_VERSION: "latest"
+
+.before_bun: &before_bun
+  - apt-get update -qq && apt-get install -y -qq curl unzip
+  - curl -fsSL https://bun.sh/install | bash
+  - export PATH="$HOME/.bun/bin:$PATH"
+  - bun --version
+
+lint:
+  stage: lint
+  image: node:22-slim
+  before_script:
+    - *before_bun
+    - npm install -g pnpm@9
+    - pnpm install --frozen-lockfile
+  script:
+    - bun run lint
+    - cd templates/general && bun install && bun run lint
+    - cd $CI_PROJECT_DIR/templates/chat && bun install && bun run lint
+    - cd $CI_PROJECT_DIR/templates/agent && bun install && bun run lint
+
+type-check:
+  stage: type-check
+  image: node:22-slim
+  before_script:
+    - *before_bun
+    - npm install -g pnpm@9
+    - pnpm install --frozen-lockfile
+  script:
+    - bun run type-check
+    - |
+      for t in general chat agent; do
+        cd $CI_PROJECT_DIR/templates/$t
+        bun install
+        ERRORS=$(npx tsc --noEmit 2>&1 | grep "error TS" | grep -v "node_modules" || true)
+        if [ -n "$ERRORS" ]; then
+          echo "$ERRORS"
+          exit 1
+        fi
+        echo "Template $t type check passed"
+      done
+
+test-rpc:
+  stage: test
+  image: node:22-slim
+  before_script:
+    - *before_bun
+    - npm install -g pnpm@9
+    - pnpm install --frozen-lockfile
+  script:
+    - bun run test:rpc
+
+test-templates:
+  stage: test
+  image: node:22-slim
+  before_script:
+    - *before_bun
+  script:
+    - cd templates/agent && bun install && npx vitest run
+    - cd $CI_PROJECT_DIR/templates/chat && bun install && npx vitest run
+    - cd $CI_PROJECT_DIR/templates/general && bun install && npx vitest run
+
+build-verify:
+  stage: build-verify
+  image: node:22-slim
+  before_script:
+    - *before_bun
+  script:
+    - bun run create ci-test /tmp/ci-test
+    - test -f /tmp/ci-test/package.json
+    - echo "Template project created successfully"
+
+integration-test:
+  stage: integration-test
+  image: node:22-slim
+  before_script:
+    - *before_bun
+  script:
+    - bun run scripts/e2e-test.ts
+
+e2e-ui-test:
+  stage: e2e-ui
+  image: node:22-slim
+  before_script:
+    - *before_bun
+    - npx playwright install --with-deps chromium
+  script:
+    - cd templates/agent && bun install && npx playwright install chromium
+    - cd $CI_PROJECT_DIR
+    - bun run scripts/e2e-ui-test.ts
+  artifacts:
+    when: always
+    paths:
+      - e2e-ui-results/
+    expire_in: 7 days
+
+notify-on-failure:
+  stage: .post
+  image: alpine:latest
+  when: on_failure
+  script:
+    - apk add --no-cache curl
+    - |
+      JOB_URL="${CI_PROJECT_URL}/-/jobs/${CI_JOB_ID}"
+      BRANCH="${CI_COMMIT_BRANCH:-unknown}"
+      MSG="CI%E5%A4%B1%E8%B4%A5%20${CI_PROJECT_NAME}%20${BRANCH}%20${JOB_URL}"
+      curl -s "https://api.day.app/PpdrqL9LsYaJc83YW5ZQj5/${MSG}" || true
+  allow_failure: true

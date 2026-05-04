@@ -1,0 +1,115 @@
+# Module: general-template
+# Reusable operation sequences for General Template UI testing
+# Last updated: 2026-05-03
+
+page_load:
+  description: "Navigate to General template - NOTE: page crashes after ~4-5s if form submit prevention not in place"
+  steps:
+    - action: open
+      url: "http://localhost:5173/"
+    - action: wait
+      duration: 3000
+    - action: eval
+      value: "document.querySelectorAll('form').forEach(f => f.addEventListener('submit', e => e.preventDefault())); window.addEventListener('beforeunload', e => { e.preventDefault(); e.returnValue = ''; });"
+      description: "CRITICAL: Prevent form submission navigation that crashes the page"
+  expected_result: "Page loaded, no crash"
+  critical_note: "The page crashes after ~4-5 seconds if a form submit occurs (e.g., pressing Enter in search/chat). Always add form submit prevention after page load!"
+
+chat_flow:
+  description: "Send a chat message"
+  steps:
+    - action: fill
+      selector: 'input[placeholder*="Type a message"]'
+      value: "<message>"
+    - action: click
+      selector: 'button:has-text("Send")'
+    - action: wait
+      duration: 3000
+  expected_result: "Message appears, bot reply received"
+
+search_flow:
+  description: "Search in files"
+  steps:
+    - action: click
+      selector: 'button[title="Search"]'
+    - action: wait
+      duration: 500
+    - action: fill
+      selector: 'input[placeholder*="Search in files"]'
+      value: "<search_term>"
+    - action: press
+      key: "Enter"
+    - action: wait
+      duration: 3000
+  expected_result: "Results grouped by file with match counts"
+  critical_note: "Pressing Enter triggers form submit - MUST have prevention in place!"
+
+feed_post_flow:
+  description: "Create a feed post"
+  steps:
+    - action: click
+      selector: 'button:has-text("Feed + Subs")'
+    - action: fill
+      selector: 'input[placeholder*="Author"]'
+      value: "<author>"
+    - action: fill
+      selector: 'input[placeholder*="Write a post"]'
+      value: "<content>"
+    - action: click
+      selector: 'button:has-text("Post")'
+    - action: wait
+      duration: 2000
+  expected_result: "Post appears in feed with category tag"
+
+subscribe_flow:
+  description: "Subscribe to events and verify in Event Stream"
+  steps:
+    - action: select
+      selector: 'select'
+      value: "chat.message"
+    - action: click
+      selector: 'button:has-text("Subscribe")'
+    - action: wait
+      duration: 1000
+  expected_result: "Subscribe becomes Unsubscribe, LIVE indicator appears in Event Stream"
+
+debug_collapse_flow:
+  description: "Toggle Debug panel collapse state"
+  steps:
+    - action: click
+      selector: 'button[title="Collapse Debug Panel"]'
+    - action: wait
+      duration: 500
+  expected_result: "Panel collapses, button changes to 'Expand Debug Panel', localStorage persists state"
+  note: "debug-panel-collapsed key in localStorage"
+
+responsive_flow:
+  description: "Test responsive layout switching"
+  steps:
+    - action: command
+      value: "agent-browser set viewport 375 667"
+      description: "Switch to mobile"
+    - action: wait
+      duration: 1000
+    - action: command
+      value: "agent-browser set viewport 1280 800"
+      description: "Switch back to desktop"
+  expected_result: "Mobile shows bottom tab bar, desktop shows left ActivityBar"
+
+tips:
+  - "CRITICAL: Page crashes ~4-5s after load due to form submit navigation. Always prevent form submissions!"
+  - "Add protection: document.querySelectorAll('form').forEach(f => f.addEventListener('submit', e => e.preventDefault()));"
+  - "Also add: window.addEventListener('beforeunload', e => { e.preventDefault(); e.returnValue = ''; });"
+  - "ActivityBar buttons use title= attribute (NOT aria-label) — query with button[title='X']"
+  - "File tree items are NOT in accessibility tree — use find text click or eval to interact"
+  - "File preview overlay close button has no title — find via eval or use DOM manipulation"
+  - "Search pressing Enter causes form submit crash — must prevent default"
+  - "Chat messages show timestamps in HH:MM format"
+  - "User messages use bg-indigo-600, bot messages use bg-gray-700"
+  - "Message count badge is span with class bg-indigo-600/30"
+  - "Debug panel collapse state persists via localStorage key 'debug-panel-collapsed'"
+  - "Mobile layout triggers at viewport width < ~640px — use 'agent-browser set viewport WxH'"
+  - "Feed subscription events appear in EVENT STREAM section with LIVE indicator"
+  - "Smart reply patterns: time queries → time response, math → result, files → file browser mention, git → git mention, unknown → default reply"
+  - "WS URL: ws://localhost:5173/ws?token=verify-general-token (proxied to ws://localhost:3100)"
+  - "Backend server must be running on port 3100 for WebSocket to work"

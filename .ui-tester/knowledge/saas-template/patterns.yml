@@ -1,0 +1,149 @@
+# Module: saas-template
+# Reusable operation sequences for SaaS template (pi-agent-template) UI testing
+# Last updated: 2026-05-04 (session ui-test-1777823168)
+
+page_load:
+  description: "Navigate to SaaS template and wait for WS auto-connect"
+  steps:
+    - action: open
+      url: "http://localhost:5199/"
+    - action: wait
+      duration: 6000
+      description: "Wait for full load + WebSocket auto-connect"
+  expected_result: "Page fully loaded, no spinner, WS connected (badge visible), shows 'TestSseApp'"
+
+debug_rpc_call:
+  description: "Test an RPC call via Debug panel"
+  steps:
+    - action: select
+      selector: 'select'
+      value: "<method_name>"
+      description: "Select RPC method from dropdown (system.ping|system.hello|system.echo|chat.send)"
+    - action: click
+      selector: 'button:has-text("Call")'
+      description: "Click Call button"
+    - action: wait
+      duration: 1000
+      description: "Wait for RPC response"
+  expected_result: "Response displayed in JSON format below dropdown, logs show method call and result"
+
+debug_subscribe:
+  description: "Subscribe to events via Debug panel"
+  steps:
+    - action: click
+      selector: 'button:has-text("Subscribe")'
+      description: "Click Subscribe"
+  expected_result: "Button changes to Unsubscribe, events stream in with timestamps"
+
+chat_send_message:
+  description: "Send a chat message via Chat panel"
+  steps:
+    - action: fill
+      selector: 'input[placeholder*="Type a message"]'
+      value: "<message>"
+      description: "Type message in chat input"
+    - action: click
+      selector: 'button:has-text("Send")'
+      description: "Click Send"
+    - action: wait
+      duration: 3000
+      description: "Wait for AI response"
+  expected_result: "User message appears (right-aligned, blue), bot response appears (left-aligned, with icon)"
+
+feed_post:
+  description: "Create a feed post"
+  steps:
+    - action: click
+      selector: 'button[aria-label="Feed"]'
+      description: "Switch to Feed panel"
+    - action: fill
+      selector: 'input[placeholder*="Author"]'
+      value: "<author>"
+    - action: select
+      selector: 'select'
+      value: "<category>"
+      description: "Select category (tech|news|general)"
+    - action: fill
+      selector: 'input[placeholder*="Write a post"]'
+      value: "<content>"
+    - action: snapshot
+      description: "Re-snapshot to get enabled Post button"
+    - action: click
+      selector: 'button:has-text("Post")'
+  expected_result: "Post appears in feed with author, category tag, timestamp"
+
+explorer_navigate:
+  description: "Navigate file tree in Explorer"
+  steps:
+    - action: click
+      selector: 'button[aria-label="Explorer"]'
+      description: "Switch to Explorer panel"
+    - action: click
+      selector: 'button:has-text("List directory")'
+      description: "List current directory"
+    - action: eval
+      value: "Click folder item in li elements to navigate into subdirectory"
+      description: "Click folder to navigate"
+  expected_result: "File tree updates, logs show ListDir with path and item count"
+
+search_files:
+  description: "Search for text in files"
+  steps:
+    - action: click
+      selector: 'button[aria-label="Search"]'
+      description: "Switch to Search panel"
+    - action: fill
+      selector: 'input[placeholder*="Search in files"]'
+      value: "<search_term>"
+    - action: eval
+      value: "dispatchEvent new KeyboardEvent('keydown', {key: 'Enter', bubbles: true}) on search input"
+      description: "Press Enter to trigger search"
+    - action: wait
+      duration: 2000
+  expected_result: "Results grouped by file with match counts, 'N results in M files (K files searched)'"
+
+timer_rpc_via_ws:
+  description: "Test timer.start/stop via direct WebSocket RPC call (not in Debug dropdown)"
+  steps:
+    - action: eval
+      value: |
+        const ws = new WebSocket('ws://localhost:5199/ws?token=test-sse-app-token');
+        ws.onopen = () => { ws.send(JSON.stringify({id: crypto.randomUUID(), type: 'request', method: 'timer.start', params: {interval: 1000}})); };
+        ws.onmessage = (e) => { window.__timerResults = (window.__timerResults || []).concat(e.data); };
+        window.__timerWs = ws;
+      description: "Create WS through Vite proxy, send timer.start"
+    - action: wait
+      duration: 2000
+    - action: eval
+      value: "window.__timerWs.send(JSON.stringify({id: crypto.randomUUID(), type: 'request', method: 'timer.stop', params: {}}))"
+      description: "Send timer.stop"
+  expected_result: "timer.start returns {started:true}, timer.stop returns {stopped:true}"
+  notes: "Must use Vite proxy URL (ws://localhost:5199/ws), NOT direct backend (ws://localhost:3101) — direct connection gets rejected"
+
+error_handling_test:
+  description: "Test error handling with unknown RPC method"
+  steps:
+    - action: eval
+      value: "window.__timerWs.send(JSON.stringify({id: crypto.randomUUID(), type: 'request', method: 'nonexistent.method', params: {}}))"
+      description: "Send unknown method via WS"
+  expected_result: "Returns {error: {code: 404, message: 'Method not found: nonexistent.method'}}"
+
+tips:
+  - "WS auto-connects through Vite proxy — no manual connection needed"
+  - "Page title is 'React + Tailwind + Vite' — confirms correct template loaded"
+  - "Status bar shows 'Web (WebSocket)' text when connected"
+  - "App name shows 'TestSseApp' on status bar"
+  - "ActivityBar has 3 sidebar icons (Explorer, Source Control, Search) + 3 tab buttons (Chat, Feed+Subs, Debug)"
+  - "Debug panel dropdown has 4 RPC methods: system.ping, system.hello, system.echo, chat.send"
+  - "file.listDir NOT in Debug dropdown — called internally by Explorer panel's 'List directory' button"
+  - "timer.start/timer.stop NOT in Debug dropdown — must call via direct WS through Vite proxy"
+  - "Feed panel subscription dropdown has: feed.update, chat.message, timer.tick"
+  - "To call timer methods via WS: use ws://localhost:5199/ws?token=test-sse-app-token (Vite proxy URL)"
+  - "Direct WS to ws://localhost:3101 gets CLOSED (readyState 3) — must go through Vite proxy"
+  - "RPC message format: {id: UUID, type: 'request', method: '...', params: {}}"
+  - "Response format: {id: UUID, type: 'response', result: {...}} or {id: UUID, type: 'response', error: {code, message}}"
+  - "No iframes, shadow DOM, contenteditable, or animations on this page"
+  - "Post button in Feed is DISABLED when input is empty, ENABLED when content filled"
+  - "Search requires Enter key press — fill alone doesn't trigger search"
+  - "Console error capture shows 0 errors during normal operation"
+  - "Feed subscriptions show LIVE status with event count and timestamps"

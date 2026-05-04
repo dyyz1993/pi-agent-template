@@ -36,6 +36,12 @@ jobs:
       - name: Run tests
         run: bun run test:rpc
 
+      - name: Install template dependencies
+        run: cd templates/agent && bun install
+
+      - name: Run agent template tests
+        run: cd templates/agent && npx vitest run
+
       - name: Setup npm auth
         run: echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > packages/rpc-core/.npmrc
         env:

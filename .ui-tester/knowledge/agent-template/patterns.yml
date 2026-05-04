@@ -1,12 +1,12 @@
 # Module: agent-template
 # Reusable operation sequences for agent template UI testing
-# Last updated: 2026-04-30 (session ui-test-1777524333)
+# Last updated: 2026-05-03 (session ui-test-1777778786)
 
 page_load:
   description: "Navigate to agent template and wait for WS auto-connect"
   steps:
     - action: open
-      url: "http://localhost:5175/"
+      url: "http://localhost:5190/"
     - action: wait
       duration: 6000
       description: "Wait for full load + WebSocket auto-connect"
@@ -101,6 +101,37 @@ rules_add_flow:
       description: "Click Add Rule button"
   expected_result: "Form appears with Rule name input, Glob pattern input, Save button (disabled until filled)"
 
+rules_full_flow:
+  description: "Complete Rules CRUD: create, toggle, delete"
+  steps:
+    - action: click
+      selector: 'button[aria-label="Rules"]'
+      description: "Switch to Rules panel"
+    - action: eval
+      value: "Delete existing rules via buttons with text-gray-600 text-red-400 classes"
+      description: "Clean up existing rules"
+    - action: click
+      selector: 'button:has-text("Add Rule")'
+      description: "Click Add Rule"
+    - action: fill
+      selector: 'input[placeholder*="Rule name"]'
+      value: "<rule_name>"
+    - action: fill
+      selector: 'input[placeholder*="Glob pattern"]'
+      value: "<pattern>"
+    - action: snapshot
+      description: "Re-snapshot to get enabled Save button"
+    - action: click
+      selector: 'button:has-text("Save")'
+      description: "Save the rule"
+    - action: eval
+      value: "div.cursor-pointer card click() to toggle enabled/disabled"
+      description: "Toggle rule via eval click (not dispatchEvent — React needs native click())"
+    - action: eval
+      value: "Delete button: button.text-gray-600.text-red-400, positioned right side"
+      description: "Delete the rule"
+  expected_result: "Rule card appears with Pattern badge, toggle changes icon (circle-check green ↔ circle gray), delete removes card"
+
 todo_add_flow:
   description: "Open Todo add form"
   steps:
@@ -112,16 +143,96 @@ todo_add_flow:
       description: "Click Add Todo button"
   expected_result: "Todo add UI appears"
 
+todo_full_flow:
+  description: "Complete Todo CRUD: add, cycle status, delete"
+  steps:
+    - action: click
+      selector: 'button[aria-label="Todo"]'
+      description: "Switch to Todo panel"
+    - action: eval
+      value: "Delete existing todos via text-gray-600 text-red-400 delete buttons"
+    - action: click
+      selector: 'button:has-text("Add Todo")'
+    - action: fill
+      selector: 'input[placeholder*="What needs to be done"]'
+      value: "<task_name>"
+    - action: snapshot
+    - action: click
+      selector: 'button:has-text("Add")'
+      description: "Add the task"
+    - action: eval
+      value: "Click status dot via dispatchEvent pointerdown/pointerup/click sequence (React synthetic events)"
+      description: "Cycle status: gray(pending) → yellow(in_progress) → green(completed)+strikethrough"
+    - action: eval
+      value: "Delete button same as rules: text-gray-600 text-red-400"
+  expected_result: "Task card with status dot, status cycles through 3 states, delete removes card"
+
+feed_post_flow:
+  description: "Post a message in the Feed panel"
+  steps:
+    - action: click
+      selector: 'button[aria-label="Feed + Subs"]'
+      description: "Switch to Feed panel"
+    - action: fill
+      selector: 'input[placeholder*="Author"]'
+      value: "<author>"
+    - action: select
+      selector: 'select, [role="combobox"]'
+      value: "<category>"
+      description: "Select category (tech/news/general)"
+    - action: fill
+      selector: 'input[placeholder*="Write a post"]'
+      value: "<content>"
+    - action: snapshot
+    - action: click
+      selector: 'button:has-text("Post")'
+  expected_result: "Post appears in feed with author, category tag, timestamp, and content"
+
+search_flow:
+  description: "Search for text in files"
+  steps:
+    - action: click
+      selector: 'button[aria-label="Search"]'
+      description: "Switch to Search panel"
+    - action: fill
+      selector: 'input[placeholder*="Search in files"]'
+      value: "<search_term>"
+    - action: type
+      selector: 'input[placeholder*="Search in files"]'
+      value: "\n"
+      description: "Press Enter to trigger search (fill alone doesn't trigger)"
+    - action: wait
+      duration: 2000
+  expected_result: "Results grouped by file with match counts, showing 'N results in M files'"
+
 tips:
   - "WS auto-connects through Vite proxy — no manual connection needed"
   - "Page title is 'React + Tailwind + Vite' — confirms correct template loaded"
   - "Status bar shows 'Web (WebSocket)' text when connected — check via body.innerText"
-  - "ActivityBar has 8 icons: Explorer, Git, Search, Rules, Unpin, Chat, Feed+Subs, Bash, Todo"
+  - "WS badge uses bg-blue-600 class (rgb(37, 99, 235)) on the status bar"
+  - "ActivityBar has 4 sidebar icons (Explorer, Source Control, Search, Rules) + 4 tab buttons (Chat, Feed+Subs, Bash, Todo)"
   - "Bash Run button is DISABLED when input is empty, ENABLED when text entered"
   - "After bash execution: Kill button + PID N button(s) appear as process indicators"
   - "Bash output accumulates — multiple commands show all outputs together"
+  - "Bash output area uses font-mono text-xs class for monospace rendering"
   - "No iframes, shadow DOM, or contenteditable elements on this page"
   - "All panels use smooth transitions — always wait 500ms after clicking ActivityBar icons"
-  - "Chat RPC dropdown defaults to system.ping option; options: system.ping, system.hello, system.echo, chat.send"
+  - "Chat RPC dropdown defaults to system.ping; must select chat.send to send messages"
   - "After filling any input, always re-snapshot before clicking action buttons (refs may change)"
   - "Bash command output visible in body text — use eval to verify specific strings"
+  - "Explorer file tree: items are LI elements with div.flex.items-center children inside"
+  - "File preview: clicking a file shows overlay with line numbers; close button is small SVG at (~952, 40)"
+  - "Chat messages: user = flex justify-end + bg-indigo-600; bot = flex justify-start with SVG icon"
+  - "Chat timestamps: text-[10px] text-gray-400 in HH:MM format"
+  - "CRITICAL: Other agents' browser sessions can interfere — page may navigate to about:blank unexpectedly"
+  - "If browser becomes unstable, kill all daemons and wait 5+ seconds before reopening"
+  - "CRITICAL FIX: Use AGENT_BROWSER_SOCKET_DIR=/tmp/agent-browser-sock-isolated to isolate session from other agents"
+  - "Rule toggle: Use native click() method in eval, NOT dispatchEvent — React needs native event propagation"
+  - "Rule delete button: opacity-0 by default, appears on group-hover; find by class text-gray-600 text-red-400"
+  - "Todo status cycle: gray(border-gray-500)=pending → yellow(border-yellow-400)=in_progress → green(border-green-400)=completed → gray"
+  - "Todo status icons: lucide-circle (pending), lucide-clock (in_progress), lucide-circle-check (completed)"
+  - "Todo completed: p element gets line-through text-decoration"
+  - "Todo status dot click: Use dispatchEvent with pointerdown+pointerup+click sequence for React synthetic events"
+  - "Feed categories: tech, news, general — selected via combobox"
+  - "Search: Must press Enter after filling search input — fill alone doesn't trigger search"
+  - "Search results show 'N results in M files (K files searched)' header"

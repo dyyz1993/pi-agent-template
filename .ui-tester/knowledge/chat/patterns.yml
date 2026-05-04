@@ -1,72 +1,110 @@
 # Module: chat
 # Interaction patterns for ChatPanel
-# Last updated: 2026-04-30
+# Version: 3
+# Last updated: 2026-05-03
+# Updated in round: r3
 
 send_chat_message:
   description: "Send a message via the chat input and verify response"
   steps:
-    - action: snapshot
-      description: "Get fresh refs for input and send button"
     - action: fill
       selector: "input[placeholder='Type a message...']"  # NOTE: <input> not <textarea>
       description: "Type message into chat input field"
     - action: click
-      selector: "Send button"
+      selector: "button"  # Send button
       description: "Click Send button to submit"
     - action: wait
-      duration_ms: 3000
+      duration_ms: 2000
       description: "Wait for RPC response (bot reply)"
-    - action: get_text
-      selector: "body"
+    - action: eval
+      code: "document.body.innerText"
       description: "Extract full page text to verify messages appeared"
   expected_result: "User message and bot response appear in chat area, Messages counter increments by 2"
 
+send_via_eval:
+  description: "Programmatic message sending via eval (more reliable when session is unstable)"
+  code: |
+    var input = document.querySelector('input[placeholder]');
+    var sendBtn = document.evaluate('//button[text()="Send"]', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+    var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+    setter.call(input, 'message text');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    sendBtn.click();
+  note: "Use this when snapshot/fill/click commands break the session"
+
 verify_chat_messages:
-  description: "Chat messages are NOT visible in snapshot -i accessibility tree. Must use get text body or eval to extract."
-  extraction_method: "agent-browser get text body"
-  pattern: "Look for 'Messages N' counter and message text between 'Messages' and 'Send'"
+  description: "Chat messages are NOT visible in snapshot -i accessibility tree. Must use eval to extract."
+  extraction_method: "eval document.body.innerText or eval document.getElementById('root').innerHTML"
+  pattern: "Look for 'Messages' line, then next line is the count number"
+
+verify_scroll_position:
+  description: "Check if chat is auto-scrolled to bottom"
+  code: "document.querySelector('.overflow-y-auto').scrollTop + clientHeight >= scrollHeight - 50"
+  note: "scrollTop + clientHeight should equal scrollHeight when at bottom"
 
 bot_responses:
   description: "The chat handler is a smart demo assistant with contextual replies"
   known_responses:
-    hello: "Hey there! How can I help you today?"
-    time_query: "It's currently **HH:MM AM/PM** on **Day, Month DD, YYYY**."
-    generic: "That's an interesting question! I'm a demo assistant..."
-  notes: "Bot responds to all messages with contextual replies including markdown formatting (**bold**)"
+    hi: "Hello! Great to see you. What would you like to know?"
+    hello: "Hello! Great to see you. What would you like to know?"
+    time_query: "It's currently HH:MM AM/PM on Day, Month DD, YYYY."
+    math_query: "That would be [result]! Need help with anything else?"
+    help: "Here's what I can help with: [lists Greetings, Time & Date, Math, Help]"
+    unknown: "Hmm, I'm not sure about that one. But I can do math and tell you the time."
+    generic_unknown: "That's an interesting question! I'm a demo assistant..."
+    unrecognized: "I wish I could help with that! For now I can answer questions about time and do simple math."
+  capabilities:
+    - "Greetings (hi, hello)"
+    - "Time & Date queries"
+    - "Simple math (multiplication, division)"
+    - "Help command"
+  notes: "Bot does NOT handle: file browsing, git commands, complex topics. Returns fallback for unsupported queries."
 
 layout:
-  description: "Clean chat-focused layout with minimal chrome"
-  activity_bar:
-    icons: ["Chat"]  # ONLY Chat icon — no Explorer, Git, Feed, Search, Debug
-    position: "left sidebar, narrow strip"
-  main_area:
-    header: "Messages [count] badge + Pi Chat subtitle"
-    content: "Message list area with user (right/blue) and bot (left/gray) bubbles"
-    footer: "Input field + Send button at bottom"
-  title_bar:
-    left_badge: "Web (WebSocket)" — blue pill badge indicating WS connection status
-    subtitle: "Pi Chat"
+  description: "Responsive chat-focused layout"
+  desktop:
+    title_bar: "h-8 bg-gray-800 with WS badge + Pi Chat subtitle"
+    activity_bar: "w-12 left sidebar with 1 icon (Chat)"
+    main_area: "Messages header + message list + input area"
+  mobile:
+    no_title_bar: true
+    no_activity_bar: true
+    bottom_tab_bar: "h-14 with Chat icon"
+    breakpoint: "< 768px (mobile), 768-1024 (tablet), >= 1024 (desktop)"
+  responsive_hook: "useBreakpointSync() in App.tsx, uses ResizeObserver"
 
-input_history:
-  description: "Up/Down arrow key navigation in input field"
-  status: "NOT_IMPLEMENTED or NOT_TRIGGERED — pressing ArrowUp in input does not populate previous messages"
-  finding_date: "2026-04-30"
-  notes: "After sending messages, pressing Up arrow in input field leaves value empty. Input history feature may not be implemented in this template."
+responsive_testing:
+  description: "How to test responsive layout with agent-browser"
+  steps:
+    - action: set viewport
+      command: "agent-browser set viewport 375 667"
+      note: "CAUTION: This causes page to go blank! Must re-open page after viewport change"
+    - action: open
+      command: "agent-browser open http://localhost:5180"
+      note: "Wait 10+ seconds for React + WebSocket to fully initialize"
+    - action: eval
+      description: "Verify layout in single eval (session unstable after viewport change)"
+  critical_issue: "set viewport causes page blank - must re-open and wait 10s"
 
 ws_connection:
-  description: "WebSocket auto-connects through Vite proxy without ?ws= query param"
+  description: "WebSocket auto-connects through Vite proxy"
   auto_connect: true
-  no_ws_param_needed: true
-  badge_shows: "Web (WebSocket)" in top-left corner
+  badge_shows: "Web (WebSocket) in blue pill badge"
+  page_load_time: "8-10 seconds for full initialization including message history"
 
 tips:
   - "snapshot -i does NOT show chat message content - accessibility tree omits them"
-  - "Use 'get text body' to extract messages from the full page text"
-  - "The message input is an <input> element, NOT a <textarea> — use correct selector"
-  - "Messages counter increments by 2 per exchange (1 user + 1 bot): Messages2 → Messages4 after 2 exchanges"
-  - "ActivityBar has ONLY the Chat icon — this is a focused chat-only template"
-  - "No Explorer, Git, Feed, Search, or Debug panels present"
+  - "Use eval document.body.innerText or root.innerHTML to extract messages"
+  - "The message input is an <input> element, NOT a <textarea>"
+  - "Messages counter is on separate line after 'Messages' text"
+  - "ActivityBar has ONLY the Chat icon — focused chat-only template"
   - "WS connects automatically via Vite proxy — no ?ws= URL param needed"
-  - "Bot responses include markdown formatting (e.g., **bold** text)"
-  - "User messages appear right-aligned in blue bubbles; bot responses left-aligned in gray"
-  - "Page document.title is 'React + Tailwind + Vite' but UI shows 'Web (WebSocket)' badge"
+  - "Bot responses include markdown formatting (bold, lists, paragraphs)"
+  - "User messages: right-aligned, bg-indigo-600 (rgb(79,70,229))"
+  - "Bot messages: left-aligned, bg-gray-700 (rgb(55,65,81)), with bot SVG icon"
+  - "Timestamps in HH:MM 24h format"
+  - "Page needs 8-10 seconds to fully load (WebSocket + message history)"
+  - "set viewport command breaks session - must re-open page after"
+  - "Session is unstable: second eval call often returns about:blank - use single comprehensive eval per open"
+  - "Prefer sending messages via eval with native value setter + click instead of fill/click when session is fragile"
+  - "Bot does NOT support file browsing or git commands - returns fallback responses"

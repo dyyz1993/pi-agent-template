@@ -17,3 +17,6 @@ done
 
 # Template lint only (no tsc — deps not installed in template)
 (cd templates/general && bun run lint 2>/dev/null || true)
+
+# Run template tests (agent has the most UI components)
+(cd templates/agent && npx vitest run --reporter=verbose 2>&1 || exit 1)
