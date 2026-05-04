@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { apiClient } from "../lib/api-client";
 import { useAppStore } from "./use-app-store";
-import type { TodoItem, TodoStatus } from "../../../shared/modules/todo";
+import type { TodoItem, TodoStatus } from "../../shared/modules/todo";
 
 interface TodoState {
   items: TodoItem[];

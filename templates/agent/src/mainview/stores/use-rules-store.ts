@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { apiClient } from "../lib/api-client";
 import { useAppStore } from "./use-app-store";
-import type { Rule } from "../../../shared/modules/rules";
+import type { Rule } from "../../shared/modules/rules";
 
 interface RulesState {
   rules: Rule[];

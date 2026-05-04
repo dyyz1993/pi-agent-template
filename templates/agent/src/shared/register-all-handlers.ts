@@ -30,7 +30,8 @@ export function discoverMethodNames(): string[] {
   if (_cachedMethods) return _cachedMethods;
   const server = new RPCServer(noopTransport);
   registerAllHandlers(server, { platform: "web" });
+  // @ts-expect-error RPCServer method exists in rpc-core but tsconfig paths don't resolve in CI
   _cachedMethods = server.getRegisteredMethods();
   server.close();
-  return _cachedMethods;
+  return _cachedMethods!;
 }
