@@ -3,7 +3,16 @@ build/
 dist/
 .bun/
 bun.lockb
-.DS_Store
+*.tsbuildinfo
 *.log
 pnpm-debug.log
+.env
+.env.local
+.env.*.local
+coverage/
+.playwright/
+test-results/
+e2e-ui-results/
+.server-port
+**/.DS_Store
 template/package-lock.json
