@@ -29,23 +29,13 @@ jobs:
       - name: Lint root
         run: bun run lint
 
-      - name: Install template dependencies (general)
-        run: cd templates/general && bun install
-
-      - name: Lint template (general)
-        run: cd templates/general && bun run lint
-
-      - name: Install template dependencies (chat)
-        run: cd templates/chat && bun install
-
-      - name: Lint template (chat)
-        run: cd templates/chat && bun run lint
-
-      - name: Install template dependencies (agent)
-        run: cd templates/agent && bun install
-
-      - name: Lint template (agent)
-        run: cd templates/agent && bun run lint
+      - name: Install & lint all templates
+        run: |
+          for t in general chat agent; do
+            cd $GITHUB_WORKSPACE/templates/$t
+            bun install
+            bun run lint
+          done
 
   type-check:
     runs-on: ubuntu-latest
@@ -65,44 +55,19 @@ jobs:
       - name: Type check (root)
         run: bun run type-check
 
-      - name: Install template dependencies (general)
-        run: cd templates/general && bun install
-
-      - name: Type check (general)
+      - name: Type check all templates
         run: |
-          cd templates/general
-          ERRORS=$(npx tsc --noEmit 2>&1 | grep "error TS" | grep -v "node_modules" || true)
-          if [ -n "$ERRORS" ]; then
-            echo "$ERRORS"
-            exit 1
-          fi
-          echo "Template type check passed"
-
-      - name: Install template dependencies (chat)
-        run: cd templates/chat && bun install
-
-      - name: Type check (chat)
-        run: |
-          cd templates/chat
-          ERRORS=$(npx tsc --noEmit 2>&1 | grep "error TS" | grep -v "node_modules" || true)
-          if [ -n "$ERRORS" ]; then
-            echo "$ERRORS"
-            exit 1
-          fi
-          echo "Template type check passed"
-
-      - name: Install template dependencies (agent)
-        run: cd templates/agent && bun install
-
-      - name: Type check (agent)
-        run: |
-          cd templates/agent
-          ERRORS=$(npx tsc --noEmit 2>&1 | grep "error TS" | grep -v "node_modules" || true)
-          if [ -n "$ERRORS" ]; then
-            echo "$ERRORS"
-            exit 1
-          fi
-          echo "Template type check passed"
+          for t in general chat agent; do
+            cd $GITHUB_WORKSPACE/templates/$t
+            bun install
+            ERRORS=$(npx tsc --noEmit 2>&1 | grep "error TS" | grep -v "node_modules" || true)
+            if [ -n "$ERRORS" ]; then
+              echo "=== $t type-check FAILED ==="
+              echo "$ERRORS"
+              exit 1
+            fi
+            echo "=== $t type-check passed ==="
+          done
 
   test:
     runs-on: ubuntu-latest
@@ -125,47 +90,46 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
 
-      - name: Install template dependencies (agent)
-        run: cd templates/agent && bun install
-
-      - name: Run agent template tests
-        run: cd templates/agent && npx vitest run
-
-      - name: Install template dependencies (chat)
-        run: cd templates/chat && bun install
-
-      - name: Run chat template tests
-        run: cd templates/chat && npx vitest run
-
-      - name: Install template dependencies (general)
-        run: cd templates/general && bun install
-
-      - name: Run general template tests
-        run: cd templates/general && npx vitest run
+      - name: Install & test all templates
+        run: |
+          for t in agent chat general; do
+            cd $GITHUB_WORKSPACE/templates/$t
+            bun install
+            npx vitest run
+          done
 
   build-verify:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        template: [general, chat, agent]
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
 
-      - name: Create project from template
-        run: HUSKY=0 bun run create ci-test /tmp/ci-test
+      - name: Create ${{ matrix.template }} project from template
+        run: HUSKY=0 bun run scripts/create.ts ci-test /tmp/ci-test-${{ matrix.template }} --type ${{ matrix.template }}
 
-      - name: Verify project created
-        run: test -f /tmp/ci-test/package.json
+      - name: Verify ${{ matrix.template }} project created
+        run: test -f /tmp/ci-test-${{ matrix.template }}/package.json
 
   integration-test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        template: [general, chat, agent]
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
 
-      - name: Run E2E integration test
-        run: bun run scripts/e2e-test.ts
+      - name: Run E2E integration test (${{ matrix.template }})
+        run: bun run scripts/e2e-test.ts --type ${{ matrix.template }}
 
   e2e-ui:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        template: [general, chat, agent]
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -176,14 +140,14 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Run E2E UI tests
-        run: bun run test:e2e-ui
+      - name: Run E2E UI tests (${{ matrix.template }})
+        run: bun run scripts/e2e-ui-test.ts ${{ matrix.template }}
 
-      - name: Upload test results
+      - name: Upload test results (${{ matrix.template }})
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-ui-results
+          name: e2e-ui-results-${{ matrix.template }}
           path: e2e-ui-results/
           retention-days: 7
 

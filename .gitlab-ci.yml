@@ -24,9 +24,12 @@ lint:
     - pnpm install --frozen-lockfile
   script:
     - bun run lint
-    - cd templates/general && bun install && bun run lint
-    - cd $CI_PROJECT_DIR/templates/chat && bun install && bun run lint
-    - cd $CI_PROJECT_DIR/templates/agent && bun install && bun run lint
+    - |
+      for t in general chat agent; do
+        cd $CI_PROJECT_DIR/templates/$t
+        bun install
+        bun run lint
+      done
 
 type-check:
   stage: type-check
@@ -65,38 +68,93 @@ test-templates:
   before_script:
     - *before_bun
   script:
-    - cd templates/agent && bun install && npx vitest run
-    - cd $CI_PROJECT_DIR/templates/chat && bun install && npx vitest run
-    - cd $CI_PROJECT_DIR/templates/general && bun install && npx vitest run
+    - |
+      for t in agent chat general; do
+        cd $CI_PROJECT_DIR/templates/$t
+        bun install
+        npx vitest run
+      done
 
-build-verify:
+build-verify-general:
   stage: build-verify
   image: node:22-slim
   before_script:
     - *before_bun
   script:
-    - HUSKY=0 bun run create ci-test /tmp/ci-test
-    - test -f /tmp/ci-test/package.json
-    - echo "Template project created successfully"
+    - HUSKY=0 bun run scripts/create.ts ci-test /tmp/ci-test-general --type general
+    - test -f /tmp/ci-test-general/package.json
 
-integration-test:
+build-verify-chat:
+  stage: build-verify
+  image: node:22-slim
+  before_script:
+    - *before_bun
+  script:
+    - HUSKY=0 bun run scripts/create.ts ci-test /tmp/ci-test-chat --type chat
+    - test -f /tmp/ci-test-chat/package.json
+
+build-verify-agent:
+  stage: build-verify
+  image: node:22-slim
+  before_script:
+    - *before_bun
+  script:
+    - HUSKY=0 bun run scripts/create.ts ci-test /tmp/ci-test-agent --type agent
+    - test -f /tmp/ci-test-agent/package.json
+
+integration-test-general:
   stage: integration-test
   image: node:22-slim
   before_script:
     - *before_bun
   script:
-    - bun run scripts/e2e-test.ts
+    - HUSKY=0 bun run scripts/e2e-test.ts --type general
 
-e2e-ui-test:
+integration-test-chat:
+  stage: integration-test
+  image: node:22-slim
+  before_script:
+    - *before_bun
+  script:
+    - HUSKY=0 bun run scripts/e2e-test.ts --type chat
+
+integration-test-agent:
+  stage: integration-test
+  image: node:22-slim
+  before_script:
+    - *before_bun
+  script:
+    - HUSKY=0 bun run scripts/e2e-test.ts --type agent
+
+e2e-ui-general:
   stage: e2e-ui
   image: node:22-slim
   before_script:
     - *before_bun
     - npx playwright install --with-deps chromium
   script:
-    - cd templates/agent && bun install && npx playwright install chromium
-    - cd $CI_PROJECT_DIR
-    - HUSKY=0 bun run scripts/e2e-ui-test.ts
+    - bun install
+    - HUSKY=0 bun run scripts/e2e-ui-test.ts general
+
+e2e-ui-chat:
+  stage: e2e-ui
+  image: node:22-slim
+  before_script:
+    - *before_bun
+    - npx playwright install --with-deps chromium
+  script:
+    - bun install
+    - HUSKY=0 bun run scripts/e2e-ui-test.ts chat
+
+e2e-ui-agent:
+  stage: e2e-ui
+  image: node:22-slim
+  before_script:
+    - *before_bun
+    - npx playwright install --with-deps chromium
+  script:
+    - bun install
+    - HUSKY=0 bun run scripts/e2e-ui-test.ts agent
   artifacts:
     when: always
     paths:
@@ -117,9 +175,9 @@ notify-result:
         STATUS="FAILED"
       fi
       if [ "$STATUS" = "FAILED" ]; then
-        TITLE="CI%E5%A4%B1%E8%B4%A5%E2%9D%8C"
+        TITLE="GitLab%20CI%E5%A4%B1%E8%B4%A5%E2%9D%8C"
       else
-        TITLE="CI%E9%80%9A%E8%BF%87%E2%9C%85"
+        TITLE="GitLab%20CI%E9%80%9A%E8%BF%87%E2%9C%85"
       fi
       MSG="${TITLE}%20${CI_PROJECT_NAME}%20${BRANCH}%20${PIPELINE_URL}"
       curl -s "https://api.day.app/PpdrqL9LsYaJc83YW5ZQj5/${MSG}" || true

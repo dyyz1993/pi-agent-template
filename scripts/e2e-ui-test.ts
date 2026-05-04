@@ -58,14 +58,15 @@ async function waitForUrl(url: string, maxMs: number): Promise<void> {
 }
 
 async function main() {
+  const templateType = process.argv[2] || "general";
   const rootDir = resolve(import.meta.dir, "..");
 
   const tmpBase = mkdtempSync(join(tmpdir(), "e2e-ui-"));
-  projectDir = join(tmpBase, "e2e-ui-app");
+  projectDir = join(tmpBase, `e2e-ui-${templateType}`);
   autoCreated = true;
 
-  log("setup", `Creating project at: ${projectDir}`);
-  execSync(`HUSKY=0 bun run create e2e-ui-app ${projectDir}`, { cwd: rootDir, stdio: "pipe" });
+  log("setup", `Creating ${templateType} project at: ${projectDir}`);
+  execSync(`HUSKY=0 bun run scripts/create.ts e2e-ui-app ${projectDir} --type ${templateType}`, { cwd: rootDir, stdio: "pipe" });
   if (!existsSync(join(projectDir, "package.json"))) {
     console.error("FAIL: Project creation failed");
     cleanup(1);

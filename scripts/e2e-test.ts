@@ -94,7 +94,17 @@ async function createRpcClient(): Promise<{ client: RPCClient; transport: WebSoc
 // --- Main ---
 
 async function main() {
-  const arg = process.argv[2];
+  let templateType = "general";
+  const positional: string[] = [];
+  for (let i = 2; i < process.argv.length; i++) {
+    const arg = process.argv[i];
+    if (arg === "--type" && process.argv[i + 1]) {
+      templateType = process.argv[++i];
+    } else if (!arg.startsWith("--")) {
+      positional.push(arg);
+    }
+  }
+  const arg = positional[0];
 
   if (arg) {
     projectDir = resolve(arg);
@@ -104,12 +114,12 @@ async function main() {
     log("setup", `Using existing project: ${projectDir}`);
   } else {
     const tmpBase = mkdtempSync(join(tmpdir(), "e2e-test-"));
-    projectDir = join(tmpBase, "e2e-app");
+    projectDir = join(tmpBase, `e2e-${templateType}`);
     autoCreated = true;
-    log("setup", `Creating project at: ${projectDir}`);
+    log("setup", `Creating ${templateType} project at: ${projectDir}`);
 
     const rootDir = resolve(import.meta.dir, "..");
-    execSync(`bun run create e2e-app ${projectDir}`, {
+    execSync(`HUSKY=0 bun run scripts/create.ts e2e-app ${projectDir} --type ${templateType}`, {
       cwd: rootDir,
       stdio: "pipe",
     });
