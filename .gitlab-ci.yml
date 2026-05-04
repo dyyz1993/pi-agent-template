@@ -75,7 +75,7 @@ build-verify:
   before_script:
     - *before_bun
   script:
-    - bun run create ci-test /tmp/ci-test
+    - HUSKY=0 bun run create ci-test /tmp/ci-test
     - test -f /tmp/ci-test/package.json
     - echo "Template project created successfully"
 
@@ -96,22 +96,31 @@ e2e-ui-test:
   script:
     - cd templates/agent && bun install && npx playwright install chromium
     - cd $CI_PROJECT_DIR
-    - bun run scripts/e2e-ui-test.ts
+    - HUSKY=0 bun run scripts/e2e-ui-test.ts
   artifacts:
     when: always
     paths:
       - e2e-ui-results/
     expire_in: 7 days
 
-notify-on-failure:
+notify-result:
   stage: .post
   image: alpine:latest
-  when: on_failure
+  when: always
   script:
     - apk add --no-cache curl
     - |
-      JOB_URL="${CI_PROJECT_URL}/-/jobs/${CI_JOB_ID}"
       BRANCH="${CI_COMMIT_BRANCH:-unknown}"
-      MSG="CI%E5%A4%B1%E8%B4%A5%20${CI_PROJECT_NAME}%20${BRANCH}%20${JOB_URL}"
+      PIPELINE_URL="${CI_PROJECT_URL}/-/pipelines/${CI_PIPELINE_ID}"
+      STATUS="PASSED"
+      if [ "$CI_PIPELINE_STATUS" = "failed" ] || [ "$CI_JOB_STATUS" = "failed" ]; then
+        STATUS="FAILED"
+      fi
+      if [ "$STATUS" = "FAILED" ]; then
+        TITLE="CI%E5%A4%B1%E8%B4%A5%E2%9D%8C"
+      else
+        TITLE="CI%E9%80%9A%E8%BF%87%E2%9C%85"
+      fi
+      MSG="${TITLE}%20${CI_PROJECT_NAME}%20${BRANCH}%20${PIPELINE_URL}"
       curl -s "https://api.day.app/PpdrqL9LsYaJc83YW5ZQj5/${MSG}" || true
   allow_failure: true

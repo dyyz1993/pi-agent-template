@@ -12,5 +12,5 @@
     "types": ["bun"]
   },
   "include": ["packages/**/*", "scripts/**/*"],
-  "exclude": ["node_modules", "templates", "packages/pi-cli/templates", "**/*.test.ts", "**/__tests__/**", "**/__wip__/**"]
+  "exclude": ["node_modules", "templates", "packages/pi-cli/templates", "**/*.test.ts", "**/__tests__/**", "**/__wip__/**", "**/tests/**"]
 }

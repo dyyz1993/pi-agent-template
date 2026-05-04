@@ -65,7 +65,7 @@ async function main() {
   autoCreated = true;
 
   log("setup", `Creating project at: ${projectDir}`);
-  execSync(`bun run create e2e-ui-app ${projectDir}`, { cwd: rootDir, stdio: "pipe" });
+  execSync(`HUSKY=0 bun run create e2e-ui-app ${projectDir}`, { cwd: rootDir, stdio: "pipe" });
   if (!existsSync(join(projectDir, "package.json"))) {
     console.error("FAIL: Project creation failed");
     cleanup(1);

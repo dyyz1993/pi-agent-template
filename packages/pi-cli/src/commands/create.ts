@@ -19,6 +19,7 @@ export async function runCreate(args: string[]): Promise<void> {
   }
 
   const projectName = positional[0];
+  const targetArg = customDir || positional[1];
   if (!projectName) {
     console.log(`
 Usage: pi create <name> [--type <type>] [--dir <path>]
@@ -36,7 +37,7 @@ Examples:
   }
 
   const sanitized = projectName.replace(/[^a-zA-Z0-9-_]/g, '-');
-  const targetDir = customDir ? resolve(customDir) : resolve(process.cwd(), sanitized);
+  const targetDir = targetArg ? resolve(targetArg) : resolve(process.cwd(), sanitized);
   const rootDir = getRootDir();
   const templateDir = resolveTemplateDir(rootDir, templateType);
 
