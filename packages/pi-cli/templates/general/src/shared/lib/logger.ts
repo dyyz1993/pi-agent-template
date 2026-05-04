@@ -1,4 +1,5 @@
-import { appendFileSync, mkdirSync, existsSync } from "fs";
+import { appendFile, mkdir as mkdirAsync, readdir as readdirAsync, unlink as unlinkAsync, stat as statAsync } from "fs/promises";
+import { mkdirSync, existsSync } from "fs";
 import { join } from "path";
 
 export type LogModule = "server" | "gateway" | "system" | "chat" | "file" | "timer" | "git" | "feed";
@@ -13,13 +14,17 @@ interface LogEntry {
 }
 
 let _logDir: string | null = null;
+let _maxAgeDays = 30;
 
-/** Configure the log output directory (call once at startup) */
-export function configureLogDir(dir: string): void {
+export async function configureLogDir(dir: string, options?: { maxAgeDays?: number }): Promise<void> {
   _logDir = dir;
+  if (options?.maxAgeDays !== undefined) {
+    _maxAgeDays = options.maxAgeDays;
+  }
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
+  await cleanOldLogs(dir, _maxAgeDays);
 }
 
 function getLogDir(): string {
@@ -32,19 +37,44 @@ function getLogDir(): string {
   return _logDir;
 }
 
+async function cleanOldLogs(dir: string, maxAgeDays: number): Promise<void> {
+  try {
+    if (!existsSync(dir)) return;
+    const files = await readdirAsync(dir);
+    const cutoff = Date.now() - maxAgeDays * 86400000;
+    for (const f of files) {
+      if (!f.endsWith(".log")) continue;
+      const filePath = join(dir, f);
+      const s = await statAsync(filePath);
+      if (s.mtimeMs < cutoff) {
+        await unlinkAsync(filePath);
+      }
+    }
+  } catch { /* ignore */ }
+}
+
 function formatLine(entry: LogEntry): string {
   const base = `[${entry.timestamp}] [${entry.level.toUpperCase()}] [${entry.module}] ${entry.message}`;
   return entry.data ? `${base} ${JSON.stringify(entry.data)}` : base;
 }
 
+let writeQueue: Promise<void> = Promise.resolve();
+
 function writeToFile(line: string): void {
-  try {
-    const date = new Date().toISOString().slice(0, 10);
-    const filePath = join(getLogDir(), `${date}.log`);
-    appendFileSync(filePath, `${line}\n`);
-  } catch {
-    // File write failure should not crash the app
-  }
+  writeQueue = writeQueue.then(async () => {
+    try {
+      const date = new Date().toISOString().slice(0, 10);
+      const dir = getLogDir();
+      if (!existsSync(dir)) {
+        await mkdirAsync(dir, { recursive: true });
+      }
+      await appendFile(join(dir, `${date}.log`), `${line}\n`);
+    } catch { /* ignore */ }
+  });
+}
+
+export function flushLogs(): Promise<void> {
+  return writeQueue;
 }
 
 export class Logger {
@@ -81,7 +111,6 @@ export class Logger {
 
     const line = formatLine(entry);
 
-    // Console output
     if (level === "error") {
       console.error(line);
     } else if (level === "warn") {
@@ -90,14 +119,12 @@ export class Logger {
       console.log(line);
     }
 
-    // File output (skip debug in production)
     if (process.env.NODE_ENV !== "production" || level !== "debug") {
       writeToFile(line);
     }
   }
 }
 
-/** Factory: create a module-scoped logger */
 export function createLogger(module: LogModule): Logger {
   return new Logger(module);
 }
