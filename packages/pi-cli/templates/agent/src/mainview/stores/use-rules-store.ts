@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { apiClient } from "../lib/api-client";
-import { useAppStore } from "./use-app-store";
-import type { Rule } from "../../../shared/modules/rules";
+import { useLogStore } from "./use-log-store";
+import type { Rule } from "../../shared/modules/rules";
 
 interface RulesState {
   rules: Rule[];
@@ -19,7 +19,7 @@ export const useRulesStore = create<RulesState>((set) => ({
       const result = await apiClient.call("rules.list", {});
       set({ rules: result.rules });
     } catch (err) {
-      useAppStore.getState().addLog(`Rules fetch error: ${err instanceof Error ? err.message : String(err)}`);
+      useLogStore.getState().addLog(`Rules fetch error: ${err instanceof Error ? err.message : String(err)}`);
     }
   },
 
@@ -28,7 +28,7 @@ export const useRulesStore = create<RulesState>((set) => ({
       const result = await apiClient.call("rules.add", { name, pattern });
       set((s) => ({ rules: [...s.rules, result.rule] }));
     } catch (err) {
-      useAppStore.getState().addLog(`Rules add error: ${err instanceof Error ? err.message : String(err)}`);
+      useLogStore.getState().addLog(`Rules add error: ${err instanceof Error ? err.message : String(err)}`);
     }
   },
 
@@ -39,7 +39,7 @@ export const useRulesStore = create<RulesState>((set) => ({
         rules: s.rules.map((r) => (r.id === id ? result.rule : r)),
       }));
     } catch (err) {
-      useAppStore.getState().addLog(`Rules toggle error: ${err instanceof Error ? err.message : String(err)}`);
+      useLogStore.getState().addLog(`Rules toggle error: ${err instanceof Error ? err.message : String(err)}`);
     }
   },
 
@@ -48,7 +48,7 @@ export const useRulesStore = create<RulesState>((set) => ({
       await apiClient.call("rules.remove", { id });
       set((s) => ({ rules: s.rules.filter((r) => r.id !== id) }));
     } catch (err) {
-      useAppStore.getState().addLog(`Rules remove error: ${err instanceof Error ? err.message : String(err)}`);
+      useLogStore.getState().addLog(`Rules remove error: ${err instanceof Error ? err.message : String(err)}`);
     }
   },
 }));

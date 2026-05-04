@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { apiClient } from "../lib/api-client";
-import { useAppStore } from "./use-app-store";
-import type { TodoItem, TodoStatus } from "../../../shared/modules/todo";
+import { useLogStore } from "./use-log-store";
+import type { TodoItem, TodoStatus } from "../../shared/modules/todo";
 
 interface TodoState {
   items: TodoItem[];
@@ -19,7 +19,7 @@ export const useTodoStore = create<TodoState>((set) => ({
       const result = await apiClient.call("todo.list", {});
       set({ items: result.items });
     } catch (err) {
-      useAppStore.getState().addLog(`Todo fetch error: ${err instanceof Error ? err.message : String(err)}`);
+      useLogStore.getState().addLog(`Todo fetch error: ${err instanceof Error ? err.message : String(err)}`);
     }
   },
 
@@ -28,7 +28,7 @@ export const useTodoStore = create<TodoState>((set) => ({
       const result = await apiClient.call("todo.add", { content });
       set((s) => ({ items: [...s.items, result.item] }));
     } catch (err) {
-      useAppStore.getState().addLog(`Todo add error: ${err instanceof Error ? err.message : String(err)}`);
+      useLogStore.getState().addLog(`Todo add error: ${err instanceof Error ? err.message : String(err)}`);
     }
   },
 
@@ -39,7 +39,7 @@ export const useTodoStore = create<TodoState>((set) => ({
         items: s.items.map((i) => (i.id === id ? result.item : i)),
       }));
     } catch (err) {
-      useAppStore.getState().addLog(`Todo update error: ${err instanceof Error ? err.message : String(err)}`);
+      useLogStore.getState().addLog(`Todo update error: ${err instanceof Error ? err.message : String(err)}`);
     }
   },
 
@@ -48,7 +48,7 @@ export const useTodoStore = create<TodoState>((set) => ({
       await apiClient.call("todo.remove", { id });
       set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
     } catch (err) {
-      useAppStore.getState().addLog(`Todo remove error: ${err instanceof Error ? err.message : String(err)}`);
+      useLogStore.getState().addLog(`Todo remove error: ${err instanceof Error ? err.message : String(err)}`);
     }
   },
 }));

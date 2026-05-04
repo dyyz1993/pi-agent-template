@@ -1,4 +1,5 @@
-import { describe, test, expect, beforeEach, afterEach } from "bun:test";
+import { describe, test, expect, beforeEach } from "bun:test";
+import type { RPCServer } from "@dyyz1993/rpc-core";
 import { register } from "../timer";
 
 type Handler = (params: unknown) => Promise<unknown>;
@@ -26,7 +27,7 @@ describe("timer handler", () => {
 
   beforeEach(() => {
     server = createMockServer();
-    register(server as any, { platform: "desktop" });
+    register(server as unknown as RPCServer, { platform: "desktop" });
   });
 
   test("registers timer.start", () => {
@@ -38,14 +39,14 @@ describe("timer handler", () => {
   });
 
   test("timer.start returns { started: true }", async () => {
-    const result = await server.get("timer.start")!({}) as any;
+    const result = await server.get("timer.start")!({}) as Record<string, unknown>;
     expect(result.started).toBe(true);
     expect(result.alreadyRunning).toBeUndefined();
   });
 
   test("timer.start when already running returns { alreadyRunning: true }", async () => {
     await server.get("timer.start")!({});
-    const result = await server.get("timer.start")!({}) as any;
+    const result = await server.get("timer.start")!({}) as Record<string, unknown>;
     expect(result.alreadyRunning).toBe(true);
     expect(result.started).toBeUndefined();
   });
@@ -57,7 +58,7 @@ describe("timer handler", () => {
     const tickEvents = server.getEvents().filter((e) => e.event === "timer.tick");
     expect(tickEvents.length).toBeGreaterThanOrEqual(1);
 
-    const payload = tickEvents[0].payload as any;
+    const payload = tickEvents[0].payload as Record<string, unknown>;
     expect(payload.count).toBeDefined();
     expect(payload.timestamp).toBeDefined();
   });
@@ -67,24 +68,24 @@ describe("timer handler", () => {
     await new Promise((r) => setTimeout(r, 2200));
 
     const tickEvents = server.getEvents().filter((e) => e.event === "timer.tick");
-    const counts = tickEvents.map((e) => (e.payload as any).count);
+    const counts = tickEvents.map((e) => (e.payload as Record<string, unknown>).count);
     for (let i = 1; i < counts.length; i++) {
-      expect(counts[i]).toBeGreaterThan(counts[i - 1]);
+      expect(Number(counts[i])).toBeGreaterThan(Number(counts[i - 1]));
     }
   });
 
   test("timer.stop returns { stopped: true }", async () => {
-    const result = await server.get("timer.stop")!({}) as any;
+    const result = await server.get("timer.stop")!({}) as Record<string, unknown>;
     expect(result.stopped).toBe(true);
   });
 
   test("timer.stop then start restarts the timer", async () => {
-    const r1 = await server.get("timer.start")!({}) as any;
+    const r1 = await server.get("timer.start")!({}) as Record<string, unknown>;
     expect(r1.started).toBe(true);
 
     await server.get("timer.stop")!({});
 
-    const r2 = await server.get("timer.start")!({}) as any;
+    const r2 = await server.get("timer.start")!({}) as Record<string, unknown>;
     expect(r2.started).toBe(true);
   });
 

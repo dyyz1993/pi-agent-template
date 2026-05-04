@@ -32,5 +32,5 @@ export function discoverMethodNames(): string[] {
   registerAllHandlers(server, { platform: "web" });
   _cachedMethods = server.getRegisteredMethods();
   server.close();
-  return _cachedMethods;
+  return _cachedMethods!;
 }

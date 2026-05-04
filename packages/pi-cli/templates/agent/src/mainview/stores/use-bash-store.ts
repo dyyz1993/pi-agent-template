@@ -1,11 +1,12 @@
 import { create } from "zustand";
 import { apiClient } from "../lib/api-client";
-import { useAppStore } from "./use-app-store";
+import { useLogStore } from "./use-log-store";
 
 interface ProcessInfo {
   command: string;
   output: string;
   running: boolean;
+  exitCode?: number | null;
 }
 
 interface BashState {
@@ -55,7 +56,7 @@ export const useBashStore = create<BashState>((set, get) => ({
       get().addProcess(result.pid, command);
       get().updateOutput(result.pid, result.output);
     } catch (err) {
-      useAppStore.getState().addLog(`Bash error: ${err instanceof Error ? err.message : String(err)}`);
+      useLogStore.getState().addLog(`Bash error: ${err instanceof Error ? err.message : String(err)}`);
     }
   },
 
@@ -64,7 +65,7 @@ export const useBashStore = create<BashState>((set, get) => ({
       await apiClient.call("bash.kill", { pid });
       get().removeProcess(pid);
     } catch (err) {
-      useAppStore.getState().addLog(`Kill error: ${err instanceof Error ? err.message : String(err)}`);
+      useLogStore.getState().addLog(`Kill error: ${err instanceof Error ? err.message : String(err)}`);
     }
   },
 
@@ -77,7 +78,7 @@ export const useBashStore = create<BashState>((set, get) => ({
       }
       set({ processes: map });
     } catch (err) {
-      useAppStore.getState().addLog(`Fetch processes error: ${err instanceof Error ? err.message : String(err)}`);
+      useLogStore.getState().addLog(`Fetch processes error: ${err instanceof Error ? err.message : String(err)}`);
     }
   },
 }));

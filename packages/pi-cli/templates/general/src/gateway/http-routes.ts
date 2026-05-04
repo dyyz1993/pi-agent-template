@@ -8,6 +8,7 @@ import { stat, readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { extname, basename, dirname, resolve } from "path";
 import { createLogger } from "../shared/lib/logger";
+import { config } from "../server-config";
 
 const log = createLogger("gateway");
 
@@ -66,7 +67,7 @@ export function createHttpHandler(deps: HttpRouteDeps): (req: IncomingMessage, r
 
   return async (req, res) => {
     // CORS
-    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Origin", config.corsOrigin);
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
     res.setHeader("Access-Control-Allow-Headers", "Authorization, Range, Content-Type");
     if (req.method === "OPTIONS") {

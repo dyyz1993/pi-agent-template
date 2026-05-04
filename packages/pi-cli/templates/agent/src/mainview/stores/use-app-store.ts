@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import { apiClient } from "../lib/api-client";
 import type { RPCMethods } from "../lib/api-client";
-import type { MethodResult } from "@dyyz1993/rpc-core";
+import type { MethodResult } from "@dyyzz1993/rpc-core";
 import type { DemoMethod } from "../types";
+import { useLogStore } from "./use-log-store";
 
 type DemoResult = MethodResult<RPCMethods, "system.ping">
   | MethodResult<RPCMethods, "system.hello">
@@ -10,9 +11,6 @@ type DemoResult = MethodResult<RPCMethods, "system.ping">
   | MethodResult<RPCMethods, "chat.send">;
 
 interface AppState {
-  mode: "desktop" | "web";
-  ready: boolean;
-  logs: string[];
   method: DemoMethod;
   result: DemoResult | null;
   tickEvents: string[];
@@ -20,8 +18,6 @@ interface AppState {
   subscriptionId: string | null;
   timerRunning: boolean;
 
-  initializeConnection: () => void;
-  addLog: (msg: string) => void;
   setMethod: (method: DemoMethod) => void;
   callRPC: (inputText: string) => Promise<void>;
   handleSubscribe: () => Promise<void>;
@@ -29,9 +25,6 @@ interface AppState {
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
-  mode: "web",
-  ready: false,
-  logs: [],
   method: "system.ping",
   result: null,
   tickEvents: [],
@@ -39,39 +32,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   subscriptionId: null,
   timerRunning: false,
 
-  initializeConnection: () => {
-    const MAX_RETRIES = 5;
-    let retries = 0;
-    const init = async () => {
-      try {
-        await apiClient.initialize();
-        const transport = apiClient.getTransport();
-        set({
-          mode: transport === "ipc" ? "desktop" : "web",
-          ready: true,
-        });
-        get().addLog(`${transport === "ipc" ? "Desktop" : "Web"} mode - ${transport.toUpperCase()}`);
-      } catch {
-        retries++;
-        if (retries < MAX_RETRIES) {
-          setTimeout(init, 1000);
-        } else {
-          get().addLog(`Failed to connect after ${MAX_RETRIES} retries`);
-        }
-      }
-    };
-    init();
-  },
-
-  addLog: (msg: string) => {
-    const time = new Date().toLocaleTimeString();
-    set((s) => ({ logs: [...s.logs.slice(-50), `[${time}] ${msg}`] }));
-  },
-
   setMethod: (method) => set({ method }),
 
   callRPC: async (inputText: string) => {
-    const { method, addLog } = get();
+    const { method } = get();
+    const addLog = useLogStore.getState().addLog;
     addLog(`RPC call: ${method}`);
     try {
       addLog(`Calling: ${method}...`);
@@ -94,7 +59,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   handleSubscribe: async () => {
-    const { addLog } = get();
+    const addLog = useLogStore.getState().addLog;
     try {
       addLog("Subscribing to tick events...");
       await apiClient.call("timer.start", {});
@@ -116,7 +81,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   handleUnsubscribe: async () => {
-    const { subscriptionId, addLog } = get();
+    const { subscriptionId } = get();
+    const addLog = useLogStore.getState().addLog;
     try {
       if (subscriptionId) {
         apiClient.unsubscribe(subscriptionId);
