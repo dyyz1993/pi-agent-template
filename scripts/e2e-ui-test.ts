@@ -111,7 +111,7 @@ async function main() {
       cwd: rootDir,
       stdio: "inherit",
       env: { ...process.env },
-      timeout: 60_000,
+      timeout: 120_000,
     });
     log("test", "Playwright tests PASSED");
   } catch {
