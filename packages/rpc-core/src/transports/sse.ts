@@ -6,6 +6,8 @@ export interface SSETransportOptions {
   logger?: RPCLogger;
   reconnect?: boolean;
   reconnectInterval?: number;
+  maxReconnectInterval?: number;
+  maxReconnectAttempts?: number;
   timeout?: number;
 }
 
@@ -14,6 +16,7 @@ export class SSETransport implements Transport {
   private errorHandlers: Set<ErrorHandler> = new Set();
   private disconnectHandlers: Set<DisconnectHandler> = new Set();
   private logger?: RPCLogger;
+  private options: SSETransportOptions;
   private _isConnected: boolean = false;
   private httpServer: ReturnType<typeof Bun.serve> | null = null;
   private sseController: ReadableStreamDefaultController | null = null;
@@ -22,8 +25,12 @@ export class SSETransport implements Transport {
   private reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
   private sseReadyResolve: (() => void) | null = null;
   private sseReady: Promise<void> = Promise.resolve();
+  private reconnectAttempts: number = 0;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private serverTransport: SSETransport | null = null;
 
   constructor(options?: SSETransportOptions) {
+    this.options = options ?? {};
     this.logger = options?.logger;
   }
 
@@ -64,11 +71,55 @@ export class SSETransport implements Transport {
       } catch { /* reader closed */ }
 
       if (!this.closed) {
-        for (const handler of [...this.disconnectHandlers]) {
-          handler();
-        }
+        this.handleDisconnect();
       }
     })();
+  }
+
+  private handleDisconnect(): void {
+    this._isConnected = false;
+    for (const handler of [...this.disconnectHandlers]) {
+      handler();
+    }
+    if (this.options.reconnect && !this.closed) {
+      this.scheduleReconnect();
+    }
+  }
+
+  private scheduleReconnect(): void {
+    const maxAttempts = this.options.maxReconnectAttempts ?? 10;
+    if (this.reconnectAttempts >= maxAttempts) {
+      return;
+    }
+    if (this.reconnectTimer) {
+      return;
+    }
+
+    const base = this.options.reconnectInterval ?? 3000;
+    const max = this.options.maxReconnectInterval ?? 30000;
+    const delay = Math.min(base * Math.pow(2, this.reconnectAttempts), max);
+
+    this.reconnectAttempts++;
+
+    this.reconnectTimer = setTimeout(async () => {
+      this.reconnectTimer = null;
+      try {
+        await this.doReconnect();
+        this._isConnected = true;
+        this.reconnectAttempts = 0;
+      } catch {
+        this.scheduleReconnect();
+      }
+    }, delay);
+  }
+
+  async doReconnect(): Promise<void> {
+    if (!this.baseUrl) throw new Error('no baseUrl');
+    const sseResponse = await fetch(`${this.baseUrl}/sse`);
+    if (this.serverTransport) {
+      this.serverTransport._isConnected = true;
+    }
+    this.startReaderLoop(sseResponse);
   }
 
   static async createPair(options?: SSETransportOptions): Promise<{ server: SSETransport; client: SSETransport }> {
@@ -119,6 +170,7 @@ export class SSETransport implements Transport {
     serverTransport._isConnected = true;
     clientTransport.baseUrl = address;
     clientTransport._isConnected = true;
+    clientTransport.serverTransport = serverTransport;
 
     const sseResponse = await fetch(`${address}/sse`);
     await serverTransport.sseReady;
@@ -134,15 +186,16 @@ export class SSETransport implements Transport {
       this.sseController = null;
     }
     this._isConnected = false;
-    if (clientTransport) {
-      clientTransport._isConnected = false;
-    }
     for (const handler of [...this.disconnectHandlers]) {
       handler();
     }
     if (clientTransport) {
+      clientTransport._isConnected = false;
       for (const handler of [...clientTransport.disconnectHandlers]) {
         handler();
+      }
+      if (clientTransport.options.reconnect && !clientTransport.closed) {
+        clientTransport.scheduleReconnect();
       }
     }
   }
@@ -155,6 +208,7 @@ export class SSETransport implements Transport {
 
     this._isConnected = true;
     clientTransport._isConnected = true;
+    clientTransport.reconnectAttempts = 0;
 
     clientTransport.reader?.cancel().catch(() => {});
     clientTransport.reader = null;
@@ -208,6 +262,11 @@ export class SSETransport implements Transport {
     if (this.closed) return;
     this.closed = true;
     this._isConnected = false;
+
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
 
     if (this.sseController) {
       try { this.sseController.close(); } catch { /* already closed */ }

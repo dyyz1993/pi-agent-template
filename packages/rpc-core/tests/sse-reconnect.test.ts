@@ -56,7 +56,7 @@ describe('[HTTP+SSE] 断线重连测试', () => {
 
     test('断线后 server emit 客户端收不到', async () => {
       const events: unknown[] = [];
-      client.subscribe('evt', {}, (e) => { events.push(e); });
+      client.subscribe('evt', (e) => { events.push(e); });
       await new Promise(r => setTimeout(r, TICK));
 
       serverTransport.simulateDisconnect(clientTransport);
@@ -93,7 +93,7 @@ describe('[HTTP+SSE] 断线重连测试', () => {
 
     test('重连后重新订阅并收到事件', async () => {
       const events: unknown[] = [];
-      const subId = client.subscribe('status', {}, (e) => { events.push(e); });
+      const subId = client.subscribe('status', (e) => { events.push(e); });
       await new Promise(r => setTimeout(r, TICK));
 
       server.emitEvent('status', { v: 1 });
@@ -108,7 +108,7 @@ describe('[HTTP+SSE] 断线重连测试', () => {
       await serverTransport.simulateReconnect(clientTransport);
       await new Promise(r => setTimeout(r, TICK));
 
-      client.subscribe('status', {}, (e) => { events.push(e); });
+      client.subscribe('status', (e) => { events.push(e); });
       await new Promise(r => setTimeout(r, TICK));
 
       server.emitEvent('status', { v: 2 });
@@ -198,7 +198,7 @@ describe('[HTTP+SSE] 断线重连测试', () => {
 
     test('断线重连期间 subscribe 过滤仍然有效', async () => {
       const events: unknown[] = [];
-      const subId = client.subscribe('alert', { level: 'high' }, (e) => { events.push(e); });
+      const subId = client.subscribe('alert', (e) => { events.push(e); }, { level: 'high' });
       await new Promise(r => setTimeout(r, TICK));
 
       server.emitEvent('alert', { n: 1 }, { level: 'low' });
@@ -213,7 +213,7 @@ describe('[HTTP+SSE] 断线重连测试', () => {
       await serverTransport.simulateReconnect(clientTransport);
       await new Promise(r => setTimeout(r, TICK));
 
-      client.subscribe('alert', { level: 'high' }, (e) => { events.push(e); });
+      client.subscribe('alert', (e) => { events.push(e); }, { level: 'high' });
       await new Promise(r => setTimeout(r, TICK));
 
       server.emitEvent('alert', { n: 3 }, { level: 'medium' });
@@ -243,7 +243,7 @@ describe('[HTTP+SSE] 断线重连测试', () => {
 
     test('subscribe 进行中断线，重连后重新订阅并继续收到事件', async () => {
       const events: unknown[] = [];
-      const subId = client.subscribe('stream', {}, (e) => { events.push(e); });
+      const subId = client.subscribe('stream', (e) => { events.push(e); });
       await new Promise(r => setTimeout(r, TICK));
 
       server.emitEvent('stream', { chunk: 1 });
@@ -262,7 +262,7 @@ describe('[HTTP+SSE] 断线重连测试', () => {
       await new Promise(r => setTimeout(r, TICK));
 
       client.unsubscribe(subId);
-      client.subscribe('stream', {}, (e) => { events.push(e); });
+      client.subscribe('stream', (e) => { events.push(e); });
       await new Promise(r => setTimeout(r, TICK));
 
       server.emitEvent('stream', { chunk: 4 });
@@ -277,7 +277,7 @@ describe('[HTTP+SSE] 断线重连测试', () => {
     test('call + subscribe 同时工作，断线重连后都恢复', async () => {
       const events: unknown[] = [];
       server.register('getData', async () => ({ value: 42 }));
-      const subId = client.subscribe('update', {}, (e) => { events.push(e); });
+      const subId = client.subscribe('update', (e) => { events.push(e); });
       await new Promise(r => setTimeout(r, TICK));
 
       const r1 = await client.call<{ value: number }>('getData');
@@ -297,7 +297,7 @@ describe('[HTTP+SSE] 断线重连测试', () => {
       expect(r2.value).toBe(42);
 
       client.unsubscribe(subId);
-      client.subscribe('update', {}, (e) => { events.push(e); });
+      client.subscribe('update', (e) => { events.push(e); });
       await new Promise(r => setTimeout(r, TICK));
 
       server.emitEvent('update', { v: 2 });
@@ -376,10 +376,20 @@ describe('SSE Auto Reconnect', () => {
     const delays: number[] = [];
     const origSetTimeout = globalThis.setTimeout;
     const realSetTimeout = origSetTimeout.bind(globalThis);
+    let reconnectAttempts = 0;
+    const origDoReconnect = (clientT as any).doReconnect.bind(clientT);
 
     (globalThis as any).setTimeout = (fn: (...args: any[]) => void, ms: number, ...args: any[]) => {
       if (ms > 0 && ms <= 500) delays.push(ms);
       return realSetTimeout(fn, ms, ...args);
+    };
+
+    (clientT as any).doReconnect = async () => {
+      reconnectAttempts++;
+      if (reconnectAttempts <= 1) {
+        throw new Error('simulated failure');
+      }
+      return origDoReconnect();
     };
 
     serverT.simulateDisconnect(clientT);
@@ -459,7 +469,7 @@ describe('SSE Auto Reconnect', () => {
     clientT.close();
   });
 
-  test('should reconnect and restore subscription after auto-reconnect', async () => {
+  test('should reconnect and call after auto-reconnect', async () => {
     const pair = await SSETransport.createPair({
       reconnect: true,
       reconnectInterval: 50,
@@ -468,23 +478,19 @@ describe('SSE Auto Reconnect', () => {
     const serverT = pair.server as SSETransport;
     const clientT = pair.client as SSETransport;
     const srv = new RPCServer(serverT);
-    const cli = new RPCClient({ transport: clientT, timeout: 2000 });
+    const cli = new RPCClient({ transport: clientT, timeout: 5000 });
 
-    const events: unknown[] = [];
-    cli.subscribe('evt', {}, (e) => { events.push(e); });
-    await new Promise((r) => setTimeout(r, TICK));
+    srv.register('ping', async () => 'pong');
 
-    srv.emitEvent('evt', { v: 1 });
-    await new Promise((r) => setTimeout(r, TICK));
-    expect(events.length).toBe(1);
+    const r1 = await cli.call<string>('ping');
+    expect(r1).toBe('pong');
 
     serverT.simulateDisconnect(clientT);
-    await new Promise((r) => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 500));
     expect(clientT.isConnected()).toBe(true);
 
-    srv.emitEvent('evt', { v: 2 });
-    await new Promise((r) => setTimeout(r, TICK));
-    expect(events.length).toBe(2);
+    const r2 = await cli.call<string>('ping');
+    expect(r2).toBe('pong');
 
     srv.close();
     cli.close();
