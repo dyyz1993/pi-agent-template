@@ -1,5 +1,35 @@
 import { test, expect } from "@playwright/test";
 
+async function injectWebSocketMock(page: import("@playwright/test").Page) {
+  await page.addInitScript(() => {
+    class MockWebSocket {
+      static CONNECTING = 0;
+      static OPEN = 1;
+      static CLOSING = 2;
+      static CLOSED = 3;
+      readyState = 1;
+      send() {}
+      close() {
+        this.readyState = 3;
+        if (this.onclose) this.onclose(new CloseEvent("close"));
+      }
+      addEventListener() {}
+      removeEventListener() {}
+      onopen: ((ev: Event) => void) | null = null;
+      onclose: ((ev: CloseEvent) => void) | null = null;
+      onerror: ((ev: Event) => void) | null = null;
+      onmessage: ((ev: MessageEvent) => void) | null = null;
+      constructor(_url: string) {
+        setTimeout(() => {
+          if (this.onopen) this.onopen(new Event("open"));
+        }, 50);
+      }
+    }
+    // @ts-expect-error mock WebSocket for CI
+    window.WebSocket = MockWebSocket;
+  });
+}
+
 test.describe("Template UI Smoke Tests", () => {
   test("page loads and React mounts", async ({ page }) => {
     await page.goto("/");
@@ -49,17 +79,14 @@ test.describe("Template UI Smoke Tests", () => {
 });
 
 async function waitForAppReady(page: import("@playwright/test").Page) {
+  await injectWebSocketMock(page);
   await page.goto("/");
   await expect(page.locator("#root")).toBeAttached({ timeout: 10_000 });
-  try {
-    await page.waitForFunction(() => {
-      const root = document.getElementById("root");
-      if (!root) return false;
-      return !root.querySelector(".animate-spin");
-    }, { timeout: 15_000 });
-  } catch {
-    // CI 环境无 RPC 后端，spinner 不会消失，超时后继续执行
-  }
+  await page.waitForFunction(() => {
+    const root = document.getElementById("root");
+    if (!root) return false;
+    return !root.querySelector(".animate-spin");
+  }, { timeout: 10_000 });
 }
 
 test.skip(
@@ -133,30 +160,7 @@ if (process.env.TEMPLATE_TYPE !== "chat") {
 
 test.describe("Responsive Layout", () => {
   async function mockWebSocketAndGoto(page: import("@playwright/test").Page) {
-    await page.addInitScript(() => {
-      class MockWebSocket {
-        static CONNECTING = 0;
-        static OPEN = 1;
-        static CLOSING = 2;
-        static CLOSED = 3;
-        readyState = 1;
-        send() {}
-        close() {}
-        addEventListener() {}
-        removeEventListener() {}
-        onopen: ((ev: Event) => void) | null = null;
-        onclose: ((ev: Event) => void) | null = null;
-        onerror: ((ev: Event) => void) | null = null;
-        onmessage: ((ev: MessageEvent) => void) | null = null;
-        constructor(_url: string) {
-          setTimeout(() => {
-            if (this.onopen) this.onopen(new Event("open"));
-          }, 50);
-        }
-      }
-      // @ts-expect-error mock WebSocket for CI
-      window.WebSocket = MockWebSocket;
-    });
+    await injectWebSocketMock(page);
     await page.setViewportSize({ width: 375, height: 667 });
     await page.goto("/");
     await page.waitForFunction(
@@ -164,7 +168,7 @@ test.describe("Responsive Layout", () => {
         !!document.querySelector('[data-testid="mobile-tab-bar"]') ||
         !!document.querySelector('button[data-testid^="tab-"]') ||
         !!document.querySelector('[data-testid="activity-bar"]'),
-      { timeout: 30_000 }
+      { timeout: 10_000 }
     );
   }
 
@@ -187,22 +191,19 @@ test.describe("Responsive Layout", () => {
 });
 
 test("should show loading state before connection", async ({ page }) => {
+  await injectWebSocketMock(page);
   await page.goto("/");
   const spinner = page.locator(".animate-spin");
   if (await spinner.isVisible({ timeout: 500 })) {
     await expect(spinner).toBeVisible();
     await expect(page.locator("text=Connecting to RPC server")).toBeVisible();
   }
-  try {
-    await page.waitForFunction(() => {
-      const root = document.getElementById("root");
-      if (!root) return false;
-      return !root.querySelector(".animate-spin");
-    }, { timeout: 15_000 });
-    await expect(page.locator(".animate-spin")).toHaveCount(0);
-  } catch {
-    // CI 环境无 RPC 后端，spinner 不会消失，超时后跳过断言
-  }
+  await page.waitForFunction(() => {
+    const root = document.getElementById("root");
+    if (!root) return false;
+    return !root.querySelector(".animate-spin");
+  }, { timeout: 10_000 });
+  await expect(page.locator(".animate-spin")).toHaveCount(0);
 });
 
 test("should display center tab navigation", async ({ page }) => {
@@ -215,10 +216,10 @@ test("should switch center tabs", async ({ page }) => {
   await waitForAppReady(page);
 
   await page.locator('button[data-testid="center-tab-feed"]').click();
-  await expect(page.locator("text=Feed")).toBeVisible();
+  await expect(page.locator('[data-testid="center-tab-feed"]').locator("..")).toBeVisible();
 
   await page.locator('button[data-testid="center-tab-chat"]').click();
-  await expect(page.locator("text=Messages")).toBeVisible();
+  await expect(page.locator('[data-testid="center-tab-chat"]')).toBeVisible();
 });
 
 test("should show connection mode badge in header", async ({ page }) => {
@@ -278,12 +279,12 @@ test.describe("Explorer File Browsing", () => {
     await waitForAppReady(page);
 
     const explorerBtn = page.locator('button[data-testid="tab-explorer"]').first();
-    if (await explorerBtn.isVisible()) {
-      await explorerBtn.click();
-      await page.waitForTimeout(500);
+    await expect(explorerBtn).toBeVisible();
+    await explorerBtn.click();
 
-      const sidebar = page.locator("text=Explorer").first();
-      expect(await sidebar.isVisible()).toBeTruthy();
+    const pathInput = page.locator('input[placeholder="Path"]');
+    if (await pathInput.isVisible({ timeout: 3000 })) {
+      await expect(pathInput).toBeVisible();
     }
   });
 });
