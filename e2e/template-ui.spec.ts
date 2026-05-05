@@ -134,8 +134,6 @@ if (process.env.TEMPLATE_TYPE !== "chat") {
 test.describe("Responsive Layout", () => {
   async function mockWebSocketAndGoto(page: import("@playwright/test").Page) {
     await page.addInitScript(() => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      type AnyFn = (...args: any[]) => void;
       class MockWebSocket {
         static CONNECTING = 0;
         static OPEN = 1;
@@ -144,14 +142,17 @@ test.describe("Responsive Layout", () => {
         readyState = 1;
         send() {}
         close() {}
-        addEventListener(type: string, handler: AnyFn) {
-          if (type === "open") setTimeout(() => handler({}), 50);
-        }
+        addEventListener() {}
         removeEventListener() {}
-        onopen: AnyFn | null = null;
-        onclose: AnyFn | null = null;
-        onerror: AnyFn | null = null;
-        onmessage: AnyFn | null = null;
+        onopen: ((ev: Event) => void) | null = null;
+        onclose: ((ev: Event) => void) | null = null;
+        onerror: ((ev: Event) => void) | null = null;
+        onmessage: ((ev: MessageEvent) => void) | null = null;
+        constructor(_url: string) {
+          setTimeout(() => {
+            if (this.onopen) this.onopen(new Event("open"));
+          }, 50);
+        }
       }
       // @ts-expect-error mock WebSocket for CI
       window.WebSocket = MockWebSocket;

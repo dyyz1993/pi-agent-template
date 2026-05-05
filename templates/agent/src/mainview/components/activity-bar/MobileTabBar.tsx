@@ -15,7 +15,7 @@ export function MobileTabBar() {
   ];
 
   return (
-    <div className="h-14 bg-[var(--color-bg-primary)] border-t border-[var(--color-border-primary)] flex items-center justify-around flex-shrink-0">
+    <div data-testid="mobile-tab-bar" className="h-14 bg-[var(--color-bg-primary)] border-t border-[var(--color-border-primary)] flex items-center justify-around flex-shrink-0">
       {items.map(({ id, icon: Icon, label }) => (
         <button
           key={id}
