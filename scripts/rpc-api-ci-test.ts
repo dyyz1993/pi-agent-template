@@ -347,7 +347,7 @@ async function runTests(templateType: string, client: RPCClient): Promise<TestRe
     {
       const name = "git.diff";
       try {
-        const r = await client.call<{ changes: unknown[] }>("git.diff", { repoPath: projectDir });
+        const r = await client.call<{ changes: unknown[]; diff?: string }>("git.diff", { repoPath: projectDir });
         if (Array.isArray(r.changes) || typeof r.diff === "string") { pass(name, "diff retrieved"); } else { fail(name, JSON.stringify(r)); }
       } catch (e) { fail(name, (e as Error).message); }
     }
