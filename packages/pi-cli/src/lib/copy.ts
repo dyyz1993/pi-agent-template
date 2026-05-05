@@ -80,21 +80,53 @@ function copySharedModules(monorepoRoot: string, targetDir: string, projectName:
     tsconfig = tsconfig.replace(/"\.\.\/shared"/g, '"./shared"');
     writeFileSync(tsconfigPath, tsconfig);
   }
+
+  cleanSharedViteConfig(destSharedDir);
 }
 
 function cleanViteConfig(targetDir: string): void {
   const viteConfigPath = join(targetDir, "vite.config.ts");
-  if (!existsSync(viteConfigPath)) return;
+  const vitestConfigPath = join(targetDir, "vitest.config.ts");
 
-  let viteConfig = readFileSync(viteConfigPath, "utf-8");
-  viteConfig = viteConfig.replace(
-    /,\n\s+resolve:\s*\{\n\s+alias:\s*\{[^}]*\}[,\s]*\}[,;]?\n/g,
-    ""
-  );
-  if (!viteConfig.includes('from "path"') && (viteConfig.includes("resolve(") || viteConfig.includes("__dirname"))) {
-    viteConfig = 'import { resolve } from "path";\n' + viteConfig;
+  for (const configPath of [viteConfigPath, vitestConfigPath]) {
+    if (!existsSync(configPath)) continue;
+
+    let config = readFileSync(configPath, "utf-8");
+    
+    config = config.replace(
+      /,\n\s+resolve:\s*\{\n\s+alias:\s*\{[^}]*\}[,\s]*\}[,;]?\n/g,
+      ""
+    );
+    
+    if (!config.includes('from "path"') && (config.includes("resolve(") || config.includes("__dirname"))) {
+      config = 'import { resolve } from "path";\n' + config;
+    }
+    
+    config = config.replace(/from ["']\.\.\/shared\/vite-base\.config["']/g, 'from "./shared/vite-base.config"');
+    config = config.replace(/from ["']\.\.\/shared\/vitest-base\.config["']/g, 'from "./shared/vitest-base.config"');
+    
+    writeFileSync(configPath, config);
   }
-  writeFileSync(viteConfigPath, viteConfig);
+}
+
+function cleanSharedViteConfig(sharedDir: string): void {
+  const viteBaseConfigPath = join(sharedDir, "vite-base.config.ts");
+  const vitestBaseConfigPath = join(sharedDir, "vitest-base.config.ts");
+
+  for (const configPath of [viteBaseConfigPath, vitestBaseConfigPath]) {
+    if (!existsSync(configPath)) continue;
+
+    let config = readFileSync(configPath, "utf-8");
+    config = config.replace(
+      /,\n\s+resolve:\s*\{\n\s+alias:\s*\{[^}]*\}[,\s]*\}[,;]?\n/g,
+      ""
+    );
+    config = config.replace(
+      /,\n\s+alias:\s*\{[^}]*\}[,\s]*[,;]?\n/g,
+      ""
+    );
+    writeFileSync(configPath, config);
+  }
 }
 
 function resolvePackageVersion(packageName: string): string {
