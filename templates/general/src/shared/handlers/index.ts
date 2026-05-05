@@ -5,3 +5,4 @@ export { register as timer } from "./timer";
 export { register as chat } from "./chat";
 export { register as git } from "./git";
 export { register as feed } from "./feed";
+export { register as debug } from "./debug";

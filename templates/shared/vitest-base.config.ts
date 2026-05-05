@@ -13,6 +13,7 @@ export function createVitestConfig(dirname: string) {
 				"src/mainview/**/*.{test,spec}.{ts,tsx}",
 				"src/shared/**/*.{test,spec}.{ts,tsx}",
 				"src/__tests__/**/*.{test,spec}.{ts,tsx}",
+				"src/gateway/**/*.{test,spec}.{ts,tsx}",
 				"../shared/**/*.{test,spec}.{ts,tsx}",
 			],
 			css: false,
