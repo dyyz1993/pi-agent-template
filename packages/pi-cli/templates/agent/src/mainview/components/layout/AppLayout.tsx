@@ -9,6 +9,7 @@ import { MobileTabBar } from "../activity-bar/MobileTabBar";
 import { ExplorerSidebar } from "../explorer/ExplorerSidebar";
 import { ChatPanel } from "../chat/ChatPanel";
 import { ThemeToggle } from "../common/ThemeToggle";
+import { LanguageSwitcher } from "../common/LanguageSwitcher";
 
 const GitPanel = React.lazy(() => import("../git/GitPanel").then((m) => ({ default: m.GitPanel })));
 const SearchPanel = React.lazy(() => import("../search/SearchPanel").then((m) => ({ default: m.SearchPanel })));
@@ -87,7 +88,8 @@ export function AppLayout({
             {mode === "desktop" ? t("app.mode.desktop") : t("app.mode.web")}
           </span>
           <span className="ml-3 text-[var(--color-text-tertiary)]">{t("app.title")}</span>
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-1">
+            <LanguageSwitcher />
             <ThemeToggle />
           </div>
         </div>

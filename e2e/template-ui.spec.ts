@@ -271,8 +271,12 @@ test.describe("Language System", () => {
 
     const explorerBtn = page.locator('button[data-testid="tab-explorer"]').first();
     await expect(explorerBtn).toBeVisible();
-    await explorerBtn.click();
 
+    const gitBtn = page.locator('button[data-testid="tab-git"]');
+    await gitBtn.click();
+    await page.waitForTimeout(300);
+
+    await explorerBtn.click();
     const pathInput = page.locator('input[placeholder="Path"]');
     await expect(pathInput).toBeVisible({ timeout: 3000 });
   });
