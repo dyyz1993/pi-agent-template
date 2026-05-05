@@ -23,7 +23,9 @@
     "build:js": "bun build src/index.ts --outdir dist --target bun --splitting",
     "build:types": "tsc --emitDeclarationOnly --declaration --outDir dist",
     "prepublishOnly": "bun run build",
-    "test": "bun test tests/"
+    "test": "bun test tests/",
+    "version": "changeset version",
+    "release": "bun run build && changeset publish"
   },
   "devDependencies": {
     "typescript": "^5.7.0"

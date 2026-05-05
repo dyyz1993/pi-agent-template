@@ -20,9 +20,14 @@
     "test:e2e-ui:all": "bun run test:e2e-ui:general && bun run test:e2e-ui:chat && bun run test:e2e-ui:agent",
     "test:integration:all": "HUSKY=0 bun run scripts/e2e-test.ts --type general && HUSKY=0 bun run scripts/e2e-test.ts --type chat && HUSKY=0 bun run scripts/e2e-test.ts --type agent",
     "test:e2e-ui:headed": "npx playwright test --headed",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "pnpm run build && changeset publish"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^0.6.0",
+    "@changesets/cli": "^2.31.0",
     "@commitlint/cli": "^20.5.3",
     "@commitlint/config-conventional": "^20.5.3",
     "@eslint/js": "^9.0.0",
