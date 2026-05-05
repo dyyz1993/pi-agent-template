@@ -226,7 +226,7 @@ test.describe("Theme System", () => {
   test("should toggle theme from dark to light", async ({ page }) => {
     await waitForAppReady(page);
 
-    const themeToggle = page.locator('button[title="Switch to light mode"], button[title="Switch to dark mode"]').first();
+    const themeToggle = page.locator('[data-testid="theme-toggle"]');
     await expect(themeToggle).toBeVisible();
     await themeToggle.click();
     await page.waitForTimeout(500);
@@ -255,7 +255,7 @@ test.describe("Language System", () => {
   test("should switch language from English to Chinese", async ({ page }) => {
     await waitForAppReady(page);
 
-    const langSwitch = page.locator('button:has-text("中"), button:has-text("EN")').first();
+    const langSwitch = page.locator('[data-testid="language-switcher"]');
     await expect(langSwitch).toBeVisible();
     await langSwitch.click();
     await page.waitForTimeout(500);
