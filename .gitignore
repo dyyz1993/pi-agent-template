@@ -2,6 +2,7 @@ node_modules/
 build/
 dist/
 .bun/
+bun.lock
 bun.lockb
 *.tsbuildinfo
 *.log
@@ -15,4 +16,5 @@ test-results/
 e2e-ui-results/
 .server-port
 **/.DS_Store
-template/package-lock.json
+**/package-lock.json
+!pnpm-lock.yaml
