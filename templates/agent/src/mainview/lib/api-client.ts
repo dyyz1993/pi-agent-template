@@ -40,7 +40,7 @@ class APIClientImpl {
     this.client = createTypedClient<RPCMethods, RPCEvents>(ipcTransport);
     this.setupElectrobunBridge(ipcTransport);
     if (import.meta.env.DEV) {
-      console.log("[APIClient] Desktop (IPC) initialized synchronously");
+      console.warn("[APIClient] Desktop (IPC) initialized synchronously");
     }
   }
 

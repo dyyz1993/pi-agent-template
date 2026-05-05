@@ -35,10 +35,6 @@ jobs:
           for t in general chat agent; do
             cd $GITHUB_WORKSPACE/templates/$t
             bun install
-            if [ "$t" = "agent" ]; then
-              echo "Skipping lint for agent template (known issues)"
-              continue
-            fi
             bun run lint
           done
 
@@ -101,6 +97,37 @@ jobs:
             bun install
             npx vitest run
           done
+
+  smoke-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        template: [general, chat, agent]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Create project from template
+        run: HUSKY=0 bun run scripts/create.ts smoke-test /tmp/smoke-${{ matrix.template }} --type ${{ matrix.template }}
+
+      - name: Verify project structure
+        run: |
+          cd /tmp/smoke-${{ matrix.template }}
+          test -f package.json || (echo "FAIL: package.json" && exit 1)
+          test -f src/server.ts || (echo "FAIL: src/server.ts" && exit 1)
+          test -f vite.config.ts || (echo "FAIL: vite.config.ts" && exit 1)
+
+      - name: Install dependencies
+        run: cd /tmp/smoke-${{ matrix.template }} && bun install
+
+      - name: Run lint
+        run: cd /tmp/smoke-${{ matrix.template }} && bun run lint
+
+      - name: Run tests
+        run: cd /tmp/smoke-${{ matrix.template }} && bun run test
+
+      - name: Build
+        run: cd /tmp/smoke-${{ matrix.template }} && bun run build
 
   build-verify:
     runs-on: ubuntu-latest
@@ -197,13 +224,13 @@ jobs:
 
   notify-result:
     runs-on: ubuntu-latest
-    needs: [lint, type-check, test, template-test, build-verify, integration-test, rpc-api-test, e2e-ui]
+    needs: [lint, type-check, test, template-test, smoke-test, build-verify, integration-test, rpc-api-test, e2e-ui]
     if: always()
     steps:
       - name: Check CI result
         id: check
         run: |
-          if echo "${{ needs.lint.result }} ${{ needs.type-check.result }} ${{ needs.test.result }} ${{ needs.template-test.result }} ${{ needs.build-verify.result }} ${{ needs.integration-test.result }} ${{ needs.rpc-api-test.result }} ${{ needs.e2e-ui.result }}" | grep -q "failure"; then
+          if echo "${{ needs.lint.result }} ${{ needs.type-check.result }} ${{ needs.test.result }} ${{ needs.template-test.result }} ${{ needs.smoke-test.result }} ${{ needs.build-verify.result }} ${{ needs.integration-test.result }} ${{ needs.rpc-api-test.result }} ${{ needs.e2e-ui.result }}" | grep -q "failure"; then
             echo "status=FAILED" >> $GITHUB_OUTPUT
           else
             echo "status=PASSED" >> $GITHUB_OUTPUT
@@ -225,10 +252,10 @@ jobs:
   feishu-notify:
     name: Feishu Notification
     if: always()
-    needs: [lint, type-check, test, template-test, build-verify, integration-test, rpc-api-test, e2e-ui, notify-result]
+    needs: [lint, type-check, test, template-test, smoke-test, build-verify, integration-test, rpc-api-test, e2e-ui, notify-result]
     uses: dyyz1993/ci-tools/.github/workflows/feishu-notify.yml@main
     with:
-      jobs: '{"lint":"${{ needs.lint.result }}","type-check":"${{ needs.type-check.result }}","test":"${{ needs.test.result }}","template-test":"${{ needs.template-test.result }}","build-verify":"${{ needs.build-verify.result }}","integration-test":"${{ needs.integration-test.result }}","rpc-api-test":"${{ needs.rpc-api-test.result }}","e2e-ui":"${{ needs.e2e-ui.result }}","notify-result":"${{ needs.notify-result.result }}"}'
+      jobs: '{"lint":"${{ needs.lint.result }}","type-check":"${{ needs.type-check.result }}","test":"${{ needs.test.result }}","template-test":"${{ needs.template-test.result }}","smoke-test":"${{ needs.smoke-test.result }}","build-verify":"${{ needs.build-verify.result }}","integration-test":"${{ needs.integration-test.result }}","rpc-api-test":"${{ needs.rpc-api-test.result }}","e2e-ui":"${{ needs.e2e-ui.result }}","notify-result":"${{ needs.notify-result.result }}"}'
       sha: ${{ github.sha }}
       ref: ${{ github.ref_name }}
       actor: ${{ github.actor }}

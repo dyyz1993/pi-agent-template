@@ -53,4 +53,11 @@ export default tseslint.config(
       'no-console': 'off',
     },
   },
+  {
+    files: ['src/**/__tests__/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unsafe-function-type': 'off',
+    },
+  },
 );

@@ -84,7 +84,7 @@ describe("TodoPanel", () => {
 
   it("should render status indicators for each item", async () => {
     const { TodoPanel } = await import("../TodoPanel");
-    const { container } = render(<TodoPanel />);
+    const _container = render(<TodoPanel />);
     const statusTexts = screen.getAllByText("todo.status");
     expect(statusTexts.length).toBeGreaterThan(0);
   });

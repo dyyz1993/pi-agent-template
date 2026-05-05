@@ -37,7 +37,7 @@ describe("ActivityBar", () => {
 
   it("should highlight active panel button", async () => {
     const { ActivityBar } = await import("../ActivityBar");
-    const { container } = render(<ActivityBar />);
+    const _container = render(<ActivityBar />);
     const activeBtn = screen.getByTitle("sidebar.explorer").closest("button");
     expect(activeBtn?.className).toContain("border-l-2");
   });

@@ -76,11 +76,11 @@ vi.mock("../GitCommitInput", () => ({
 }));
 
 vi.mock("../GitBranchSelector", () => ({
-  GitBranchSelector: ({ onClose }: any) => <div data-testid="branch-selector" />,
+  GitBranchSelector: ({ onClose: _onClose }: any) => <div data-testid="branch-selector" />,
 }));
 
 vi.mock("../../explorer/ContextMenu", () => ({
-  ContextMenu: ({ items }: any) => <div data-testid="context-menu" />,
+  ContextMenu: ({ items: _items }: any) => <div data-testid="context-menu" />,
 }));
 
 vi.mock("../../sidebar/PinButton", () => ({
