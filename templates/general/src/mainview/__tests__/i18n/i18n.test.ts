@@ -44,5 +44,6 @@ describe("i18n configuration", () => {
     const i18n = await import("../../lib/i18n");
     await i18n.default.changeLanguage("zh");
     expect(i18n.default.t("app.title")).toBe("Pi Agent");
+    expect(i18n.default.t("sidebar.explorer")).toBe("资源管理器");
   });
 });
