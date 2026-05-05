@@ -66,6 +66,22 @@ function copyTraeRules(monorepoRoot: string, targetDir: string, projectName: str
   }
 }
 
+function copySharedModules(monorepoRoot: string, targetDir: string, projectName: string): void {
+  const sharedDir = resolve(monorepoRoot, 'templates', 'shared');
+  if (!existsSync(sharedDir)) return;
+
+  const destSharedDir = join(targetDir, 'shared');
+  copyAndReplace(sharedDir, destSharedDir, projectName);
+
+  const tsconfigPath = join(targetDir, 'tsconfig.json');
+  if (existsSync(tsconfigPath)) {
+    let tsconfig = readFileSync(tsconfigPath, 'utf-8');
+    tsconfig = tsconfig.replace(/"\.\.\/shared\/\*"/g, '"./shared/*"');
+    tsconfig = tsconfig.replace(/"\.\.\/shared"/g, '"./shared"');
+    writeFileSync(tsconfigPath, tsconfig);
+  }
+}
+
 function cleanViteConfig(targetDir: string): void {
   const viteConfigPath = join(targetDir, "vite.config.ts");
   if (!existsSync(viteConfigPath)) return;
@@ -105,14 +121,55 @@ function updatePackageJson(targetDir: string, _projectName: string): void {
   for (const depKey of ['dependencies', 'devDependencies'] as const) {
     if (!rootPkg[depKey]) continue;
     for (const pkgName of WORKSPACE_PACKAGES) {
-      if (rootPkg[depKey][pkgName] === 'workspace:*') {
+      if (!rootPkg[depKey][pkgName]) continue;
+      if (pkgName === '@dyyz1993/rpc-core') {
         const version = resolvePackageVersion(pkgName);
         rootPkg[depKey][pkgName] = `^${version}`;
+      } else {
+        delete rootPkg[depKey][pkgName];
       }
     }
   }
 
   writeFileSync(rootPkgPath, JSON.stringify(rootPkg, null, '\t') + '\n');
+
+  const eslintConfigPath = join(targetDir, 'eslint.config.mjs');
+  if (existsSync(eslintConfigPath)) {
+    const lines = readFileSync(eslintConfigPath, 'utf-8').split('\n');
+    const filteredLines: string[] = [];
+
+    let inRpcSection = false;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      if (line.includes('import rpcPlugin') && line.includes('@dyyz1993/eslint-plugin-rpc')) {
+        continue;
+      }
+      
+      if (line.includes('RPC') && line.includes('规范规则')) {
+        inRpcSection = true;
+        continue;
+      }
+      
+      if (inRpcSection) {
+        if (line.trim().startsWith("'rpc/") || line.trim().startsWith('"rpc/')) {
+          continue;
+        }
+        inRpcSection = false;
+      }
+      
+      if (line.includes('rpc: rpcPlugin')) {
+        continue;
+      }
+      
+      filteredLines.push(line);
+    }
+
+    let content = filteredLines.join('\n');
+    content = content.replace(/\n\s+plugins:\s*\{\s*\},?\s*\n/g, '\n');
+
+    writeFileSync(eslintConfigPath, content);
+  }
 }
 
 export async function copyTemplate(options: CopyOptions): Promise<void> {
@@ -134,6 +191,7 @@ export async function copyTemplate(options: CopyOptions): Promise<void> {
   copyAndReplace(templateDir, targetDir, projectName);
   if (isMonorepo) {
     copyTraeRules(localRoot, targetDir, projectName);
+    copySharedModules(localRoot, targetDir, projectName);
   }
   cleanViteConfig(targetDir);
   updatePackageJson(targetDir, projectName);
