@@ -11,14 +11,14 @@ export interface CopyOptions {
   targetDir: string;
 }
 
-function deriveNames(projectName: string) {
+export function deriveNames(projectName: string) {
   const pascalName = projectName.replace(/(^|-)([a-z])/g, (_, _sep, c) => c.toUpperCase());
   const identifier = `com.${projectName.replace(/-/g, '')}.app`;
   const shortId = `com.${projectName.replace(/-/g, '')}`;
   return { pascalName, identifier, shortId };
 }
 
-function copyAndReplace(srcDir: string, destDir: string, projectName: string): void {
+export function copyAndReplace(srcDir: string, destDir: string, projectName: string): void {
   const { pascalName, identifier, shortId } = deriveNames(projectName);
 
   mkdirSync(destDir, { recursive: true });
@@ -81,24 +81,35 @@ function cleanViteConfig(targetDir: string): void {
   writeFileSync(viteConfigPath, viteConfig);
 }
 
-function resolveRpcVersion(): string {
+function resolvePackageVersion(packageName: string): string {
   try {
-    return execSync('npm view @dyyz1993/rpc-core version', { encoding: 'utf-8' }).trim();
+    return execSync(`npm view ${packageName} version`, { encoding: 'utf-8' }).trim();
   } catch {
     return '1.0.0';
   }
 }
 
+const WORKSPACE_PACKAGES = [
+  '@dyyz1993/rpc-core',
+  '@dyyz1993/eslint-plugin-rpc',
+];
+
 function updatePackageJson(targetDir: string, _projectName: string): void {
   const rootPkgPath = join(targetDir, 'package.json');
   if (!existsSync(rootPkgPath)) return;
 
-  const rpcCoreVersion = resolveRpcVersion();
   const rootPkg = JSON.parse(readFileSync(rootPkgPath, 'utf-8'));
 
   delete rootPkg.workspaces;
-  if (rootPkg.dependencies && rootPkg.dependencies['@dyyz1993/rpc-core']) {
-    rootPkg.dependencies['@dyyz1993/rpc-core'] = `^${rpcCoreVersion}`;
+
+  for (const depKey of ['dependencies', 'devDependencies'] as const) {
+    if (!rootPkg[depKey]) continue;
+    for (const pkgName of WORKSPACE_PACKAGES) {
+      if (rootPkg[depKey][pkgName] === 'workspace:*') {
+        const version = resolvePackageVersion(pkgName);
+        rootPkg[depKey][pkgName] = `^${version}`;
+      }
+    }
   }
 
   writeFileSync(rootPkgPath, JSON.stringify(rootPkg, null, '\t') + '\n');

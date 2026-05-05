@@ -84,6 +84,9 @@ jobs:
       - name: Run rpc-core tests
         run: bun run test:rpc
 
+      - name: Run pi-cli tests
+        run: cd packages/pi-cli && bun test src/__tests__/
+
   template-test:
     runs-on: ubuntu-latest
     steps:
@@ -153,6 +156,18 @@ jobs:
       - name: Run E2E integration test (${{ matrix.template }})
         run: bun run scripts/e2e-test.ts --type ${{ matrix.template }}
 
+  rpc-api-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        template: [general, chat, agent]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Run full RPC API test (${{ matrix.template }})
+        run: bun run scripts/rpc-api-ci-test.ts --type ${{ matrix.template }}
+
   e2e-ui:
     runs-on: ubuntu-latest
     strategy:
@@ -181,13 +196,13 @@ jobs:
 
   notify-result:
     runs-on: ubuntu-latest
-    needs: [lint, type-check, test, template-test, build-verify, integration-test, e2e-ui]
+    needs: [lint, type-check, test, template-test, build-verify, integration-test, rpc-api-test, e2e-ui]
     if: always()
     steps:
       - name: Check CI result
         id: check
         run: |
-          if echo "${{ needs.lint.result }} ${{ needs.type-check.result }} ${{ needs.test.result }} ${{ needs.template-test.result }} ${{ needs.build-verify.result }} ${{ needs.integration-test.result }} ${{ needs.e2e-ui.result }}" | grep -q "failure"; then
+          if echo "${{ needs.lint.result }} ${{ needs.type-check.result }} ${{ needs.test.result }} ${{ needs.template-test.result }} ${{ needs.build-verify.result }} ${{ needs.integration-test.result }} ${{ needs.rpc-api-test.result }} ${{ needs.e2e-ui.result }}" | grep -q "failure"; then
             echo "status=FAILED" >> $GITHUB_OUTPUT
           else
             echo "status=PASSED" >> $GITHUB_OUTPUT
@@ -209,10 +224,10 @@ jobs:
   feishu-notify:
     name: Feishu Notification
     if: always()
-    needs: [lint, type-check, test, template-test, build-verify, integration-test, e2e-ui, notify-result]
+    needs: [lint, type-check, test, template-test, build-verify, integration-test, rpc-api-test, e2e-ui, notify-result]
     uses: dyyz1993/ci-tools/.github/workflows/feishu-notify.yml@main
     with:
-      jobs: '{"lint":"${{ needs.lint.result }}","type-check":"${{ needs.type-check.result }}","test":"${{ needs.test.result }}","template-test":"${{ needs.template-test.result }}","build-verify":"${{ needs.build-verify.result }}","integration-test":"${{ needs.integration-test.result }}","e2e-ui":"${{ needs.e2e-ui.result }}","notify-result":"${{ needs.notify-result.result }}"}'
+      jobs: '{"lint":"${{ needs.lint.result }}","type-check":"${{ needs.type-check.result }}","test":"${{ needs.test.result }}","template-test":"${{ needs.template-test.result }}","build-verify":"${{ needs.build-verify.result }}","integration-test":"${{ needs.integration-test.result }}","rpc-api-test":"${{ needs.rpc-api-test.result }}","e2e-ui":"${{ needs.e2e-ui.result }}","notify-result":"${{ needs.notify-result.result }}"}'
       sha: ${{ github.sha }}
       ref: ${{ github.ref_name }}
       actor: ${{ github.actor }}

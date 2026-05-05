@@ -4,6 +4,7 @@ stages:
   - test
   - build-verify
   - integration-test
+  - rpc-api-test
   - e2e-ui
 
 variables:
@@ -67,6 +68,14 @@ test-rpc:
     - pnpm install --frozen-lockfile
   script:
     - bun run test:rpc
+
+test-pi-cli:
+  stage: test
+  image: node:22-slim
+  before_script:
+    - *before_bun
+  script:
+    - cd packages/pi-cli && bun test src/__tests__/
 
 test-templates:
   stage: test
@@ -185,6 +194,30 @@ integration-test-agent:
     - *before_bun
   script:
     - HUSKY=0 bun run scripts/e2e-test.ts --type agent
+
+rpc-api-test-general:
+  stage: rpc-api-test
+  image: node:22-slim
+  before_script:
+    - *before_bun
+  script:
+    - HUSKY=0 bun run scripts/rpc-api-ci-test.ts --type general
+
+rpc-api-test-chat:
+  stage: rpc-api-test
+  image: node:22-slim
+  before_script:
+    - *before_bun
+  script:
+    - HUSKY=0 bun run scripts/rpc-api-ci-test.ts --type chat
+
+rpc-api-test-agent:
+  stage: rpc-api-test
+  image: node:22-slim
+  before_script:
+    - *before_bun
+  script:
+    - HUSKY=0 bun run scripts/rpc-api-ci-test.ts --type agent
 
 e2e-ui-general:
   stage: e2e-ui
