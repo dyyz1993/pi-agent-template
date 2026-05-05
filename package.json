@@ -26,7 +26,10 @@
 		"version-packages": "changeset version",
 		"release": "pnpm run build && changeset publish",
 		"format": "prettier --write .",
-		"format:check": "prettier --check ."
+		"format:check": "prettier --check .",
+		"analyze": "ANALYZE=true pnpm -C templates/agent build",
+		"analyze:chat": "ANALYZE=true pnpm -C templates/chat build",
+		"analyze:general": "ANALYZE=true pnpm -C templates/general build"
 	},
 	"devDependencies": {
 		"@changesets/changelog-github": "^0.6.0",
@@ -42,6 +45,7 @@
 		"husky": "^9.0.0",
 		"lint-staged": "^15.0.0",
 		"prettier": "^3.8.3",
+		"rollup-plugin-visualizer": "^7.0.1",
 		"typescript-eslint": "^8.0.0"
 	},
 	"lint-staged": {
