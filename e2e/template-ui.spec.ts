@@ -89,31 +89,26 @@ async function waitForAppReady(page: import("@playwright/test").Page) {
   }, { timeout: 10_000 });
 }
 
-test.skip(
-  process.env.TEMPLATE_TYPE === "chat",
-  "should switch between activity bar tabs",
-  async ({ page }) => {
+test("should switch between activity bar tabs", async ({ page }) => {
+  await waitForAppReady(page);
+
+  const explorerBtn = page.locator('button[data-testid="tab-explorer"]');
+  await expect(explorerBtn).toBeVisible();
+  await explorerBtn.click();
+  await expect(page.locator("text=Explorer")).toBeVisible();
+
+  const chatBtn = page.locator('button[data-testid="tab-chat"]');
+  await expect(chatBtn).toBeVisible();
+  await chatBtn.click();
+  await expect(page.locator("text=Messages")).toBeVisible();
+
+  await explorerBtn.click();
+  await expect(page.locator("text=Explorer")).toBeVisible();
+});
+
+test.describe("Chat Panel", () => {
+  test("should display chat input", async ({ page }) => {
     await waitForAppReady(page);
-
-    const explorerBtn = page.locator('button[data-testid="tab-explorer"]');
-    await expect(explorerBtn).toBeVisible();
-    await explorerBtn.click();
-    await expect(page.locator("text=Explorer")).toBeVisible();
-
-    const chatBtn = page.locator('button[data-testid="tab-chat"]');
-    await expect(chatBtn).toBeVisible();
-    await chatBtn.click();
-    await expect(page.locator("text=Messages")).toBeVisible();
-
-    await explorerBtn.click();
-    await expect(page.locator("text=Explorer")).toBeVisible();
-  }
-);
-
-if (process.env.TEMPLATE_TYPE !== "chat") {
-  test.describe.skip("Chat Panel", () => {
-    test("should display chat input", async ({ page }) => {
-      await waitForAppReady(page);
 
     const chatTab = page.locator('button[data-testid="tab-chat"]');
     await chatTab.click();
@@ -121,22 +116,20 @@ if (process.env.TEMPLATE_TYPE !== "chat") {
     await expect(page.locator("button:has-text('Send')")).toBeVisible();
   });
 
-    test("should accept input text", async ({ page }) => {
-      await waitForAppReady(page);
+  test("should accept input text", async ({ page }) => {
+    await waitForAppReady(page);
 
-      const chatTab = page.locator('button[data-testid="tab-chat"]');
-      await chatTab.click();
+    const chatTab = page.locator('button[data-testid="tab-chat"]');
+    await chatTab.click();
 
-      const input = page.locator('input[placeholder="Type a message..."]');
-      await input.fill("Hello from E2E test");
-      await expect(input).toHaveValue("Hello from E2E test");
-    });
+    const input = page.locator('input[placeholder="Type a message..."]');
+    await input.fill("Hello from E2E test");
+    await expect(input).toHaveValue("Hello from E2E test");
   });
-}
+});
 
-if (process.env.TEMPLATE_TYPE !== "chat") {
-  test.describe.skip("Explorer Panel", () => {
-    test("should display explorer sidebar", async ({ page }) => {
+test.describe("Explorer Panel", () => {
+  test("should display explorer sidebar", async ({ page }) => {
     await waitForAppReady(page);
 
     const explorerBtn = page.locator('button[data-testid="tab-explorer"]');
@@ -155,10 +148,9 @@ if (process.env.TEMPLATE_TYPE !== "chat") {
       page.locator("text=Enter path and click refresh").or(page.locator("text=Explorer"))
     ).toBeVisible();
   });
-  });
-}
+});
 
-test.describe.skip("Responsive Layout", () => {
+test.describe("Responsive Layout", () => {
   async function mockWebSocketAndGoto(page: import("@playwright/test").Page) {
     await injectWebSocketMock(page);
     await page.setViewportSize({ width: 375, height: 667 });
