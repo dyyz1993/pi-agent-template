@@ -58,12 +58,10 @@ async function waitForAppReady(page: import("@playwright/test").Page) {
   }, { timeout: 15_000 });
 }
 
-if (process.env.TEMPLATE_TYPE === "chat") {
-  test.skip("should switch between activity bar tabs", () => {
-    // Chat template doesn't have Explorer tab
-  });
-} else {
-  test("should switch between activity bar tabs", async ({ page }) => {
+test.skip(
+  process.env.TEMPLATE_TYPE === "chat",
+  "should switch between activity bar tabs",
+  async ({ page }) => {
     await waitForAppReady(page);
 
     const explorerBtn = page.locator('button[title="Explorer"]');
@@ -78,8 +76,8 @@ if (process.env.TEMPLATE_TYPE === "chat") {
 
     await explorerBtn.click();
     await expect(page.locator("text=Explorer")).toBeVisible();
-  });
-}
+  }
+);
 
 test.describe("Chat Panel", () => {
   test("should display chat input", async ({ page }) => {
