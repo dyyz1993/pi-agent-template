@@ -96,23 +96,24 @@ const isAgent = process.env.TEMPLATE_TYPE === "agent";
 
   const explorerBtn = page.locator('button[data-testid="tab-explorer"]');
   await expect(explorerBtn).toBeVisible();
-  await explorerBtn.click();
-  await expect(page.locator("text=Explorer")).toBeVisible();
 
-  const chatBtn = page.locator('button[data-testid="tab-chat"]');
-  await expect(chatBtn).toBeVisible();
-  await chatBtn.click();
-  await expect(page.locator("text=Messages")).toBeVisible();
+  const gitBtn = page.locator('button[data-testid="tab-git"]');
+  await expect(gitBtn).toBeVisible();
+  await gitBtn.click();
+  await expect(page.locator("text=Source Control")).toBeVisible();
 
   await explorerBtn.click();
   await expect(page.locator("text=Explorer")).toBeVisible();
+
+  await gitBtn.click();
+  await expect(page.locator("text=Source Control")).toBeVisible();
 });
 
 (isAgent ? test.describe : test.describe.skip)("Chat Panel", () => {
   test("should display chat input", async ({ page }) => {
     await waitForAppReady(page);
 
-    const chatTab = page.locator('button[data-testid="tab-chat"]');
+    const chatTab = page.locator('button[data-testid="center-tab-chat"]');
     await chatTab.click();
     await expect(page.locator('input[placeholder="Type a message..."]')).toBeVisible();
     await expect(page.locator("button:has-text('Send')")).toBeVisible();
@@ -121,7 +122,7 @@ const isAgent = process.env.TEMPLATE_TYPE === "agent";
   test("should accept input text", async ({ page }) => {
     await waitForAppReady(page);
 
-    const chatTab = page.locator('button[data-testid="tab-chat"]');
+    const chatTab = page.locator('button[data-testid="center-tab-chat"]');
     await chatTab.click();
 
     const input = page.locator('input[placeholder="Type a message..."]');
@@ -135,7 +136,7 @@ const isAgent = process.env.TEMPLATE_TYPE === "agent";
     await waitForAppReady(page);
 
     const explorerBtn = page.locator('button[data-testid="tab-explorer"]');
-    await explorerBtn.click();
+    await expect(explorerBtn).toBeVisible();
     await expect(page.locator("text=Explorer")).toBeVisible();
     await expect(page.locator('input[placeholder="Path"]')).toBeVisible();
     await expect(page.locator('button[title="List directory"]')).toBeVisible();
@@ -144,8 +145,6 @@ const isAgent = process.env.TEMPLATE_TYPE === "agent";
   test("should show empty state prompt", async ({ page }) => {
     await waitForAppReady(page);
 
-    const explorerBtn = page.locator('button[data-testid="tab-explorer"]');
-    await explorerBtn.click();
     await expect(
       page.locator("text=Enter path and click refresh").or(page.locator("text=Explorer"))
     ).toBeVisible();

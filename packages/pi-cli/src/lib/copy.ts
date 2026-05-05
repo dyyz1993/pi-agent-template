@@ -127,6 +127,10 @@ function cleanSharedViteConfig(sharedDir: string): void {
     );
     if (!config.includes("resolve(")) {
       config = config.replace(/import\s*\{\s*resolve\s*\}\s*from\s*["']path["'];?\n?/g, "");
+      config = config.replace(
+        /export function create(Vite|Vitest)Config\(dirname: string\)/g,
+        "export function create$1Config()"
+      );
     }
     writeFileSync(configPath, config);
   }
