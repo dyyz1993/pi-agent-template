@@ -9,6 +9,9 @@
 		"dev:server": "bun src/server.ts",
 		"build": "vite build",
 		"build:canary": "vite build && electrobun build --env=canary",
+		"build:mac": "vite build && electrobun build --env=canary",
+		"build:win": "vite build && electrobun build --env=canary",
+		"build:linux": "vite build && electrobun build --env=canary",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
 		"prepare": "husky",
@@ -19,7 +22,7 @@
 	"dependencies": {
 		"@dyyz1993/rpc-core": "^1.2.0",
 		"@tanstack/react-virtual": "^3.13.24",
-		"electrobun": "1.13.1",
+		"electrobun": "1.18.1",
 		"i18next": "^24.2.2",
 		"i18next-browser-languagedetector": "^8.0.4",
 		"lucide-react": "^1.9.0",
