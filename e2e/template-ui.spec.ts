@@ -89,7 +89,9 @@ async function waitForAppReady(page: import("@playwright/test").Page) {
   }, { timeout: 10_000 });
 }
 
-test("should switch between activity bar tabs", async ({ page }) => {
+const isAgent = process.env.TEMPLATE_TYPE === "agent";
+
+(isAgent ? test : test.skip)("should switch between activity bar tabs", async ({ page }) => {
   await waitForAppReady(page);
 
   const explorerBtn = page.locator('button[data-testid="tab-explorer"]');
@@ -106,7 +108,7 @@ test("should switch between activity bar tabs", async ({ page }) => {
   await expect(page.locator("text=Explorer")).toBeVisible();
 });
 
-test.describe("Chat Panel", () => {
+(isAgent ? test.describe : test.describe.skip)("Chat Panel", () => {
   test("should display chat input", async ({ page }) => {
     await waitForAppReady(page);
 
@@ -128,7 +130,7 @@ test.describe("Chat Panel", () => {
   });
 });
 
-test.describe("Explorer Panel", () => {
+(isAgent ? test.describe : test.describe.skip)("Explorer Panel", () => {
   test("should display explorer sidebar", async ({ page }) => {
     await waitForAppReady(page);
 
@@ -150,7 +152,7 @@ test.describe("Explorer Panel", () => {
   });
 });
 
-test.describe("Responsive Layout", () => {
+(isAgent ? test.describe : test.describe.skip)("Responsive Layout", () => {
   async function mockWebSocketAndGoto(page: import("@playwright/test").Page) {
     await injectWebSocketMock(page);
     await page.setViewportSize({ width: 375, height: 667 });
@@ -266,7 +268,7 @@ test.describe("Language System", () => {
   });
 });
 
-test.describe("Explorer File Browsing", () => {
+(isAgent ? test.describe : test.describe.skip)("Explorer File Browsing", () => {
   test("should show explorer sidebar when clicking explorer icon", async ({ page }) => {
     await waitForAppReady(page);
 

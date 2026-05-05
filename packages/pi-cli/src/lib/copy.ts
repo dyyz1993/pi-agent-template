@@ -98,7 +98,7 @@ function cleanViteConfig(targetDir: string): void {
       ""
     );
     
-    if (!config.includes('from "path"') && (config.includes("resolve(") || config.includes("__dirname"))) {
+    if (!config.includes('from "path"') && config.includes("resolve(")) {
       config = 'import { resolve } from "path";\n' + config;
     }
     
@@ -125,6 +125,9 @@ function cleanSharedViteConfig(sharedDir: string): void {
       /,\n\s+alias:\s*\{[^}]*\}[,\s]*[,;]?\n/g,
       ""
     );
+    if (!config.includes("resolve(")) {
+      config = config.replace(/import\s*\{\s*resolve\s*\}\s*from\s*["']path["'];?\n?/g, "");
+    }
     writeFileSync(configPath, config);
   }
 }

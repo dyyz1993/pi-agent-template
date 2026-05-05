@@ -1,5 +1,5 @@
 import { appendFile, mkdir as mkdirAsync, readdir as readdirAsync, unlink as unlinkAsync, stat as statAsync } from "fs/promises";
-import { existsSync } from "fs";
+import { existsSync, mkdirSync } from "fs";
 import { join } from "path";
 
 export type LogLevel = "debug" | "info" | "warn" | "error";
@@ -21,7 +21,7 @@ export function configureLogDir(dir: string, options?: { maxAgeDays?: number }):
     _maxAgeDays = options.maxAgeDays;
   }
   if (!existsSync(dir)) {
-    require("fs").mkdirSync(dir, { recursive: true });
+    mkdirSync(dir, { recursive: true });
   }
   cleanOldLogs(dir, _maxAgeDays);
 }
@@ -30,7 +30,7 @@ function getLogDir(): string {
   if (!_logDir) {
     _logDir = "logs";
     if (!existsSync(_logDir)) {
-      require("fs").mkdirSync(_logDir, { recursive: true });
+      mkdirSync(_logDir, { recursive: true });
     }
   }
   return _logDir;
