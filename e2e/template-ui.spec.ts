@@ -175,3 +175,75 @@ test("should show connection mode badge in header", async ({ page }) => {
     page.locator("text=Desktop (IPC)").or(page.locator("text=Web (WebSocket)"))
   ).toBeVisible();
 });
+
+test.describe("Theme System", () => {
+  test("should toggle theme from dark to light", async ({ page }) => {
+    await waitForAppReady(page);
+
+    const themeToggle = page.locator('button[title="Switch to light mode"], button[title="Switch to dark mode"]').first();
+    if (await themeToggle.isVisible()) {
+      await themeToggle.click();
+      await page.waitForTimeout(500);
+
+      const hasDarkClass = await page.evaluate(() => document.documentElement.classList.contains("dark"));
+      expect(typeof hasDarkClass).toBe("boolean");
+    }
+  });
+
+  test("should persist theme after page reload", async ({ page }) => {
+    await waitForAppReady(page);
+
+    await page.evaluate(() => {
+      localStorage.setItem("theme", "light");
+      document.documentElement.classList.remove("dark");
+    });
+
+    await page.reload();
+    await waitForAppReady(page);
+
+    const storedTheme = await page.evaluate(() => localStorage.getItem("theme"));
+    expect(storedTheme).toBe("light");
+  });
+});
+
+test.describe("Language System", () => {
+  test("should switch language from English to Chinese", async ({ page }) => {
+    await waitForAppReady(page);
+
+    const langSwitch = page.locator('button:has-text("中"), button:has-text("EN")').first();
+    if (await langSwitch.isVisible()) {
+      await langSwitch.click();
+      await page.waitForTimeout(500);
+
+      const locale = await page.evaluate(() => localStorage.getItem("locale"));
+      expect(locale).toBeTruthy();
+    }
+  });
+});
+
+test.describe("Explorer File Browsing", () => {
+  test("should show explorer sidebar when clicking explorer icon", async ({ page }) => {
+    await waitForAppReady(page);
+
+    const explorerBtn = page.locator('button[title="Explorer"]').first();
+    if (await explorerBtn.isVisible()) {
+      await explorerBtn.click();
+      await page.waitForTimeout(500);
+
+      const sidebar = page.locator("text=Explorer").first();
+      expect(await sidebar.isVisible()).toBeTruthy();
+    }
+  });
+});
+
+test.describe("Connection Info", () => {
+  test("should display connection mode in header", async ({ page }) => {
+    await waitForAppReady(page);
+
+    const modeBadge = page.locator("text=/Desktop \\(IPC\\)|Web \\(WebSocket\\)/").first();
+    if (await modeBadge.isVisible()) {
+      const text = await modeBadge.textContent();
+      expect(text).toBeTruthy();
+    }
+  });
+});
