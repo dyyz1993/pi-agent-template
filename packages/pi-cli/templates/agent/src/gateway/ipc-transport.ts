@@ -13,9 +13,6 @@ export class ElectrobunTransport implements Transport {
 
   setBrowserView(view: { executeJavascript: (js: string) => void }): void {
     this.browserView = view;
-    if (import.meta.env.DEV) {
-      console.log("[IPC Transport] BrowserView set");
-    }
   }
 
   async send(message: unknown): Promise<void> {

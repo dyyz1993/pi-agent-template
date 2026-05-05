@@ -1,7 +1,6 @@
 /**
  * @fileoverview 禁止使用裸方法名（无模块前缀）
  */
-
 "use strict";
 
 const METHOD_CALL_PATTERNS = [

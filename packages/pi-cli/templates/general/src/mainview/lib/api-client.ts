@@ -38,9 +38,6 @@ class APIClientImpl {
     this._baseUrl = null; // 桌面端不走 HTTP
     this.client = createTypedClient<RPCMethods, RPCEvents>(ipcTransport);
     this.setupElectrobunBridge(ipcTransport);
-    if (import.meta.env.DEV) {
-      console.log("[APIClient] Desktop (IPC) initialized synchronously");
-    }
   }
 
   /**

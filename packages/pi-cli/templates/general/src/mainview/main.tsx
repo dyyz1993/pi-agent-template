@@ -13,10 +13,6 @@ if (isElectrobun) {
 }
 // Web 端 WS 初始化由 App.tsx 统一管理，避免竞争
 
-if (import.meta.env.DEV) {
-  console.log("[Main] Application starting, isElectrobun:", isElectrobun);
-}
-
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <App />

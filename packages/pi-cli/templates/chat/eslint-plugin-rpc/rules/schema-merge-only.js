@@ -1,7 +1,6 @@
 /**
  * @fileoverview rpc-schema.ts 只允许合并，禁止直接定义方法
  */
-
 "use strict";
 
 module.exports = {

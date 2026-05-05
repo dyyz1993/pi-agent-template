@@ -1,4 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+
+vi.mock("@tanstack/react-virtual", () => ({
+  useVirtualizer: (options: { count: number }) => ({
+    getVirtualItems: () =>
+      Array.from({ length: options.count }).map((_, i) => ({
+        index: i,
+        key: i,
+        start: i * 80,
+        size: 80,
+      })),
+    getTotalSize: () => options.count * 80,
+    scrollToIndex: vi.fn(),
+  }),
+}));
+
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ChatPanel } from "../../components/chat/ChatPanel";

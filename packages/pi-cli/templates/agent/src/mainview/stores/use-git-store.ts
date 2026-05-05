@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { apiClient } from "../lib/api-client";
+import { rpcCache } from "../lib/rpc-cache";
 import { useLogStore } from "./use-log-store";
 
 export interface GitFileChange {
@@ -193,6 +194,7 @@ export const useGitStore = create<GitState>((set, get) => ({
     set({ loadingAction: "checkout" });
     try {
       await apiClient.call("git.checkout", { repoPath, branch });
+      rpcCache.invalidateAll(["git.status", "git.branches", "git.log", "git.diff"]);
       addLog(`Checked out: ${branch}`);
       await get().refresh(repoPath);
     } catch (err) {
@@ -207,6 +209,7 @@ export const useGitStore = create<GitState>((set, get) => ({
     set({ loadingAction: "stage" });
     try {
       await apiClient.call("git.add", { repoPath, paths });
+      rpcCache.invalidateAll(["git.status", "git.diff"]);
       addLog(`Staged: ${paths.join(", ")}`);
       await get().refresh(repoPath);
     } catch (err) {
@@ -221,6 +224,7 @@ export const useGitStore = create<GitState>((set, get) => ({
     set({ loadingAction: "unstage" });
     try {
       await apiClient.call("git.reset", { repoPath, paths });
+      rpcCache.invalidateAll(["git.status", "git.diff"]);
       addLog(`Unstaged: ${paths.join(", ")}`);
       await get().refresh(repoPath);
     } catch (err) {
@@ -235,6 +239,7 @@ export const useGitStore = create<GitState>((set, get) => ({
     set({ loadingAction: "commit" });
     try {
       const res = await apiClient.call("git.commit", { repoPath, message });
+      rpcCache.invalidateAll(["git.status", "git.log", "git.diff"]);
       addLog(`Committed: ${res.shortHash}`);
       await get().refresh(repoPath);
     } catch (err) {
@@ -249,6 +254,7 @@ export const useGitStore = create<GitState>((set, get) => ({
     set({ loadingAction: "push" });
     try {
       await apiClient.call("git.push", { repoPath });
+      rpcCache.invalidateAll(["git.status", "git.log"]);
       addLog("Pushed successfully");
       await get().refresh(repoPath);
     } catch (err) {
@@ -263,6 +269,7 @@ export const useGitStore = create<GitState>((set, get) => ({
     set({ loadingAction: "pull" });
     try {
       await apiClient.call("git.pull", { repoPath });
+      rpcCache.invalidateAll(["git.status", "git.log", "git.diff"]);
       addLog("Pulled successfully");
       await get().refresh(repoPath);
     } catch (err) {

@@ -2,6 +2,9 @@ import { create } from "zustand";
 import { apiClient } from "../lib/api-client";
 import { useLogStore } from "./use-log-store";
 
+const MAX_OUTPUT_LINES = 5000;
+const TRUNCATION_NOTICE = "... [output truncated, showing last 5000 lines]\n";
+
 interface ProcessInfo {
   command: string;
   output: string;
@@ -36,7 +39,13 @@ export const useBashStore = create<BashState>((set, get) => ({
     set((s) => {
       const next = new Map(s.processes);
       const proc = next.get(pid);
-      if (proc) next.set(pid, { ...proc, output: proc.output + data });
+      if (!proc) return { processes: next };
+      let newOutput = proc.output + data;
+      const lines = newOutput.split("\n");
+      if (lines.length > MAX_OUTPUT_LINES) {
+        newOutput = TRUNCATION_NOTICE + lines.slice(-MAX_OUTPUT_LINES).join("\n");
+      }
+      next.set(pid, { ...proc, output: newOutput });
       return { processes: next };
     }),
 

@@ -1,9 +1,7 @@
-import { useTranslation } from "react-i18next";
 import { useLocaleStore } from "../../stores/use-locale-store";
 
 export function LanguageSwitcher() {
   const { locale, setLocale } = useLocaleStore();
-  const { t } = useTranslation();
 
   return (
     <button

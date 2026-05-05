@@ -1,6 +1,6 @@
 {
   "name": "@dyyz1993/rpc-core",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Type-safe RPC communication framework with request-response and pub-sub patterns",
   "repository": {
     "type": "git",
@@ -16,7 +16,10 @@
       "default": "./src/index.ts"
     }
   },
-  "files": ["dist", "src"],
+  "files": [
+    "dist",
+    "src"
+  ],
   "dependencies": {},
   "scripts": {
     "build": "bun run build:js && bun run build:types",

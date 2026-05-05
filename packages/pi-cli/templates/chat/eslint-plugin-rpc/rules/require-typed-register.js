@@ -1,7 +1,6 @@
 /**
  * @fileoverview 入口文件必须导入 registerAllHandlers
  */
-
 "use strict";
 
 module.exports = {

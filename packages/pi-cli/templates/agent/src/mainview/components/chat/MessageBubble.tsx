@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Bot } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -37,7 +38,7 @@ function CodeBlock({ children, className }: { children: string; className?: stri
   );
 }
 
-export function MessageBubble({ message }: MessageBubbleProps) {
+export const MessageBubble = memo(function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === "user";
 
   return (
@@ -82,4 +83,4 @@ export function MessageBubble({ message }: MessageBubbleProps) {
       )}
     </div>
   );
-}
+});

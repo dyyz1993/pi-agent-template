@@ -1,7 +1,6 @@
 /**
  * @fileoverview server.register() 只允许在 shared/handlers/ 目录内使用
  */
-
 "use strict";
 
 module.exports = {

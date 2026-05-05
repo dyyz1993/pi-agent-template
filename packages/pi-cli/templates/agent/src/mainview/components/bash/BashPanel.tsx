@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Play, Square, X } from "lucide-react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useBashStore } from "../../stores/use-bash-store";
 
 export function BashPanel() {
@@ -11,15 +12,31 @@ export function BashPanel() {
   const executeCommand = useBashStore((s) => s.executeCommand);
   const killProcess = useBashStore((s) => s.killProcess);
   const setActive = useBashStore((s) => s.setActive);
-  const outputRef = useRef<HTMLDivElement>(null);
+  const parentRef = useRef<HTMLDivElement>(null);
+  const isUserScrollingRef = useRef(false);
 
   const activeProcess = activePid != null ? processes.get(activePid) : null;
+  const lines = activeProcess?.output ? activeProcess.output.split("\n") : [];
+
+  const virtualizer = useVirtualizer({
+    count: lines.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 20,
+    overscan: 20,
+  });
+
+  const handleScroll = useCallback(() => {
+    const el = parentRef.current;
+    if (!el) return;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+    isUserScrollingRef.current = !atBottom;
+  }, []);
 
   useEffect(() => {
-    if (outputRef.current) {
-      outputRef.current.scrollTop = outputRef.current.scrollHeight;
+    if (!isUserScrollingRef.current && lines.length > 0) {
+      virtualizer.scrollToIndex(lines.length - 1, { align: "end" });
     }
-  }, [activeProcess?.output]);
+  }, [lines.length, virtualizer]);
 
   const handleRun = () => {
     if (!command.trim()) return;
@@ -100,7 +117,8 @@ export function BashPanel() {
       )}
 
       <div
-        ref={outputRef}
+        ref={parentRef}
+        onScroll={handleScroll}
         className="flex-1 overflow-auto p-3 font-mono text-xs text-[var(--color-text-secondary)] bg-gray-950 whitespace-pre-wrap leading-relaxed"
       >
         {activeProcess ? (
@@ -114,13 +132,35 @@ export function BashPanel() {
                 {t("bash.processRunning", { pid: activePid })}
               </div>
             )}
-            {activeProcess.output ? (
-              activeProcess.output.split("\n").map((line, i) => (
-                <div key={i} className="hover:bg-[var(--color-bg-secondary)]/30 px-1 -mx-1 rounded">
-                  <span className="text-[var(--color-text-placeholder)] select-none mr-2">&gt;</span>
-                  <span>{line || "\u00A0"}</span>
-                </div>
-              ))
+            {lines.length > 0 ? (
+              <div
+                style={{
+                  height: virtualizer.getTotalSize(),
+                  width: "100%",
+                  position: "relative",
+                }}
+              >
+                {virtualizer.getVirtualItems().map((virtualRow) => {
+                  const line = lines[virtualRow.index];
+                  return (
+                    <div
+                      key={virtualRow.index}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        height: `${virtualRow.size}px`,
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                      className="hover:bg-[var(--color-bg-secondary)]/30 px-1 -mx-1 rounded"
+                    >
+                      <span className="text-[var(--color-text-placeholder)] select-none mr-2">&gt;</span>
+                      <span>{line || "\u00A0"}</span>
+                    </div>
+                  );
+                })}
+              </div>
             ) : activeProcess.running ? (
               <span className="text-gray-600">{t("bash.waitingOutput")}</span>
             ) : null}

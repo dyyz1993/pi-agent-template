@@ -1,18 +1,25 @@
 {
   "name": "@dyyz1993/pi-cli",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "description": "Pi Agent project scaffolding CLI",
   "repository": {
     "type": "git",
     "url": "https://github.com/dyyz1993/pi-agent-template"
   },
-  "bin": { "pi": "./src/cli.ts" },
-  "files": ["src/", "templates/"],
+  "bin": {
+    "pi": "./src/cli.ts"
+  },
+  "files": [
+    "src/",
+    "templates/"
+  ],
   "scripts": {
     "sync-templates": "rm -rf templates/general templates/chat templates/agent && rsync -a --exclude='node_modules' --exclude='dist' --exclude='build' --exclude='.server-port' --exclude='logs' --exclude='bun.lock' ../../templates/general/ templates/general/ && rsync -a --exclude='node_modules' --exclude='dist' --exclude='build' --exclude='.server-port' --exclude='logs' --exclude='bun.lock' ../../templates/chat/ templates/chat/ && rsync -a --exclude='node_modules' --exclude='dist' --exclude='build' --exclude='.server-port' --exclude='logs' --exclude='bun.lock' ../../templates/agent/ templates/agent/ && rsync -a ../../packages/eslint-plugin-rpc/ templates/agent/eslint-plugin-rpc/ && rsync -a ../../packages/eslint-plugin-rpc/ templates/chat/eslint-plugin-rpc/ && rsync -a ../../packages/eslint-plugin-rpc/ templates/general/eslint-plugin-rpc/ && node scripts/post-sync-templates.mjs",
     "test": "bun test src/__tests__/",
     "prepublishOnly": "test -d templates/general/src && test -d templates/chat/src && test -d templates/agent/src"
   },
-  "engines": { "bun": ">=1.0.0" },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
   "license": "MIT"
 }

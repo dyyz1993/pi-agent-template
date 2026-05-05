@@ -1,5 +1,6 @@
 import { memo, useEffect, useCallback, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useShallow } from "zustand/react/shallow";
 import {
   GitBranch, RefreshCw, FileQuestion, Plus, Minus, Pencil,
   ChevronRight, ChevronDown, Eye, FileText, Copy,
@@ -204,20 +205,36 @@ interface GitPanelProps {
 
 export function GitPanel({ hideOuterShell }: GitPanelProps) {
   const { t } = useTranslation();
-  const branch = useGitStore((s) => s.branch);
-  const ahead = useGitStore((s) => s.ahead);
-  const behind = useGitStore((s) => s.behind);
-  const staged = useGitStore((s) => s.staged);
-  const changed = useGitStore((s) => s.changed);
-  const untracked = useGitStore((s) => s.untracked);
-  const commits = useGitStore((s) => s.commits);
-  const loadingCommits = useGitStore((s) => s.loadingCommits);
-  const currentDiff = useGitStore((s) => s.currentDiff);
-  const expandedCommits = useGitStore((s) => s.expandedCommits);
-  const commitFiles = useGitStore((s) => s.commitFiles);
-  const loadingCommitFiles = useGitStore((s) => s.loadingCommitFiles);
-  const loadingAction = useGitStore((s) => s.loadingAction);
-  const worktrees = useGitStore((s) => s.worktrees);
+
+  const { branch, ahead, behind } = useGitStore(
+    useShallow((s) => ({
+      branch: s.branch,
+      ahead: s.ahead,
+      behind: s.behind,
+    }))
+  );
+
+  const { staged, changed, untracked } = useGitStore(
+    useShallow((s) => ({
+      staged: s.staged,
+      changed: s.changed,
+      untracked: s.untracked,
+    }))
+  );
+
+  const { commits, loadingCommits, currentDiff, expandedCommits, commitFiles, loadingCommitFiles, loadingAction, worktrees } = useGitStore(
+    useShallow((s) => ({
+      commits: s.commits,
+      loadingCommits: s.loadingCommits,
+      currentDiff: s.currentDiff,
+      expandedCommits: s.expandedCommits,
+      commitFiles: s.commitFiles,
+      loadingCommitFiles: s.loadingCommitFiles,
+      loadingAction: s.loadingAction,
+      worktrees: s.worktrees,
+    }))
+  );
+
   const fetchStatus = useGitStore((s) => s.fetchStatus);
   const fetchDiff = useGitStore((s) => s.fetchDiff);
   const fetchLog = useGitStore((s) => s.fetchLog);
