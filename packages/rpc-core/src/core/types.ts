@@ -1,37 +1,38 @@
 export interface RPCLogger {
-  debug: (message: string, ...args: unknown[]) => void;
-  info: (message: string, ...args: unknown[]) => void;
-  error: (message: string, ...args: unknown[]) => void;
+	debug: (message: string, ...args: unknown[]) => void;
+	info: (message: string, ...args: unknown[]) => void;
+	warn: (message: string, ...args: unknown[]) => void;
+	error: (message: string, ...args: unknown[]) => void;
 }
 
 export interface RPCMessage {
-  id: string;
-  type: 'request' | 'response' | 'event' | 'subscribe' | 'unsubscribe';
-  method?: string;
-  params?: unknown;
-  result?: unknown;
-  error?: { code: number; message: string };
-  eventType?: string;
-  filter?: SubscriptionFilter;
-  subscriptionId?: string;
-  payload?: unknown;
-  sessionId?: string;
-  source?: string;
-  timestamp?: number;
+	id: string;
+	type: "request" | "response" | "event" | "subscribe" | "unsubscribe";
+	method?: string;
+	params?: unknown;
+	result?: unknown;
+	error?: { code: number; message: string };
+	eventType?: string;
+	filter?: SubscriptionFilter;
+	subscriptionId?: string;
+	payload?: unknown;
+	sessionId?: string;
+	source?: string;
+	timestamp?: number;
 }
 
 export interface RPCRequest {
-  id: string;
-  type: 'request';
-  method: string;
-  params: unknown;
+	id: string;
+	type: "request";
+	method: string;
+	params: unknown;
 }
 
 export interface RPCResponse {
-  id: string;
-  type: 'response';
-  result?: unknown;
-  error?: { code: number; message: string };
+	id: string;
+	type: "response";
+	result?: unknown;
+	error?: { code: number; message: string };
 }
 
 // ============================================
@@ -68,18 +69,18 @@ export type EventPayload<E> = E extends { payload: infer P } ? P : E;
  * 2. 直接 payload 定义（返回 undefined）
  */
 export type EventMetadata<E> = E extends { metadata: infer M }
-  ? M
-  : E extends { metadata?: infer M }
-    ? M | undefined
-    : undefined;
+	? M
+	: E extends { metadata?: infer M }
+		? M | undefined
+		: undefined;
 
 // ============================================
 // 默认事件元数据
 // ============================================
 
 export interface DefaultEventMetadata {
-  sessionId?: string;
-  source?: string;
+	sessionId?: string;
+	source?: string;
 }
 
 // ============================================
@@ -87,12 +88,12 @@ export interface DefaultEventMetadata {
 // ============================================
 
 export interface RPCEvent<Metadata = DefaultEventMetadata> {
-  id: string;
-  type: 'event';
-  eventType: string;
-  payload: unknown;
-  metadata?: Metadata;
-  timestamp: number;
+	id: string;
+	type: "event";
+	eventType: string;
+	payload: unknown;
+	metadata?: Metadata;
+	timestamp: number;
 }
 
 export type SubscriptionFilter<Metadata = DefaultEventMetadata> = Partial<Metadata>;
@@ -100,12 +101,12 @@ export type SubscriptionFilter<Metadata = DefaultEventMetadata> = Partial<Metada
 export type RPCHandler = (params: unknown) => Promise<unknown>;
 
 export interface EventHandler {
-  (event: RPCEvent): void;
+	(event: RPCEvent): void;
 }
 
 export interface StreamPayload {
-  action: 'text_delta' | 'text_end' | 'tool_call' | 'done' | 'error';
-  delta?: string;
-  content?: string;
-  error?: string;
+	action: "text_delta" | "text_end" | "tool_call" | "done" | "error";
+	delta?: string;
+	content?: string;
+	error?: string;
 }
