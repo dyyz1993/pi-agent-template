@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { X, Columns2, Rows3 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import ReactDiffViewer, { DiffMethod } from "react-diff-viewer-continued";
 import { useGitStore } from "../../stores/use-git-store";
 
@@ -44,6 +45,7 @@ const DIFF_STYLES = {
 } as const;
 
 export function DiffViewerPanel() {
+  const { t } = useTranslation();
   const currentDiff = useGitStore((s) => s.currentDiff);
   const loadingDiff = useGitStore((s) => s.loadingDiff);
   const clearDiff = useGitStore((s) => s.clearDiff);
@@ -63,14 +65,14 @@ export function DiffViewerPanel() {
           <button
             onClick={() => setSplitView(false)}
             className={`p-1 rounded transition-colors ${!splitView ? "bg-gray-600 text-white" : "text-gray-500 hover:text-white"}`}
-            title="Line by line"
+            title={t("diff.lineByLine")}
           >
             <Rows3 className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => setSplitView(true)}
             className={`p-1 rounded transition-colors ${splitView ? "bg-gray-600 text-white" : "text-gray-500 hover:text-white"}`}
-            title="Side by side"
+            title={t("diff.sideBySide")}
           >
             <Columns2 className="w-3.5 h-3.5" />
           </button>
@@ -87,7 +89,7 @@ export function DiffViewerPanel() {
       <div className="flex-1 overflow-auto">
         {loadingDiff ? (
           <div className="flex items-center justify-center h-full text-gray-500">
-            Loading diff...
+            {t("diff.loading")}
           </div>
         ) : currentDiff ? (
           <ReactDiffViewer
@@ -96,8 +98,8 @@ export function DiffViewerPanel() {
             splitView={splitView}
             compareMethod={DiffMethod.LINES}
             useDarkTheme={true}
-            leftTitle="Before"
-            rightTitle="After"
+            leftTitle={t("diff.before")}
+            rightTitle={t("diff.after")}
             styles={DIFF_STYLES}
           />
         ) : null}

@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { Check } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useGitStore } from "../../stores/use-git-store";
 import { useExplorerStore } from "../../stores/use-explorer-store";
 
@@ -9,6 +10,7 @@ import { useExplorerStore } from "../../stores/use-explorer-store";
  * Self-contained: only depends on useGitStore + useExplorerStore.
  */
 export function GitCommitInput() {
+  const { t } = useTranslation();
   const staged = useGitStore((s) => s.staged);
   const loadingAction = useGitStore((s) => s.loadingAction);
   const commit = useGitStore((s) => s.commit);
@@ -39,7 +41,7 @@ export function GitCommitInput() {
       <textarea
         className="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-200 placeholder-gray-500 resize-none outline-none focus:border-indigo-500 transition-colors"
         rows={3}
-        placeholder="Commit message (Ctrl+Enter to commit)"
+        placeholder={t("git.commitPlaceholder")}
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         onKeyDown={handleKeyDown}
@@ -51,7 +53,7 @@ export function GitCommitInput() {
         disabled={!message.trim() || isCommitting}
       >
         <Check className="w-3 h-3" />
-        {isCommitting ? "Committing..." : "Commit"}
+        {isCommitting ? t("git.committing") : t("git.commit")}
       </button>
     </div>
   );

@@ -10,6 +10,7 @@ import {
   Loader2,
   X,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { apiClient } from "../../lib/api-client";
 import { useExplorerStore } from "../../stores/use-explorer-store";
 import type { TreeNode } from "../../types";
@@ -74,6 +75,7 @@ function buildSearchRegex(query: string, caseSensitive: boolean, wholeWord: bool
 }
 
 export function SearchPanel() {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [caseSensitive, setCaseSensitive] = useState(false);
   const [wholeWord, setWholeWord] = useState(false);
@@ -218,7 +220,7 @@ export function SearchPanel() {
       <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-700 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-1.5">
           <Search className="w-3.5 h-3.5" />
-          Search
+          {t("sidebar.search")}
         </div>
         <kbd className="px-1.5 py-0.5 text-[10px] text-gray-500 bg-gray-800 border border-gray-700 rounded font-mono">
           {modKey}⇧F

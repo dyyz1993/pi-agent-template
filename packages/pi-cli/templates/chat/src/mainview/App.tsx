@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { Wifi, Monitor } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { apiClient } from "./lib/api-client";
 import { useConnectionStore } from "./stores/use-connection-store";
 import { useLogStore } from "./stores/use-log-store";
@@ -11,6 +12,7 @@ import { MobileTabBar } from "./components/activity-bar/MobileTabBar";
 import { ChatPanel } from "./components/chat/ChatPanel";
 
 function App() {
+  const { t } = useTranslation();
   const mode = useConnectionStore((s) => s.mode);
   const ready = useConnectionStore((s) => s.ready);
   const initializeConnection = useConnectionStore((s) => s.initializeConnection);
@@ -73,7 +75,7 @@ function App() {
       <div className="h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <div className="inline-block w-8 h-8 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin mb-4" />
-          <div className="text-gray-400 text-sm">Connecting to RPC server...</div>
+          <div className="text-gray-400 text-sm">{t("app.connecting")}</div>
         </div>
       </div>
     );
@@ -85,9 +87,9 @@ function App() {
         <div className="h-8 bg-gray-800 flex items-center px-3 text-xs border-b border-gray-700 flex-shrink-0">
           <span className={`px-2 py-0.5 rounded flex items-center gap-1 ${mode === "desktop" ? "bg-green-600" : "bg-blue-600"}`}>
             {mode === "desktop" ? <Monitor className="w-3 h-3" /> : <Wifi className="w-3 h-3" />}
-            {mode === "desktop" ? "Desktop (IPC)" : "Web (WebSocket)"}
+            {mode === "desktop" ? t("app.mode.desktop") : t("app.mode.web")}
           </span>
-          <span className="ml-3 text-gray-400">Pi Chat</span>
+          <span className="ml-3 text-gray-400">{t("app.title")}</span>
         </div>
       )}
 

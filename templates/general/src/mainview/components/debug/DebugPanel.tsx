@@ -1,6 +1,8 @@
 import { Send, Play, Square, File, ChevronRight, ChevronDown, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useAppStore } from "../../stores/use-app-store";
+import { useLogStore } from "../../stores/use-log-store";
 import type { DemoMethod } from "../../types";
 
 const COLLAPSED_KEY = "debug-panel-collapsed";
@@ -14,6 +16,7 @@ function readCollapsed(): boolean {
 }
 
 export function DebugPanel() {
+  const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(readCollapsed);
 
   useEffect(() => {
@@ -24,7 +27,7 @@ export function DebugPanel() {
 
   const method = useAppStore((s) => s.method);
   const result = useAppStore((s) => s.result);
-  const logs = useAppStore((s) => s.logs);
+  const logs = useLogStore((s) => s.logs);
   const tickEvents = useAppStore((s) => s.tickEvents);
   const tickCount = useAppStore((s) => s.tickCount);
   const subscriptionId = useAppStore((s) => s.subscriptionId);
@@ -44,7 +47,7 @@ export function DebugPanel() {
           className="w-10 h-6 flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors"
         >
           <ChevronRight className="w-3 h-3" />
-          Debug
+          {t("tabs.debug")}
         </button>
       </div>
     );
@@ -60,7 +63,7 @@ export function DebugPanel() {
           className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-white transition-colors"
         >
           <ChevronDown className="w-3 h-3" />
-          Debug
+          {t("tabs.debug")}
         </button>
         <button
           onClick={clearDebug}
@@ -76,7 +79,7 @@ export function DebugPanel() {
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-xs font-semibold flex items-center gap-1.5">
             <Send className="w-3.5 h-3.5 text-indigo-400" />
-            RPC Calls
+            {t("debug.rpcCalls")}
           </h2>
         </div>
         <div className="flex gap-2 mb-2">
@@ -95,7 +98,7 @@ export function DebugPanel() {
             className="px-3 py-1 text-xs bg-indigo-600 hover:bg-indigo-700 rounded transition-colors flex items-center gap-1"
           >
             <Play className="w-3 h-3" />
-            Call
+            {t("debug.call")}
           </button>
         </div>
         {!!result && (
@@ -116,37 +119,37 @@ export function DebugPanel() {
             ) : (
               <Play className="w-3.5 h-3.5 text-gray-400" />
             )}
-            Subscriptions
+            {t("debug.subscriptions")}
             {timerRunning && (
-              <span className="ml-1 px-1.5 py-0.5 bg-green-600/30 text-green-400 rounded text-[10px]">
-                LIVE
+                <span className="ml-1 px-1.5 py-0.5 bg-green-600/30 text-green-400 rounded text-[10px]">
+                  {t("feed.live")}
               </span>
             )}
           </h2>
           <div className="flex gap-2 items-center">
             <span className="text-[11px] text-gray-400">
-              {tickCount} events
+              {t("debug.events", { count: tickCount })}
             </span>
             {!subscriptionId ? (
               <button
                 onClick={handleSubscribe}
                 className="px-2 py-0.5 text-xs bg-green-600 hover:bg-green-700 rounded transition-colors"
               >
-                Subscribe
+                {t("debug.subscribe")}
               </button>
             ) : (
               <button
                 onClick={handleUnsubscribe}
                 className="px-2 py-0.5 text-xs bg-red-600 hover:bg-red-700 rounded transition-colors"
               >
-                Unsubscribe
+                {t("debug.unsubscribe")}
               </button>
             )}
           </div>
         </div>
         <div className="bg-gray-700 rounded p-2 max-h-32 overflow-y-auto font-mono text-[11px]">
           {tickEvents.length === 0 ? (
-            <div className="text-gray-500 text-center py-1">No events yet</div>
+            <div className="text-gray-500 text-center py-1">{t("debug.noEvents")}</div>
           ) : (
             tickEvents.map((ev, i) => (
               <div key={i} className="text-cyan-400">{ev}</div>
@@ -159,7 +162,7 @@ export function DebugPanel() {
       <div className="p-3 flex flex-col flex-1 min-h-0">
         <h2 className="text-xs font-semibold mb-2 flex-shrink-0 flex items-center gap-1.5">
           <File className="w-3.5 h-3.5 text-gray-400" />
-          Logs
+          {t("debug.logs")}
         </h2>
         <div className="flex-1 bg-black rounded p-2 overflow-y-auto font-mono text-[11px]">
           {logs.map((log, i) => (

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { ChatMessage } from "../types";
 import { apiClient } from "../lib/api-client";
-import { useAppStore } from "./use-app-store";
+import { useLogStore } from "./use-log-store";
 
 interface ChatState {
   messages: ChatMessage[];
@@ -27,7 +27,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     try {
       await apiClient.call("chat.send", { content: text });
     } catch (err) {
-      useAppStore.getState().addLog(`Chat error: ${err instanceof Error ? err.message : String(err)}`);
+      useLogStore.getState().addLog(`Chat error: ${err instanceof Error ? err.message : String(err)}`);
     }
   },
 
