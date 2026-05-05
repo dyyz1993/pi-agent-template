@@ -19,6 +19,7 @@ export function MobileTabBar() {
       {items.map(({ id, icon: Icon, label }) => (
         <button
           key={id}
+          data-testid={`tab-${id}`}
           onClick={() => togglePanel(id)}
           className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded transition-colors ${
             activePanel === id

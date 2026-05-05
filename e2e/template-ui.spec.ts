@@ -64,12 +64,12 @@ test.skip(
   async ({ page }) => {
     await waitForAppReady(page);
 
-    const explorerBtn = page.locator('button[title="Explorer"]');
+    const explorerBtn = page.locator('button[data-testid="tab-explorer"]');
     await expect(explorerBtn).toBeVisible();
     await explorerBtn.click();
     await expect(page.locator("text=Explorer")).toBeVisible();
 
-    const chatBtn = page.locator('button[title="Chat"]');
+    const chatBtn = page.locator('button[data-testid="tab-chat"]');
     await expect(chatBtn).toBeVisible();
     await chatBtn.click();
     await expect(page.locator("text=Messages")).toBeVisible();
@@ -84,16 +84,16 @@ if (process.env.TEMPLATE_TYPE !== "chat") {
     test("should display chat input", async ({ page }) => {
       await waitForAppReady(page);
 
-      const chatTab = page.locator('button[title="Chat"]');
-      await chatTab.click();
-      await expect(page.locator('input[placeholder="Type a message..."]')).toBeVisible();
-      await expect(page.locator("button:has-text('Send')")).toBeVisible();
-    });
+    const chatTab = page.locator('button[data-testid="tab-chat"]');
+    await chatTab.click();
+    await expect(page.locator('input[placeholder="Type a message..."]')).toBeVisible();
+    await expect(page.locator("button:has-text('Send')")).toBeVisible();
+  });
 
     test("should accept input text", async ({ page }) => {
       await waitForAppReady(page);
 
-      const chatTab = page.locator('button[title="Chat"]');
+      const chatTab = page.locator('button[data-testid="tab-chat"]');
       await chatTab.click();
 
       const input = page.locator('input[placeholder="Type a message..."]');
@@ -108,7 +108,7 @@ if (process.env.TEMPLATE_TYPE !== "chat") {
     test("should display explorer sidebar", async ({ page }) => {
     await waitForAppReady(page);
 
-    const explorerBtn = page.locator('button[title="Explorer"]');
+    const explorerBtn = page.locator('button[data-testid="tab-explorer"]');
     await explorerBtn.click();
     await expect(page.locator("text=Explorer")).toBeVisible();
     await expect(page.locator('input[placeholder="Path"]')).toBeVisible();
@@ -118,7 +118,7 @@ if (process.env.TEMPLATE_TYPE !== "chat") {
   test("should show empty state prompt", async ({ page }) => {
     await waitForAppReady(page);
 
-    const explorerBtn = page.locator('button[title="Explorer"]');
+    const explorerBtn = page.locator('button[data-testid="tab-explorer"]');
     await explorerBtn.click();
     await expect(
       page.locator("text=Enter path and click refresh").or(page.locator("text=Explorer"))
@@ -132,8 +132,8 @@ test.describe("Responsive Layout", () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await waitForAppReady(page);
 
-    await expect(page.locator('button[title="Explorer"]')).toHaveCount(2);
-    const allExplorerBtns = page.locator('button[title="Explorer"]');
+    await expect(page.locator('button[data-testid="tab-explorer"]')).toHaveCount(2);
+    const allExplorerBtns = page.locator('button[data-testid="tab-explorer"]');
     await expect(allExplorerBtns).toHaveCount(2);
   });
 
@@ -141,7 +141,7 @@ test.describe("Responsive Layout", () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await waitForAppReady(page);
 
-    const activityBar = page.locator(".w-12.bg-gray-900.border-r");
+    const activityBar = page.locator('[data-testid="activity-bar"]');
     await expect(activityBar).toHaveCount(0);
   });
 });
@@ -163,17 +163,17 @@ test("should show loading state before connection", async ({ page }) => {
 
 test("should display center tab navigation", async ({ page }) => {
   await waitForAppReady(page);
-  await expect(page.locator("button:has-text('Chat')")).toBeVisible();
-  await expect(page.locator("button:has-text('Feed')")).toBeVisible();
+  await expect(page.locator('button[data-testid="center-tab-chat"]')).toBeVisible();
+  await expect(page.locator('button[data-testid="center-tab-feed"]')).toBeVisible();
 });
 
 test("should switch center tabs", async ({ page }) => {
   await waitForAppReady(page);
 
-  await page.locator("button:has-text('Feed')").click();
+  await page.locator('button[data-testid="center-tab-feed"]').click();
   await expect(page.locator("text=Feed")).toBeVisible();
 
-  await page.locator("button:has-text('Chat')").click();
+  await page.locator('button[data-testid="center-tab-chat"]').click();
   await expect(page.locator("text=Messages")).toBeVisible();
 });
 
@@ -233,7 +233,7 @@ test.describe("Explorer File Browsing", () => {
   test("should show explorer sidebar when clicking explorer icon", async ({ page }) => {
     await waitForAppReady(page);
 
-    const explorerBtn = page.locator('button[title="Explorer"]').first();
+    const explorerBtn = page.locator('button[data-testid="tab-explorer"]').first();
     if (await explorerBtn.isVisible()) {
       await explorerBtn.click();
       await page.waitForTimeout(500);

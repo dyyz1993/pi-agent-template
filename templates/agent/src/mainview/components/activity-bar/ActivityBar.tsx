@@ -15,11 +15,12 @@ export function ActivityBar() {
   ];
 
   return (
-    <div className="w-12 bg-[var(--color-bg-primary)] border-r border-[var(--color-border-primary)] flex flex-col items-center py-2 gap-1 flex-shrink-0">
+    <div data-testid="activity-bar" className="w-12 bg-[var(--color-bg-primary)] border-r border-[var(--color-border-primary)] flex flex-col items-center py-2 gap-1 flex-shrink-0">
       {items.map(({ id, icon: Icon, label }) => (
         <button
           key={id}
           title={label}
+          data-testid={`tab-${id}`}
           onClick={() => togglePanel(id)}
           className={`w-10 h-10 flex items-center justify-center rounded transition-colors ${
             activePanel === id

@@ -115,6 +115,7 @@ export function AppLayout({
             {centerTabs.map(({ id, icon: Icon, label }) => (
               <button
                 key={id}
+                data-testid={`center-tab-${id}`}
                 onClick={() => setCenterTab(id)}
                 className={`flex items-center gap-1.5 px-4 py-1.5 text-xs border-b-2 transition-colors ${
                   centerTab === id
