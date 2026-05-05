@@ -12,7 +12,7 @@ export function PinButton() {
     <button
       onClick={() => setPinned(!isPinned)}
       title={isPinned ? "Unpin sidebar" : "Pin sidebar"}
-      className="text-gray-500 hover:text-white transition-colors"
+      className="text-[var(--color-text-placeholder)] hover:text-[var(--color-text-primary)] transition-colors"
     >
       {isPinned ? <PinOff className="w-3 h-3" /> : <Pin className="w-3 h-3" />}
     </button>

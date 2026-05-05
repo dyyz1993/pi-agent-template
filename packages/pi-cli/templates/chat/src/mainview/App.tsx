@@ -72,24 +72,24 @@ function App() {
 
   if (!ready) {
     return (
-      <div className="h-screen bg-gray-900 flex items-center justify-center">
+      <div className="h-screen bg-[var(--color-bg-primary)] flex items-center justify-center">
         <div className="text-center">
-          <div className="inline-block w-8 h-8 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin mb-4" />
-          <div className="text-gray-400 text-sm">{t("app.connecting")}</div>
+          <div className="inline-block w-8 h-8 border-2 border-[var(--color-text-accent)] border-t-transparent rounded-full animate-spin mb-4" />
+          <div className="text-[var(--color-text-tertiary)] text-sm">{t("app.connecting")}</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-gray-900 text-white flex flex-col overflow-hidden">
+    <div className="h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] flex flex-col overflow-hidden">
       {!isMobile && (
-        <div className="h-8 bg-gray-800 flex items-center px-3 text-xs border-b border-gray-700 flex-shrink-0">
+        <div className="h-8 bg-[var(--color-bg-secondary)] flex items-center px-3 text-xs border-b border-[var(--color-border-primary)] flex-shrink-0">
           <span className={`px-2 py-0.5 rounded flex items-center gap-1 ${mode === "desktop" ? "bg-green-600" : "bg-blue-600"}`}>
             {mode === "desktop" ? <Monitor className="w-3 h-3" /> : <Wifi className="w-3 h-3" />}
             {mode === "desktop" ? t("app.mode.desktop") : t("app.mode.web")}
           </span>
-          <span className="ml-3 text-gray-400">{t("app.title")}</span>
+          <span className="ml-3 text-[var(--color-text-tertiary)]">{t("app.title")}</span>
         </div>
       )}
 

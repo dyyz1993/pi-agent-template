@@ -55,17 +55,17 @@ export function ContextMenu({ x, y, items, onClose }: ContextMenuProps) {
   return (
     <div
       ref={ref}
-      className="fixed z-50 min-w-[160px] bg-gray-800 border border-gray-600 rounded-md shadow-xl py-1"
+      className="fixed z-50 min-w-[160px] bg-[var(--color-bg-secondary)] border border-[var(--color-border-secondary)] rounded-md shadow-xl py-1"
       style={{ left: adjustedX.current, top: adjustedY.current }}
     >
       {items.map((item, i) => (
         <div key={i}>
-          {item.divider && i > 0 && <div className="border-t border-gray-600 my-1" />}
+          {item.divider && i > 0 && <div className="border-t border-[var(--color-border-secondary)] my-1" />}
           <button
             className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 transition-colors ${
               item.danger
                 ? "text-red-400 hover:bg-red-900/30"
-                : "text-gray-200 hover:bg-gray-700"
+                : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]"
             }`}
             onClick={() => {
               item.onClick();

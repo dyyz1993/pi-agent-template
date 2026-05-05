@@ -9,12 +9,12 @@ export function ActivityBar() {
   const { t } = useTranslation();
 
   return (
-    <div className="w-12 bg-gray-900 border-r border-gray-700 flex flex-col items-center py-2 gap-1 flex-shrink-0">
+    <div className="w-12 bg-[var(--color-bg-primary)] border-r border-[var(--color-border-primary)] flex flex-col items-center py-2 gap-1 flex-shrink-0">
       {items.map(({ id, icon: Icon, labelKey }) => (
         <button
           key={id}
           title={t(labelKey)}
-          className="w-10 h-10 flex items-center justify-center rounded transition-colors text-indigo-400 bg-gray-700 border-l-2 border-white"
+          className="w-10 h-10 flex items-center justify-center rounded transition-colors text-[var(--color-text-accent)] bg-[var(--color-bg-tertiary)] border-l-2 border-[var(--color-text-primary)]"
         >
           <Icon className="w-5 h-5" />
         </button>

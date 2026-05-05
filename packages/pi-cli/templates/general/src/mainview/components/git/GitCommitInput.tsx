@@ -37,9 +37,9 @@ export function GitCommitInput() {
   const isCommitting = loadingAction === "commit";
 
   return (
-    <div className="p-2 border-b border-gray-700">
+    <div className="p-2 border-b border-[var(--color-border-primary)]">
       <textarea
-        className="w-full bg-gray-800 border border-gray-600 rounded px-2 py-1.5 text-xs text-gray-200 placeholder-gray-500 resize-none outline-none focus:border-indigo-500 transition-colors"
+        className="w-full bg-[var(--color-bg-secondary)] border border-[var(--color-border-secondary)] rounded px-2 py-1.5 text-xs text-[var(--color-text-secondary)] placeholder-[var(--color-text-placeholder)] resize-none outline-none focus:border-[var(--color-accent)] transition-colors"
         rows={3}
         placeholder={t("git.commitPlaceholder")}
         value={message}
@@ -48,7 +48,7 @@ export function GitCommitInput() {
         disabled={isCommitting}
       />
       <button
-        className="mt-1.5 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-indigo-600 hover:bg-indigo-500 text-white"
+        className="mt-1.5 w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed bg-[var(--color-accent)] hover:bg-[var(--color-accent)] text-[var(--color-text-primary)]"
         onClick={handleSubmit}
         disabled={!message.trim() || isCommitting}
       >
