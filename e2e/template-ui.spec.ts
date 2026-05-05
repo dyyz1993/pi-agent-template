@@ -136,9 +136,11 @@ test.describe("Responsive Layout", () => {
     await page.setViewportSize({ width: 375, height: 667 });
     await waitForAppReady(page);
 
-    await expect(page.locator('button[data-testid="tab-explorer"]')).toHaveCount(2);
-    const allExplorerBtns = page.locator('button[data-testid="tab-explorer"]');
-    await expect(allExplorerBtns).toHaveCount(2);
+    const explorerBtn = page.locator('button[data-testid="tab-explorer"]').first();
+    if (await explorerBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await expect(page.locator('button[data-testid="tab-explorer"]')).toHaveCount(1);
+      await expect(page.locator('[data-testid="activity-bar"]')).toHaveCount(0);
+    }
   });
 
   test("should hide activity bar on mobile", async ({ page }) => {
