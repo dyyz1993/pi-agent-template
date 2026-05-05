@@ -22,16 +22,16 @@ export async function runCreate(args: string[]): Promise<void> {
   const targetArg = customDir || positional[1];
   if (!projectName) {
     console.log(`
-Usage: pi create <name> [--type <type>] [--dir <path>]
+Usage: create-agent create <name> [--type <type>] [--dir <path>]
 
 Options:
   --type <type>   Template type (default: general)
   --dir <path>    Target directory (default: ./<name>)
 
 Examples:
-  pi create my-app
-  pi create my-app --type chat
-  pi create my-app --dir ~/projects/my-app
+  create-agent create my-app
+  create-agent create my-app --type chat
+  create-agent create my-app --dir ~/projects/my-app
 `);
     process.exit(1);
   }

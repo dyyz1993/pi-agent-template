@@ -5,7 +5,7 @@
 ## 前置条件
 
 ```bash
-npx @dyyz1993/pi-cli create test-agent --type agent --dir /tmp/test-agent
+npx @dyyz1993/create-agent create test-agent --type agent --dir /tmp/test-agent
 cd /tmp/test-agent && PORT=3120 VITE_PORT=5190 bun run dev:web
 curl http://localhost:3120/health → {"status":"ok"}
 ```

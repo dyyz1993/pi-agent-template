@@ -14,10 +14,10 @@ const COMMANDS = new Map<string, (args: string[]) => Promise<void>>([
 
 function printHelp(): void {
   console.log(`
-Pi Agent CLI — project scaffolding tool
+Create Agent CLI — project scaffolding tool
 
 Usage:
-  pi <command> [options]
+  create-agent <command> [options]
 
 Commands:
   create <name>  Create a new project from template
@@ -29,7 +29,7 @@ Commands:
 Options:
   -h, --help     Show this help message
 
-Run "pi create --help" for create-specific options.
+Run "create-agent create --help" for create-specific options.
 `);
 }
 

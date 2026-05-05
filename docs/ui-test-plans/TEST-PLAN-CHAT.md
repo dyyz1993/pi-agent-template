@@ -6,7 +6,7 @@
 
 ```bash
 # 1. 创建项目
-npx @dyyz1993/pi-cli create test-chat --type chat --dir /tmp/test-chat
+npx @dyyz1993/create-agent create test-chat --type chat --dir /tmp/test-chat
 
 # 2. 启动 dev server
 cd /tmp/test-chat && PORT=3110 VITE_PORT=5180 bun run dev:web

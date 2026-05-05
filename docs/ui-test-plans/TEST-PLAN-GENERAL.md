@@ -5,7 +5,7 @@
 ## 前置条件
 
 ```bash
-npx @dyyz1993/pi-cli create test-general --type general --dir /tmp/test-general
+npx @dyyz1993/create-agent create test-general --type general --dir /tmp/test-general
 cd /tmp/test-general && PORT=3100 VITE_PORT=5173 bun run dev:web
 curl http://localhost:3100/health → {"status":"ok"}
 ```

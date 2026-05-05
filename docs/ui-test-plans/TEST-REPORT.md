@@ -6,7 +6,7 @@
 |------|-----|
 | 执行工具 | ui-tester subagent (agent-browser) |
 | 浏览器 | Chromium (headless) |
-| 模板版本 | @dyyz1993/pi-cli@1.7.0 |
+| 模板版本 | @dyyz1993/create-agent@1.7.0 |
 | 日期 | 2026-05-03 |
 
 ## 测试结果汇总

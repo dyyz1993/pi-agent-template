@@ -43,7 +43,8 @@
       "eslint --fix"
     ],
     "packages/pi-cli/src/**/*.ts": [
-      "eslint --fix"
+      "eslint --fix",
+      "echo 'Note: package is published as @dyyz1993/create-agent'"
     ],
     "scripts/**/*.ts": [
       "eslint --fix"

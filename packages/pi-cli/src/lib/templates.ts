@@ -40,7 +40,7 @@ export function getAllTemplates(): TemplateInfo[] {
 export function resolveTemplateDir(monorepoRoot: string, type: string): string {
   const info = getTemplateInfo(type);
   if (!info) {
-    throw new Error(`Unknown template type: "${type}". Run "pi list" to see available types.`);
+    throw new Error(`Unknown template type: "${type}". Run "create-agent list" to see available types.`);
   }
   if (!info.available) {
     throw new Error(`Template "${type}" is not available yet (coming soon).`);

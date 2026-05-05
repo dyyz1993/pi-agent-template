@@ -42,7 +42,7 @@ describe('CLI argument parsing (create)', () => {
     }
 
     const output = logs.join('\n');
-    expect(output).toContain('pi create');
+    expect(output).toContain('create-agent create');
     expect(output).toContain('--type');
     expect(output).toContain('--dir');
 

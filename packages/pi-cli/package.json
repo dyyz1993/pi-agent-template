@@ -1,13 +1,13 @@
 {
-  "name": "@dyyz1993/pi-cli",
+  "name": "@dyyz1993/create-agent",
   "version": "1.8.0",
-  "description": "Pi Agent project scaffolding CLI",
+  "description": "Create Agent project scaffolding CLI",
   "repository": {
     "type": "git",
     "url": "https://github.com/dyyz1993/pi-agent-template"
   },
   "bin": {
-    "pi": "./src/cli.ts"
+    "create-agent": "./src/cli.ts"
   },
   "files": [
     "src/",

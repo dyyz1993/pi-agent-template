@@ -81,7 +81,7 @@ jobs:
       - name: Run rpc-core tests
         run: bun run test:rpc
 
-      - name: Run pi-cli tests
+      - name: Run create-agent tests
         run: cd packages/pi-cli && bun test src/__tests__/
 
   template-test:

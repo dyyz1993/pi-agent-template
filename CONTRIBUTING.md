@@ -27,7 +27,7 @@ cd templates/agent && npx vitest run  # Agent template tests
 ```
 packages/
   rpc-core/     # Type-safe RPC framework
-  pi-cli/       # CLI scaffolding tool
+  pi-cli/       # CLI scaffolding tool (@dyyz1993/create-agent)
 templates/
   agent/        # Coding Agent template
   chat/         # Chat template

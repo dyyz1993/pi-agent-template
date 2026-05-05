@@ -40,7 +40,7 @@ export async function runWorkspace(args: string[]): Promise<void> {
 
   if (!subCommand || subCommand === '--help' || subCommand === '-h') {
     console.log(`
-Usage: pi workspace add <name> [--base <branch>]
+Usage: create-agent workspace add <name> [--base <branch>]
 
 Creates an isolated git worktree in .workspace/<name> with its own branch and ports.
 
@@ -48,15 +48,15 @@ Options:
   --base <branch>  Base branch for the new worktree (default: current HEAD)
 
 Examples:
-  pi workspace add feature-chat-ui
-  pi workspace add fix-login --base develop
+  create-agent workspace add feature-chat-ui
+  create-agent workspace add fix-login --base develop
 `);
     return;
   }
 
   if (subCommand !== 'add') {
     console.error(`Unknown workspace subcommand: "${subCommand}"`);
-    console.log('Usage: pi workspace add <name>');
+    console.log('Usage: create-agent workspace add <name>');
     return;
   }
 

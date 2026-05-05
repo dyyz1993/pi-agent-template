@@ -21,8 +21,8 @@
 
   - Enhanced build-verify: structure check → install → build → dist verification
   - Full RPC API E2E test: ~30 endpoints per template
-  - pi-cli unit tests: 31 test cases
-  - Smoke test: validates pi create → lint → test → build in created projects
+  - create-agent unit tests: 31 test cases
+  - Smoke test: validates create-agent create → lint → test → build in created projects
   - E2E UI tests: Playwright with mock WebSocket for CI
 
   **Developer Skills (3 items):**
