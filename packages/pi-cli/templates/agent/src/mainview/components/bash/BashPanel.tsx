@@ -1,8 +1,10 @@
 import { useState, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Play, Square, X } from "lucide-react";
 import { useBashStore } from "../../stores/use-bash-store";
 
 export function BashPanel() {
+  const { t } = useTranslation();
   const [command, setCommand] = useState("");
   const processes = useBashStore((s) => s.processes);
   const activePid = useBashStore((s) => s.activePid);
@@ -42,7 +44,7 @@ export function BashPanel() {
           value={command}
           onChange={(e) => setCommand(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Enter command..."
+          placeholder={t("bash.enterCommand")}
           className="flex-1 bg-gray-800 text-gray-100 px-3 py-1.5 rounded text-sm font-mono border border-gray-600 focus:border-indigo-500 focus:outline-none"
         />
         <button
@@ -51,7 +53,7 @@ export function BashPanel() {
           className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed rounded text-sm text-white"
         >
           <Play className="w-3.5 h-3.5" />
-          Run
+          {t("bash.run")}
         </button>
       </div>
 
@@ -89,7 +91,7 @@ export function BashPanel() {
               )}
               {!proc.running && (
                 <span className={`text-[10px] ${proc.exitCode === 0 ? "text-green-500/70" : "text-red-500/70"}`}>
-                  exited({proc.exitCode ?? "?"})
+                  {t("bash.exited", { code: proc.exitCode ?? "?" })}
                 </span>
               )}
             </button>
@@ -109,7 +111,7 @@ export function BashPanel() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500" />
                 </span>
-                Process running... (PID: {activePid})
+                {t("bash.processRunning", { pid: activePid })}
               </div>
             )}
             {activeProcess.output ? (
@@ -120,21 +122,21 @@ export function BashPanel() {
                 </div>
               ))
             ) : activeProcess.running ? (
-              <span className="text-gray-600">Waiting for output...</span>
+              <span className="text-gray-600">{t("bash.waitingOutput")}</span>
             ) : null}
             {!activeProcess.running && activeProcess.exitCode != null && (
               <div className={`mt-2 pt-2 border-t border-gray-800 text-xs font-semibold ${
                 activeProcess.exitCode === 0 ? "text-green-400" : "text-red-400"
               }`}>
-                Exit: {activeProcess.exitCode}
+                {t("bash.exit", { code: activeProcess.exitCode })}
               </div>
             )}
           </>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-gray-600">
             <TerminalIcon className="w-12 h-12 mb-3 opacity-30" />
-            <span className="text-sm">No active process</span>
-            <span className="text-xs mt-1">Run a command to get started</span>
+            <span className="text-sm">{t("bash.noActiveProcess")}</span>
+            <span className="text-xs mt-1">{t("bash.getStarted")}</span>
           </div>
         )}
       </div>
@@ -146,7 +148,7 @@ export function BashPanel() {
             className="flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-500 rounded text-xs text-white"
           >
             <Square className="w-3 h-3" />
-            Kill
+            {t("bash.kill")}
           </button>
         </div>
       )}

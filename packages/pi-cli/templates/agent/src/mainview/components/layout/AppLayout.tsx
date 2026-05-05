@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Wifi, Monitor, MessageSquare, Rss, Terminal, ListTodo } from "lucide-react";
 import { useConnectionStore } from "../../stores/use-connection-store";
 import { useExplorerStore } from "../../stores/use-explorer-store";
@@ -15,6 +16,7 @@ import { TodoPanel } from "../todo/TodoPanel";
 import { FilePreviewOverlay } from "../file-preview/FilePreviewOverlay";
 import { DiffViewerPanel } from "../diff/DiffViewerPanel";
 import { DebugPanel } from "../debug/DebugPanel";
+import { ThemeToggle } from "../common/ThemeToggle";
 
 export type CenterTab = "chat" | "feed" | "bash" | "todo";
 
@@ -31,6 +33,7 @@ export function AppLayout({
   sidebarWidth,
   handleResizeStart,
 }: AppLayoutProps) {
+  const { t } = useTranslation();
   const mode = useConnectionStore((s) => s.mode);
   const filePreview = useExplorerStore((s) => s.filePreview);
   const loadingFile = useExplorerStore((s) => s.loadingFile);
@@ -59,10 +62,10 @@ export function AppLayout({
   ) : null;
 
   const centerTabs: { id: CenterTab; icon: typeof MessageSquare; label: string }[] = [
-    { id: "chat", icon: MessageSquare, label: "Chat" },
-    { id: "feed", icon: Rss, label: "Feed + Subs" },
-    { id: "bash", icon: Terminal, label: "Bash" },
-    { id: "todo", icon: ListTodo, label: "Todo" },
+    { id: "chat", icon: MessageSquare, label: t("tabs.chat") },
+    { id: "feed", icon: Rss, label: t("tabs.feed") },
+    { id: "bash", icon: Terminal, label: t("tabs.bash") },
+    { id: "todo", icon: ListTodo, label: t("tabs.todo") },
   ];
 
   return (
@@ -71,9 +74,12 @@ export function AppLayout({
         <div className="h-8 bg-gray-800 flex items-center px-3 text-xs border-b border-gray-700 flex-shrink-0">
           <span className={`px-2 py-0.5 rounded flex items-center gap-1 ${mode === "desktop" ? "bg-green-600" : "bg-blue-600"}`}>
             {mode === "desktop" ? <Monitor className="w-3 h-3" /> : <Wifi className="w-3 h-3" />}
-            {mode === "desktop" ? "Desktop (IPC)" : "Web (WebSocket)"}
+            {mode === "desktop" ? t("app.mode.desktop") : t("app.mode.web")}
           </span>
-          <span className="ml-3 text-gray-400">Pi Agent</span>
+          <span className="ml-3 text-gray-400">{t("app.title")}</span>
+          <div className="ml-auto">
+            <ThemeToggle />
+          </div>
         </div>
       )}
 

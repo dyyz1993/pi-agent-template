@@ -1,4 +1,5 @@
 import { memo, useEffect, useCallback, useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   GitBranch, RefreshCw, FileQuestion, Plus, Minus, Pencil,
   ChevronRight, ChevronDown, Eye, FileText, Copy,
@@ -11,8 +12,6 @@ import { ContextMenu, type MenuItem } from "../explorer/ContextMenu";
 import { GitCommitInput } from "./GitCommitInput";
 import { GitBranchSelector } from "./GitBranchSelector";
 import { PinButton } from "../sidebar/PinButton";
-
-/* ── Helpers ────────────────────────────────────────────── */
 
 function statusIcon(status: GitFileChange["status"]) {
   switch (status) {
@@ -33,23 +32,6 @@ function statusLabel(status: GitFileChange["status"]) {
   }
 }
 
-function relativeTime(dateStr: string): string {
-  const d = new Date(dateStr);
-  const now = new Date();
-  const diff = now.getTime() - d.getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  return d.toLocaleDateString();
-}
-
-/* ── Sub-components ─────────────────────────────────────── */
-
-/* Working file item (staged / changed) with stage/unstage button */
 interface FileItemProps {
   path: string;
   status: GitFileChange["status"];
@@ -58,10 +40,12 @@ interface FileItemProps {
   onClick: (filePath: string, staged?: boolean) => void;
   onContextMenu: (e: React.MouseEvent, filePath: string, isStaged?: boolean) => void;
   onStageToggle: (filePath: string, isStaged?: boolean) => void;
+  stageTitle: string;
+  unstageTitle: string;
 }
 
 const FileItem = memo(function FileItem({
-  path, status, isSelected, isStaged, onClick, onContextMenu, onStageToggle,
+  path, status, isSelected, isStaged, onClick, onContextMenu, onStageToggle, stageTitle, unstageTitle,
 }: FileItemProps) {
   return (
     <div
@@ -79,7 +63,7 @@ const FileItem = memo(function FileItem({
           isStaged ? "text-orange-400 hover:text-orange-300" : "text-green-400 hover:text-green-300"
         }`}
         onClick={(e) => { e.stopPropagation(); onStageToggle(path, isStaged); }}
-        title={isStaged ? "Unstage" : "Stage"}
+        title={isStaged ? unstageTitle : stageTitle}
       >
         {isStaged ? <ChevronUp className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
       </button>
@@ -87,17 +71,17 @@ const FileItem = memo(function FileItem({
   );
 });
 
-/* Untracked item with stage button */
 interface UntrackedItemProps {
   path: string;
   isSelected: boolean;
   onClick: (filePath: string) => void;
   onContextMenu: (e: React.MouseEvent, filePath: string) => void;
   onStage: (filePath: string) => void;
+  stageTitle: string;
 }
 
 const UntrackedItem = memo(function UntrackedItem({
-  path, isSelected, onClick, onContextMenu, onStage,
+  path, isSelected, onClick, onContextMenu, onStage, stageTitle,
 }: UntrackedItemProps) {
   return (
     <div
@@ -113,7 +97,7 @@ const UntrackedItem = memo(function UntrackedItem({
       <button
         className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-green-400 hover:text-green-300 hover:bg-gray-600"
         onClick={(e) => { e.stopPropagation(); onStage(path); }}
-        title="Stage"
+        title={stageTitle}
       >
         <Plus className="w-3 h-3" />
       </button>
@@ -121,7 +105,6 @@ const UntrackedItem = memo(function UntrackedItem({
   );
 });
 
-/* Commit file item (inside expanded commit) */
 interface CommitFileItemProps {
   path: string;
   status: GitFileChange["status"];
@@ -144,7 +127,6 @@ const CommitFileItem = memo(function CommitFileItem({ path, status, isSelected, 
   );
 });
 
-/* Expandable commit item */
 interface CommitItemProps {
   commit: GitCommit;
   expanded: boolean;
@@ -154,10 +136,25 @@ interface CommitItemProps {
   onToggle: () => void;
   onFileClick: (filePath: string) => void;
   onContextMenu: (e: React.MouseEvent, commit: GitCommit) => void;
+  t: (key: string) => string;
+}
+
+function relativeTime(dateStr: string, t: (key: string, options?: Record<string, unknown>) => string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diff = now.getTime() - d.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return t("git.justNow");
+  if (mins < 60) return t("git.minutesAgo", { count: mins });
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return t("git.hoursAgo", { count: hours });
+  const days = Math.floor(hours / 24);
+  if (days < 30) return t("git.daysAgo", { count: days });
+  return d.toLocaleDateString();
 }
 
 const CommitItem = memo(function CommitItem({
-  commit, expanded, files, loading, selectedFilePath, onToggle, onFileClick, onContextMenu,
+  commit, expanded, files, loading, selectedFilePath, onToggle, onFileClick, onContextMenu, t,
 }: CommitItemProps) {
   return (
     <div>
@@ -174,14 +171,14 @@ const CommitItem = memo(function CommitItem({
           <div className="text-gray-500 text-[10px] flex items-center gap-1.5 mt-0.5">
             <span className="text-indigo-400 font-mono">{commit.shortHash}</span>
             <span>{commit.author}</span>
-            <span>{relativeTime(commit.date)}</span>
+            <span>{relativeTime(commit.date, t)}</span>
           </div>
         </div>
       </div>
       {expanded && (
         <div className="ml-1">
           {loading ? (
-            <div className="text-gray-600 text-[10px] pl-7 py-1">Loading files...</div>
+            <div className="text-gray-600 text-[10px] pl-7 py-1">{t("git.loadingFiles")}</div>
           ) : files && files.length > 0 ? (
             files.map((f) => (
               <CommitFileItem
@@ -193,7 +190,7 @@ const CommitItem = memo(function CommitItem({
               />
             ))
           ) : (
-            <div className="text-gray-600 text-[10px] pl-7 py-1">No files</div>
+            <div className="text-gray-600 text-[10px] pl-7 py-1">{t("git.noFiles")}</div>
           )}
         </div>
       )}
@@ -201,13 +198,12 @@ const CommitItem = memo(function CommitItem({
   );
 });
 
-/* ── Main Panel ─────────────────────────────────────────── */
-
 interface GitPanelProps {
   hideOuterShell?: boolean;
 }
 
 export function GitPanel({ hideOuterShell }: GitPanelProps) {
+  const { t } = useTranslation();
   const branch = useGitStore((s) => s.branch);
   const ahead = useGitStore((s) => s.ahead);
   const behind = useGitStore((s) => s.behind);
@@ -244,7 +240,6 @@ export function GitPanel({ hideOuterShell }: GitPanelProps) {
 
   const branchBtnRef = useRef<HTMLButtonElement>(null);
 
-  /* Refresh status + worktrees on mount */
   const refresh = useCallback(() => {
     fetchStatus(currentPath);
     fetchWorktrees(currentPath);
@@ -253,7 +248,6 @@ export function GitPanel({ hideOuterShell }: GitPanelProps) {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  /* File click handlers */
   const handleFileClick = useCallback((filePath: string, staged?: boolean) => {
     fetchDiff(currentPath, filePath, staged);
   }, [fetchDiff, currentPath]);
@@ -272,28 +266,25 @@ export function GitPanel({ hideOuterShell }: GitPanelProps) {
   }, [currentPath]);
 
   const getContextMenuItems = useCallback((filePath: string, isStaged?: boolean): MenuItem[] => [
-    { label: "Open Diff", icon: <Eye className="w-3 h-3" />, onClick: () => fetchDiff(currentPath, filePath, isStaged) },
-    { label: "Open File", icon: <FileText className="w-3 h-3" />, onClick: () => handleOpenFile(filePath) },
+    { label: t("git.openDiff"), icon: <Eye className="w-3 h-3" />, onClick: () => fetchDiff(currentPath, filePath, isStaged) },
+    { label: t("git.openFile"), icon: <FileText className="w-3 h-3" />, onClick: () => handleOpenFile(filePath) },
     { label: "", onClick: () => {}, divider: true },
-    { label: "Copy Path", icon: <Copy className="w-3 h-3" />, onClick: () => handleCopyPath(filePath) },
-  ], [fetchDiff, currentPath, handleOpenFile, handleCopyPath]);
+    { label: t("git.copyPath"), icon: <Copy className="w-3 h-3" />, onClick: () => handleCopyPath(filePath) },
+  ], [fetchDiff, currentPath, handleOpenFile, handleCopyPath, t]);
 
-  /* Commit context menu */
   const handleCommitContextMenu = useCallback((e: React.MouseEvent, commit: GitCommit) => {
     setCommitCtxMenu({ x: e.clientX, y: e.clientY, commit });
   }, []);
 
   const getCommitContextMenuItems = useCallback((commit: GitCommit): MenuItem[] => [
-    { label: "Copy Hash", icon: <Copy className="w-3 h-3" />, onClick: () => navigator.clipboard.writeText(commit.hash) },
-    { label: "Copy Message", icon: <Copy className="w-3 h-3" />, onClick: () => navigator.clipboard.writeText(commit.message) },
-  ], []);
+    { label: t("git.copyHash"), icon: <Copy className="w-3 h-3" />, onClick: () => navigator.clipboard.writeText(commit.hash) },
+    { label: t("git.copyMessage"), icon: <Copy className="w-3 h-3" />, onClick: () => navigator.clipboard.writeText(commit.message) },
+  ], [t]);
 
-  /* Commit file diff */
   const handleCommitFileClick = useCallback((hash: string, filePath: string) => {
     fetchCommitFileDiff(currentPath, hash, filePath);
   }, [fetchCommitFileDiff, currentPath]);
 
-  /* Stage / Unstage */
   const handleStageToggle = useCallback((filePath: string, isStaged?: boolean) => {
     if (isStaged) {
       unstageFiles(currentPath, [filePath]);
@@ -316,14 +307,12 @@ export function GitPanel({ hideOuterShell }: GitPanelProps) {
     stageFiles(currentPath, [filePath]);
   }, [stageFiles, currentPath]);
 
-  /* Commits toggle */
   const toggleCommits = useCallback(() => {
     const next = !commitsExpanded;
     setCommitsExpanded(next);
     if (next && commits.length === 0) fetchLog(currentPath);
   }, [commitsExpanded, commits.length, fetchLog, currentPath]);
 
-  /* Push / Pull */
   const handlePush = useCallback(() => push(currentPath), [push, currentPath]);
   const handlePull = useCallback(() => pull(currentPath), [pull, currentPath]);
 
@@ -335,10 +324,9 @@ export function GitPanel({ hideOuterShell }: GitPanelProps) {
 
   const panelContent = (
     <>
-      {/* Header */}
       <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-700 flex items-center gap-1.5">
         <GitBranch className="w-3.5 h-3.5" />
-        Source Control
+        {t("git.title")}
         <span className="ml-auto flex items-center gap-1">
           {totalChanges > 0 && (
             <span className="bg-indigo-600 text-white px-1.5 py-0.5 rounded-full text-[10px] leading-none">
@@ -346,19 +334,18 @@ export function GitPanel({ hideOuterShell }: GitPanelProps) {
             </span>
           )}
           {pinButton}
-          <button onClick={handlePull} className="text-gray-500 hover:text-white" disabled={loadingAction === "pull"} title="Pull">
+          <button onClick={handlePull} className="text-gray-500 hover:text-white" disabled={loadingAction === "pull"} title={t("git.pull")}>
             <Download className="w-3 h-3" />
           </button>
-          <button onClick={handlePush} className="text-gray-500 hover:text-white" disabled={loadingAction === "push"} title="Push">
+          <button onClick={handlePush} className="text-gray-500 hover:text-white" disabled={loadingAction === "push"} title={t("git.push")}>
             <Upload className="w-3 h-3" />
           </button>
-          <button onClick={refresh} className="text-gray-500 hover:text-white" title="Refresh">
+          <button onClick={refresh} className="text-gray-500 hover:text-white" title={t("git.refresh")}>
             <RefreshCw className="w-3 h-3" />
           </button>
         </span>
       </div>
 
-      {/* Branch info + selector */}
       <div className="px-2 py-1.5 text-xs text-gray-400 flex items-center gap-1.5 border-b border-gray-700/50">
         <button
           ref={branchBtnRef}
@@ -372,7 +359,6 @@ export function GitPanel({ hideOuterShell }: GitPanelProps) {
           <BranchChevron className="w-3 h-3 text-gray-500" />
         </button>
 
-        {/* Worktree indicator */}
         {hasMultipleWorktrees && (
           <button
             className="ml-auto text-gray-500 hover:text-white transition-colors"
@@ -384,75 +370,73 @@ export function GitPanel({ hideOuterShell }: GitPanelProps) {
         )}
       </div>
 
-      {/* Commit input */}
       <GitCommitInput />
 
       <div className="flex-1 overflow-y-auto p-1">
-        {/* Staged */}
         {staged.length > 0 && (
           <div className="mt-1">
             <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-gray-500 font-semibold flex items-center">
-              <span>Staged Changes ({staged.length})</span>
-              <button className="ml-auto text-orange-400 hover:text-orange-300" onClick={handleUnstageAll} title="Unstage all">
+              <span>{t("git.staged")} ({staged.length})</span>
+              <button className="ml-auto text-orange-400 hover:text-orange-300" onClick={handleUnstageAll} title={t("git.unstageAll")}>
                 <ChevronUp className="w-3 h-3" />
               </button>
             </div>
             {staged.map((f) => (
               <FileItem key={f.path} path={f.path} status={f.status} isSelected={selectedFilePath === f.path} isStaged
-                onClick={handleFileClick} onContextMenu={handleContextMenu} onStageToggle={handleStageToggle} />
+                onClick={handleFileClick} onContextMenu={handleContextMenu} onStageToggle={handleStageToggle}
+                stageTitle={t("git.stage")} unstageTitle={t("git.unstage")} />
             ))}
           </div>
         )}
 
-        {/* Changed */}
         {changed.length > 0 && (
           <div className="mt-2">
             <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-gray-500 font-semibold flex items-center">
-              <span>Changes ({changed.length})</span>
-              <button className="ml-auto text-green-400 hover:text-green-300" onClick={handleStageAll} title="Stage all">
+              <span>{t("git.changes")} ({changed.length})</span>
+              <button className="ml-auto text-green-400 hover:text-green-300" onClick={handleStageAll} title={t("git.stageAll")}>
                 <Plus className="w-3 h-3" />
               </button>
             </div>
             {changed.map((f) => (
               <FileItem key={f.path} path={f.path} status={f.status} isSelected={selectedFilePath === f.path}
-                onClick={handleFileClick} onContextMenu={handleContextMenu} onStageToggle={handleStageToggle} />
+                onClick={handleFileClick} onContextMenu={handleContextMenu} onStageToggle={handleStageToggle}
+                stageTitle={t("git.stage")} unstageTitle={t("git.unstage")} />
             ))}
           </div>
         )}
 
-        {/* Untracked */}
         {untracked.length > 0 && (
           <div className="mt-2">
             <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-gray-500 font-semibold">
-              Untracked ({untracked.length})
+              {t("git.untracked")} ({untracked.length})
             </div>
             {untracked.map((f) => (
               <UntrackedItem key={f} path={f} isSelected={selectedFilePath === f}
-                onClick={handleFileClick} onContextMenu={handleContextMenu} onStage={handleUntrackedStage} />
+                onClick={handleFileClick} onContextMenu={handleContextMenu} onStage={handleUntrackedStage}
+                stageTitle={t("git.stage")} />
             ))}
           </div>
         )}
 
         {totalChanges === 0 && !commitsExpanded && (
-          <div className="text-gray-500 text-xs text-center py-8">No changes detected</div>
+          <div className="text-gray-500 text-xs text-center py-8">{t("git.noChanges")}</div>
         )}
 
-        {/* Commit History */}
         <div className="mt-2 border-t border-gray-700 pt-1">
           <button
             className="w-full px-2 py-1 text-[10px] uppercase tracking-wide text-gray-500 font-semibold flex items-center gap-1 hover:text-gray-300 transition-colors"
             onClick={toggleCommits}
           >
             {commitsExpanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-            Commits
+            {t("git.commits")}
             {commits.length > 0 && <span className="text-gray-600 ml-auto">{commits.length}</span>}
           </button>
           {commitsExpanded && (
             <div className="mt-0.5">
               {loadingCommits ? (
-                <div className="text-gray-500 text-xs text-center py-4">Loading...</div>
+                <div className="text-gray-500 text-xs text-center py-4">{t("common.loading")}</div>
               ) : commits.length === 0 ? (
-                <div className="text-gray-600 text-xs text-center py-4">No commits</div>
+                <div className="text-gray-600 text-xs text-center py-4">{t("git.noCommits")}</div>
               ) : (
                 commits.map((c) => (
                   <CommitItem key={c.hash} commit={c}
@@ -463,6 +447,7 @@ export function GitPanel({ hideOuterShell }: GitPanelProps) {
                     onToggle={() => toggleCommitExpand(currentPath, c.hash)}
                     onFileClick={(fp) => handleCommitFileClick(c.hash, fp)}
                     onContextMenu={handleCommitContextMenu}
+                    t={t}
                   />
                 ))
               )}
@@ -471,7 +456,6 @@ export function GitPanel({ hideOuterShell }: GitPanelProps) {
         </div>
       </div>
 
-      {/* Branch selector popup */}
       {showBranches && branchBtnRef.current && (
         <div className="absolute z-50" style={{
           top: branchBtnRef.current.getBoundingClientRect().bottom + 4,
@@ -481,11 +465,10 @@ export function GitPanel({ hideOuterShell }: GitPanelProps) {
         </div>
       )}
 
-      {/* Worktree popup */}
       {showWorktrees && worktrees.length > 1 && (
         <div className="fixed z-50 min-w-[200px] bg-gray-800 border border-gray-600 rounded-md shadow-xl py-1"
           style={{ top: 80, left: 48 }}>
-          <div className="px-3 py-1 text-[10px] uppercase tracking-wide text-gray-500 font-semibold">Worktrees</div>
+          <div className="px-3 py-1 text-[10px] uppercase tracking-wide text-gray-500 font-semibold">{t("git.worktrees")}</div>
           {worktrees.map((wt) => (
             <div key={wt.path} className={`px-3 py-1.5 text-xs flex items-center gap-2 ${
               wt.path === currentPath ? "text-indigo-400" : "text-gray-300"
@@ -499,11 +482,10 @@ export function GitPanel({ hideOuterShell }: GitPanelProps) {
             </div>
           ))}
           <button className="w-full text-left px-3 py-1 text-[10px] text-gray-500 hover:text-gray-300 border-t border-gray-700 mt-1 pt-1"
-            onClick={() => setShowWorktrees(false)}>Close</button>
+            onClick={() => setShowWorktrees(false)}>{t("git.close")}</button>
         </div>
       )}
 
-      {/* Context menus */}
       {ctxMenu && (
         <ContextMenu x={ctxMenu.x} y={ctxMenu.y}
           items={getContextMenuItems(ctxMenu.filePath, ctxMenu.isStaged)}

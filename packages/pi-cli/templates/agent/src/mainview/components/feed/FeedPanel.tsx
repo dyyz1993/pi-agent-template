@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Rss, Send } from "lucide-react";
 import { apiClient } from "../../lib/api-client";
 import { useLogStore } from "../../stores/use-log-store";
@@ -21,6 +22,7 @@ const CATEGORY_COLORS: Record<FeedCategory, string> = {
 };
 
 export function FeedPanel() {
+  const { t } = useTranslation();
   const posts = useFeedStore((s) => s.posts);
   const author = useFeedStore((s) => s.author);
   const category = useFeedStore((s) => s.category);
@@ -35,7 +37,6 @@ export function FeedPanel() {
   const addLog = useLogStore((s) => s.addLog);
   const ready = useConnectionStore((s) => s.ready);
 
-  // Event stream state
   const entries = useEventStreamStore((s) => s.entries);
   const activeEventType = useEventStreamStore((s) => s.activeEventType);
   const activeFilter = useEventStreamStore((s) => s.activeFilter);
@@ -45,14 +46,12 @@ export function FeedPanel() {
   const handleSubscribe = useEventStreamStore((s) => s.handleSubscribe);
   const handleUnsubscribe = useEventStreamStore((s) => s.handleUnsubscribe);
 
-  // On ready: subscribe to feed.update (no filter) + load posts
   useEffect(() => {
     if (!ready) return;
 
     let subId: string | null = null;
 
     const setup = async () => {
-      // Subscribe to all feed updates (no filter) to populate feed list
       subId = await apiClient.subscribe("feed.update", (payload) => {
         addPost(payload as typeof posts[number]);
       }, {});
@@ -69,11 +68,10 @@ export function FeedPanel() {
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Header */}
       <div className="px-4 py-2 bg-gray-800 border-b border-gray-700 flex items-center justify-between flex-shrink-0">
         <h2 className="text-sm font-semibold flex items-center gap-1.5">
           <Rss className="w-4 h-4 text-indigo-400" />
-          Feed + Subscriptions
+          {t("feed.title")}
           {posts.length > 0 && (
             <span className="ml-1 px-2 py-0.5 bg-indigo-600/30 text-indigo-300 rounded text-[10px]">
               {posts.length}
@@ -83,15 +81,14 @@ export function FeedPanel() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Create Post */}
         <div className="bg-gray-800 rounded-lg p-3 space-y-2">
-          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">New Post</div>
+          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t("feed.newPost")}</div>
           <div className="flex gap-2">
             <input
               type="text"
               value={author}
               onChange={(e) => setAuthor(e.target.value)}
-              placeholder="Author"
+              placeholder={t("feed.authorPlaceholder")}
               className="w-24 px-2 py-1.5 text-xs bg-gray-700 rounded text-white border border-gray-600 focus:border-indigo-500 focus:outline-none"
             />
             <select
@@ -110,7 +107,7 @@ export function FeedPanel() {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && createPost()}
-              placeholder="Write a post..."
+              placeholder={t("feed.postPlaceholder")}
               className="flex-1 px-3 py-1.5 text-xs bg-gray-700 rounded text-white border border-gray-600 focus:border-indigo-500 focus:outline-none"
             />
             <button
@@ -119,14 +116,13 @@ export function FeedPanel() {
               className="px-3 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded transition-colors flex items-center gap-1"
             >
               <Send className="w-3 h-3" />
-              Post
+              {t("feed.post")}
             </button>
           </div>
         </div>
 
-        {/* Subscription Panel */}
         <div className="bg-gray-800 rounded-lg p-3 space-y-2">
-          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Subscribe with Filter</div>
+          <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t("feed.subscribeWithFilter")}</div>
           <div className="flex gap-2 items-center">
             <select
               value={activeEventType}
@@ -136,15 +132,15 @@ export function FeedPanel() {
               }}
               className="px-2 py-1.5 text-xs bg-gray-700 rounded text-white border border-gray-600"
             >
-              {EVENT_TYPES.map((t) => (
-                <option key={t} value={t}>{t}</option>
+              {EVENT_TYPES.map((et) => (
+                <option key={et} value={et}>{et}</option>
               ))}
             </select>
             <input
               type="text"
               value={activeFilter}
               onChange={(e) => setActiveFilter(e.target.value)}
-              placeholder='filter JSON, e.g. {"category":"tech"}'
+              placeholder={t("feed.filterPlaceholder")}
               className="flex-1 px-2 py-1.5 text-xs bg-gray-700 rounded text-white border border-gray-600 focus:border-indigo-500 focus:outline-none font-mono"
             />
             {!subscribed ? (
@@ -152,18 +148,17 @@ export function FeedPanel() {
                 onClick={handleSubscribe}
                 className="px-3 py-1.5 text-xs bg-green-600 hover:bg-green-700 rounded transition-colors whitespace-nowrap"
               >
-                Subscribe
+                {t("feed.subscribe")}
               </button>
             ) : (
               <button
                 onClick={handleUnsubscribe}
                 className="px-3 py-1.5 text-xs bg-red-600 hover:bg-red-700 rounded transition-colors whitespace-nowrap"
               >
-                Unsubscribe
+                {t("feed.unsubscribe")}
               </button>
             )}
           </div>
-          {/* Filter presets */}
           <div className="flex gap-1 flex-wrap">
             {FILTER_PRESETS[activeEventType].map((preset) => (
               <button
@@ -175,22 +170,21 @@ export function FeedPanel() {
                     : "border-gray-600 text-gray-400 hover:text-gray-300"
                 }`}
               >
-                {preset || "no filter"}
+                {preset || t("feed.noFilter")}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Event Stream */}
         {entries.length > 0 && (
           <div className="bg-gray-800 rounded-lg p-3 space-y-2">
             <div className="flex items-center justify-between">
               <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                Event Stream
+                {t("feed.eventStream")}
               </div>
               {subscribed && (
                 <span className="px-1.5 py-0.5 bg-green-600/30 text-green-400 rounded text-[10px] animate-pulse">
-                  LIVE
+                  {t("feed.live")}
                 </span>
               )}
             </div>
@@ -202,7 +196,7 @@ export function FeedPanel() {
                     <span className="text-[10px]">
                       {Object.keys(entry.filter).length > 0
                         ? `filter: ${JSON.stringify(entry.filter)}`
-                        : "no filter"}
+                        : t("feed.noFilter")}
                     </span>
                     <span className="text-[10px] ml-auto">
                       {new Date(entry.timestamp).toLocaleTimeString()}
@@ -217,10 +211,9 @@ export function FeedPanel() {
           </div>
         )}
 
-        {/* Feed Posts */}
         {posts.length === 0 ? (
           <div className="flex items-center justify-center py-8 text-gray-500 text-xs">
-            No posts yet. Create one above!
+            {t("feed.noPostsYet")}
           </div>
         ) : (
           <div className="space-y-2">

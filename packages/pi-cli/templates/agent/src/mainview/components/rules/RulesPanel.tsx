@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus, Trash2, Shield, CheckCircle2, Circle } from "lucide-react";
 import { useRulesStore } from "../../stores/use-rules-store";
 
 export function RulesPanel() {
+  const { t } = useTranslation();
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [pattern, setPattern] = useState("");
@@ -29,14 +31,14 @@ export function RulesPanel() {
       <div className="p-3 border-b border-gray-700 flex items-center justify-between">
         <div className="flex items-center gap-2 text-sm text-gray-300">
           <Shield className="w-4 h-4" />
-          Rules
+          {t("rules.title")}
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
           className="flex items-center gap-1 px-2 py-1 text-xs bg-indigo-600 hover:bg-indigo-500 rounded text-white"
         >
           <Plus className="w-3 h-3" />
-          Add Rule
+          {t("rules.add")}
         </button>
       </div>
 
@@ -46,14 +48,14 @@ export function RulesPanel() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Rule name"
+            placeholder={t("rules.namePlaceholder")}
             className="bg-gray-900 text-gray-100 px-3 py-1.5 rounded text-sm border border-gray-600 focus:border-indigo-500 focus:outline-none"
           />
           <input
             type="text"
             value={pattern}
             onChange={(e) => setPattern(e.target.value)}
-            placeholder="Glob pattern (e.g. **/*.ts)"
+            placeholder={t("rules.patternPlaceholder")}
             className="bg-gray-900 text-gray-100 px-3 py-1.5 rounded text-sm font-mono border border-gray-600 focus:border-indigo-500 focus:outline-none"
           />
           <button
@@ -61,7 +63,7 @@ export function RulesPanel() {
             disabled={!name.trim() || !pattern.trim()}
             className="self-end px-3 py-1 text-xs bg-green-600 hover:bg-green-500 disabled:opacity-40 rounded text-white"
           >
-            Save
+            {t("rules.save")}
           </button>
         </div>
       )}
@@ -70,8 +72,8 @@ export function RulesPanel() {
         {rules.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-600">
             <Shield className="w-12 h-12 mb-3 opacity-30" />
-            <span className="text-sm">No rules defined yet</span>
-            <span className="text-xs mt-1">Click "Add Rule" to create one</span>
+            <span className="text-sm">{t("rules.empty")}</span>
+            <span className="text-xs mt-1">{t("rules.emptyHint")}</span>
           </div>
         ) : (
           <div className="space-y-2.5">
@@ -103,7 +105,7 @@ export function RulesPanel() {
                   </button>
                 </div>
                 <p className={`text-xs mt-1.5 ml-6 ${rule.enabled ? "text-gray-400" : "text-gray-600"}`}>
-                  Pattern: <code className="font-mono text-gray-500">{rule.pattern}</code>
+                  {t("rules.pattern")} <code className="font-mono text-gray-500">{rule.pattern}</code>
                 </p>
               </div>
             ))}

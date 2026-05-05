@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 
 interface ConfirmDialogProps {
   title: string;
@@ -8,6 +9,8 @@ interface ConfirmDialogProps {
 }
 
 export function ConfirmDialog({ title, message, onConfirm, onCancel }: ConfirmDialogProps) {
+  const { t } = useTranslation();
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Escape") onCancel();
@@ -35,13 +38,13 @@ export function ConfirmDialog({ title, message, onConfirm, onCancel }: ConfirmDi
             className="px-3 py-1.5 text-xs bg-gray-700 hover:bg-gray-600 rounded transition-colors text-gray-200"
             onClick={onCancel}
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             className="px-3 py-1.5 text-xs bg-red-600 hover:bg-red-700 rounded transition-colors text-white"
             onClick={onConfirm}
           >
-            Delete
+            {t("common.delete")}
           </button>
         </div>
       </div>
