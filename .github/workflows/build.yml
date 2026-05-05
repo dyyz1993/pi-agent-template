@@ -1,0 +1,196 @@
+name: Build & Package
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        template: [agent, chat, general]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build web frontend
+        run: |
+          cd templates/${{ matrix.template }}
+          bun run build
+
+      - name: Verify build output
+        run: |
+          test -f templates/${{ matrix.template }}/dist/index.html
+          test -d templates/${{ matrix.template }}/dist/assets
+
+      - name: Upload web build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-${{ matrix.template }}
+          path: templates/${{ matrix.template }}/dist/
+          retention-days: 7
+
+  # ── 桌面应用构建（Electrobun 跨平台）────────────────
+  # Electrobun 当前主要支持 macOS，Windows/Linux 支持尚在开发中。
+  # 使用 continue-on-error: true 容错，等 Electrobun 正式支持后移除。
+  # macOS runner 计费是 Linux 的 10 倍，Windows runner 是 Linux 的 10 倍。
+  # 本 job 仅在 main 分支或手动触发时运行，避免 PR 消耗过多资源。
+  build-desktop:
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos
+            runner: macos-latest
+            template: agent
+          - platform: windows
+            runner: windows-latest
+            template: agent
+          - platform: linux
+            runner: ubuntu-latest
+            template: agent
+    runs-on: ${{ matrix.runner }}
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build frontend for desktop
+        run: |
+          cd templates/${{ matrix.template }}
+          bun run build
+
+      - name: Build Electrobun desktop app (${{ matrix.platform }})
+        run: |
+          cd templates/${{ matrix.template }}
+          bun run build:canary
+
+      - name: Upload desktop build artifact (${{ matrix.platform }})
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.platform }}-${{ matrix.template }}
+          path: |
+            templates/${{ matrix.template }}/dist/
+            templates/${{ matrix.template }}/build/
+          retention-days: 7
+
+  smoke-server:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        template: [agent, chat, general]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Start server and smoke test
+        run: |
+          cd templates/${{ matrix.template }}
+
+          PORT=$((4000 + RANDOM % 1000))
+          AUTH_TOKEN="ci-smoke-test-token" PORT=$PORT bun src/server.ts &
+          SERVER_PID=$!
+
+          echo "Waiting for server (PID $SERVER_PID) on port $PORT..."
+          for i in $(seq 1 30); do
+            if curl -sf "http://localhost:$PORT/health" > /dev/null 2>&1; then
+              echo "Server is ready!"
+              break
+            fi
+            if [ "$i" = "30" ]; then
+              echo "Server failed to start within 30s"
+              kill $SERVER_PID 2>/dev/null || true
+              exit 1
+            fi
+            sleep 1
+          done
+
+          echo "=== Health check ==="
+          HEALTH=$(curl -s "http://localhost:$PORT/health")
+          echo "$HEALTH"
+          echo "$HEALTH" | grep -q '"status":"ok"' || { echo "FAIL: health check"; kill $SERVER_PID; exit 1; }
+
+          echo "=== Unauthenticated file access (expect 401) ==="
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT/file/test.txt")
+          echo "HTTP $STATUS"
+          [ "$STATUS" = "401" ] || { echo "FAIL: expected 401"; kill $SERVER_PID; exit 1; }
+
+          echo "=== Authenticated file access (expect 404, not 401) ==="
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ci-smoke-test-token" "http://localhost:$PORT/file/test.txt")
+          echo "HTTP $STATUS"
+          [ "$STATUS" != "401" ] || { echo "FAIL: token auth rejected"; kill $SERVER_PID; exit 1; }
+
+          echo "=== Authenticated info endpoint ==="
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ci-smoke-test-token" "http://localhost:$PORT/info/test.txt")
+          echo "HTTP $STATUS"
+          [ "$STATUS" != "401" ] || { echo "FAIL: token auth rejected on /info"; kill $SERVER_PID; exit 1; }
+
+          echo "All smoke tests passed!"
+          kill $SERVER_PID
+
+      - name: Cleanup
+        if: always()
+        run: pkill -f "bun src/server.ts" 2>/dev/null || true
+
+  smoke-hybrid:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Test hybrid mode server startup
+        run: |
+          cd templates/agent
+
+          AUTH_TOKEN="hybrid-test-token" \
+          ENABLE_WEB_SERVICE=true \
+          PORT=3200 \
+          bun src/server.ts &
+          SERVER_PID=$!
+
+          for i in $(seq 1 30); do
+            if curl -sf "http://localhost:3200/health" > /dev/null 2>&1; then
+              echo "Hybrid server is ready!"
+              break
+            fi
+            if [ "$i" = "30" ]; then
+              echo "Hybrid server failed to start"
+              kill $SERVER_PID 2>/dev/null || true
+              exit 1
+            fi
+            sleep 1
+          done
+
+          curl -s "http://localhost:3200/health" | grep -q '"status":"ok"'
+          echo "Hybrid mode smoke test passed!"
+          kill $SERVER_PID
+
+      - name: Cleanup
+        if: always()
+        run: pkill -f "bun src/server.ts" 2>/dev/null || true
