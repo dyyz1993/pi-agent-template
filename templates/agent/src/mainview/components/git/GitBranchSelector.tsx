@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useRef } from "react";
 import { GitBranch as BranchIcon, Check } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { useGitStore, type GitBranch } from "../../stores/use-git-store";
 import { useExplorerStore } from "../../stores/use-explorer-store";
 
@@ -12,9 +13,13 @@ interface GitBranchSelectorProps {
 }
 
 export function GitBranchSelector({ onClose }: GitBranchSelectorProps) {
-  const branches = useGitStore((s) => s.branches);
-  const loadingBranches = useGitStore((s) => s.loadingBranches);
-  const loadingAction = useGitStore((s) => s.loadingAction);
+  const { branches, loadingBranches, loadingAction } = useGitStore(
+    useShallow((s) => ({
+      branches: s.branches,
+      loadingBranches: s.loadingBranches,
+      loadingAction: s.loadingAction,
+    }))
+  );
   const fetchBranches = useGitStore((s) => s.fetchBranches);
   const checkout = useGitStore((s) => s.checkout);
   const currentPath = useExplorerStore((s) => s.currentPath);

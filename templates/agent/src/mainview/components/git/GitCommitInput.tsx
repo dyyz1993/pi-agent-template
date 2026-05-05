@@ -1,13 +1,18 @@
 import { useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Check } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 import { useGitStore } from "../../stores/use-git-store";
 import { useExplorerStore } from "../../stores/use-explorer-store";
 
 export function GitCommitInput() {
   const { t } = useTranslation();
-  const staged = useGitStore((s) => s.staged);
-  const loadingAction = useGitStore((s) => s.loadingAction);
+  const { staged, loadingAction } = useGitStore(
+    useShallow((s) => ({
+      staged: s.staged,
+      loadingAction: s.loadingAction,
+    }))
+  );
   const commit = useGitStore((s) => s.commit);
   const currentPath = useExplorerStore((s) => s.currentPath);
 
