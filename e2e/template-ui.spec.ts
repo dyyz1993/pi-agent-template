@@ -90,17 +90,18 @@ if (process.env.TEMPLATE_TYPE !== "chat") {
       await expect(page.locator("button:has-text('Send')")).toBeVisible();
     });
 
-  test("should accept input text", async ({ page }) => {
-    await waitForAppReady(page);
+    test("should accept input text", async ({ page }) => {
+      await waitForAppReady(page);
 
-    const chatTab = page.locator('button[title="Chat"]');
-    await chatTab.click();
+      const chatTab = page.locator('button[title="Chat"]');
+      await chatTab.click();
 
-    const input = page.locator('input[placeholder="Type a message..."]');
-    await input.fill("Hello from E2E test");
-    await expect(input).toHaveValue("Hello from E2E test");
+      const input = page.locator('input[placeholder="Type a message..."]');
+      await input.fill("Hello from E2E test");
+      await expect(input).toHaveValue("Hello from E2E test");
+    });
   });
-});
+}
 
 if (process.env.TEMPLATE_TYPE !== "chat") {
   test.describe.skip("Explorer Panel", () => {
