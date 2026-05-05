@@ -408,6 +408,35 @@ async function main() {
   }
   log("setup", "Project created successfully");
 
+  // Initialize git commit so git.log and git.diff tests work
+  log("setup", "Initializing git commit...");
+  try {
+    execSync("git config user.email 'ci@example.com'", { cwd: projectDir, stdio: "pipe" });
+    execSync("git config user.name 'CI Bot'", { cwd: projectDir, stdio: "pipe" });
+
+    // Check if there's already a commit
+    const commitCount = execSync("git rev-list --count HEAD 2>/dev/null || echo 0", {
+      cwd: projectDir,
+      stdio: "pipe",
+      encoding: "utf-8",
+    }).trim();
+
+    if (commitCount === "0") {
+      log("setup", "No commits found, creating initial commit...");
+      execSync("git add .", { cwd: projectDir, stdio: "pipe" });
+      execSync('git commit -m "chore: initial commit"', { cwd: projectDir, stdio: "pipe" });
+      log("setup", "Initial commit created");
+    } else {
+      log("setup", `Found ${commitCount} existing commit(s), skipping initial commit`);
+    }
+  } catch (err) {
+    const error = err as Error & { stdout?: string; stderr?: string; status?: number };
+    fail(
+      "setup",
+      `Failed to initialize git: ${error.message}\nstdout: ${error.stdout || "none"}\nstderr: ${error.stderr || "none"}`
+    );
+  }
+
   // Start server
   log("server", `Starting server in ${projectDir}...`);
   serverProcess = spawn("bun", ["run", "src/server.ts"], {
