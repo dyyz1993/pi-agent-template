@@ -175,7 +175,7 @@ describe("Logger (shared)", () => {
 	});
 
 	it("should create default log dir if not configured", async () => {
-		const { createLogger, flushLogs, _logDir } = await import("../logger");
+		const { createLogger, flushLogs } = await import("../logger");
 		const logger = createLogger("default-dir");
 		logger.info("default test");
 

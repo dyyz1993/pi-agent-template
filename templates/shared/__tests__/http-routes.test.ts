@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 function mockRes() {
 	const state = { statusCode: 200, body: "", headers: {} as Record<string, string> };
 
-	const res: any = {
+	const res = {
 		setHeader(key: string, val: string) {
 			state.headers[key] = val;
 		},
@@ -20,7 +20,7 @@ function mockRes() {
 	return { res, state };
 }
 
-function mockReq(url: string, opts?: { method?: string; headers?: Record<string, string> }): any {
+function mockReq(url: string, opts?: { method?: string; headers?: Record<string, string> }) {
 	return {
 		url,
 		method: opts?.method ?? "GET",
