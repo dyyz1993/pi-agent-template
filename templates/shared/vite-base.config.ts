@@ -25,6 +25,11 @@ export function createViteConfig(dirname: string) {
     build: {
       outDir: "../../dist",
       emptyOutDir: true,
+      target: "es2020",
+      cssMinify: true,
+      minify: "esbuild",
+      reportCompressedSize: true,
+      chunkSizeWarningLimit: 1000,
       rollupOptions: {
         output: {
           manualChunks: {
@@ -34,8 +39,12 @@ export function createViteConfig(dirname: string) {
             "vendor-markdown": ["react-markdown", "remark-gfm", "prism-react-renderer"],
             "vendor-diff": ["react-diff-viewer-continued"],
           },
+          compact: true,
         },
       },
+    },
+    css: {
+      devSourcemap: false,
     },
     server: {
       port: parseInt(process.env.VITE_PORT || "5173"),
