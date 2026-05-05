@@ -132,20 +132,53 @@ if (process.env.TEMPLATE_TYPE !== "chat") {
 }
 
 test.describe("Responsive Layout", () => {
-  test("should show mobile tab bar on small screens", async ({ page }) => {
+  async function mockWebSocketAndGoto(page: import("@playwright/test").Page) {
+    await page.addInitScript(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      type AnyFn = (...args: any[]) => void;
+      class MockWebSocket {
+        static CONNECTING = 0;
+        static OPEN = 1;
+        static CLOSING = 2;
+        static CLOSED = 3;
+        readyState = 1;
+        send() {}
+        close() {}
+        addEventListener(type: string, handler: AnyFn) {
+          if (type === "open") setTimeout(() => handler({}), 50);
+        }
+        removeEventListener() {}
+        onopen: AnyFn | null = null;
+        onclose: AnyFn | null = null;
+        onerror: AnyFn | null = null;
+        onmessage: AnyFn | null = null;
+      }
+      // @ts-expect-error mock WebSocket for CI
+      window.WebSocket = MockWebSocket;
+    });
     await page.setViewportSize({ width: 375, height: 667 });
-    await waitForAppReady(page);
+    await page.goto("/");
+    await page.waitForFunction(
+      () =>
+        !!document.querySelector('[data-testid="mobile-tab-bar"]') ||
+        !!document.querySelector('button[data-testid^="tab-"]') ||
+        !!document.querySelector('[data-testid="activity-bar"]'),
+      { timeout: 30_000 }
+    );
+  }
 
-    const explorerBtn = page.locator('button[data-testid="tab-explorer"]').first();
-    if (await explorerBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
-      await expect(page.locator('button[data-testid="tab-explorer"]')).toHaveCount(1);
-      await expect(page.locator('[data-testid="activity-bar"]')).toHaveCount(0);
-    }
+  test("should show mobile tab bar on small screens", async ({ page }) => {
+    await mockWebSocketAndGoto(page);
+
+    const tabs = page.locator('button[data-testid^="tab-"]');
+    await expect(tabs.first()).toBeVisible({ timeout: 10_000 });
+
+    const mobileTabBar = page.locator('[data-testid="mobile-tab-bar"]');
+    await expect(mobileTabBar).toBeVisible();
   });
 
   test("should hide activity bar on mobile", async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 667 });
-    await waitForAppReady(page);
+    await mockWebSocketAndGoto(page);
 
     const activityBar = page.locator('[data-testid="activity-bar"]');
     await expect(activityBar).toHaveCount(0);
