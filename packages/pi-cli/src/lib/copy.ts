@@ -126,7 +126,7 @@ function cleanSharedViteConfig(sharedDir: string): void {
 		);
 		config = config.replace(
 			/resolve\(\s*\n?\s*dirname,\s*\n?\s*"\.\.",\s*\n?\s*"shared"\s*\n?\s*\)/g,
-			"resolve(dirname)"
+			'resolve(dirname, "shared")'
 		);
 		writeFileSync(configPath, config);
 	}
