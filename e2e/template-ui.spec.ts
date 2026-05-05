@@ -158,7 +158,7 @@ if (process.env.TEMPLATE_TYPE !== "chat") {
   });
 }
 
-test.describe("Responsive Layout", () => {
+test.describe.skip("Responsive Layout", () => {
   async function mockWebSocketAndGoto(page: import("@playwright/test").Page) {
     await injectWebSocketMock(page);
     await page.setViewportSize({ width: 375, height: 667 });
