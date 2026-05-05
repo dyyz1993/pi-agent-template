@@ -13,8 +13,9 @@ export class ElectrobunTransport implements Transport {
 
   setBrowserView(view: { executeJavascript: (js: string) => void }): void {
     this.browserView = view;
-    // eslint-disable-next-line no-console
-    console.log("[IPC Transport] BrowserView set");
+    if (import.meta.env.DEV) {
+      console.log("[IPC Transport] BrowserView set");
+    }
   }
 
   async send(message: unknown): Promise<void> {
