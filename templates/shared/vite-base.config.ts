@@ -2,8 +2,6 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { resolve } from "path";
 import { readFileSync, existsSync } from "fs";
-import { visualizer } from "rollup-plugin-visualizer";
-
 export function createViteConfig(dirname: string) {
 	const PORT_FILE = resolve(dirname, ".server-port");
 
@@ -21,16 +19,7 @@ export function createViteConfig(dirname: string) {
 	const backendPort = getBackendPort();
 
 	return defineConfig({
-		plugins: [
-			react(),
-			process.env.ANALYZE &&
-				visualizer({
-					open: true,
-					filename: "dist/stats.html",
-					gzipSize: true,
-					brotliSize: true,
-				}),
-		],
+		plugins: [react()],
 		root: "src/mainview",
 		build: {
 			outDir: "../../dist",
