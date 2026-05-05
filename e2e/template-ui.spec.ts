@@ -58,7 +58,7 @@ async function waitForAppReady(page: import("@playwright/test").Page) {
   }, { timeout: 15_000 });
 }
 
-test("should switch between activity bar tabs", async ({ page }) => {
+test.skip(({ project }) => process.env.TEMPLATE_TYPE === "chat", "Chat template doesn't have Explorer tab")("should switch between activity bar tabs", async ({ page }) => {
   await waitForAppReady(page);
 
   const explorerBtn = page.locator('button[title="Explorer"]');

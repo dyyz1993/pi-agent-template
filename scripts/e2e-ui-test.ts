@@ -128,7 +128,7 @@ async function main() {
     execSync("npx playwright test --reporter=list", {
       cwd: rootDir,
       stdio: "inherit",
-      env: { ...process.env },
+      env: { ...process.env, TEMPLATE_TYPE: templateType },
       timeout: 90_000,
     });
     log("test", "Playwright tests PASSED");
