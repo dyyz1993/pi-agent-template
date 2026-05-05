@@ -33,6 +33,7 @@ export default tseslint.config(
       ...jsxA11y.configs.recommended.rules,
       'jsx-a11y/click-events-have-key-events': 'warn',
       'jsx-a11y/no-static-element-interactions': 'warn',
+      'jsx-a11y/no-autofocus': 'warn',
       // TS 严格规则
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-empty-object-type': ['error', { allowObjectTypes: 'always', allowInterfaces: 'with-single-extends' }],

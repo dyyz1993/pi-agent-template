@@ -124,6 +124,10 @@ function cleanSharedViteConfig(sharedDir: string): void {
 			/,?\s*\n?\s*"@dyyz1993\/rpc-core":\s*resolve\(\s*\n?\s*dirname,\s*\n?\s*"\.\.",\s*\n?\s*"\.\.",\s*\n?\s*"packages",\s*\n?\s*"rpc-core",\s*\n?\s*"src",\s*\n?\s*"index\.ts"\s*\n?\s*\),?\s*\n?/g,
 			""
 		);
+		config = config.replace(
+			/resolve\(\s*\n?\s*dirname,\s*\n?\s*"\.\.",\s*\n?\s*"shared"\s*\n?\s*\)/g,
+			"resolve(dirname)"
+		);
 		writeFileSync(configPath, config);
 	}
 }
