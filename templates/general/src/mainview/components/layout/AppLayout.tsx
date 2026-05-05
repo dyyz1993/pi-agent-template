@@ -67,14 +67,14 @@ export function AppLayout({
   ];
 
   return (
-    <div className="h-screen bg-gray-900 text-white flex flex-col overflow-hidden">
+    <div className="h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] flex flex-col overflow-hidden">
       {!isMobile && (
-        <div className="h-8 bg-gray-800 flex items-center px-3 text-xs border-b border-gray-700 flex-shrink-0">
+        <div className="h-8 bg-[var(--color-bg-secondary)] flex items-center px-3 text-xs border-b border-[var(--color-border-primary)] flex-shrink-0">
           <span className={`px-2 py-0.5 rounded flex items-center gap-1 ${mode === "desktop" ? "bg-green-600" : "bg-blue-600"}`}>
             {mode === "desktop" ? <Monitor className="w-3 h-3" /> : <Wifi className="w-3 h-3" />}
             {mode === "desktop" ? t("app.mode.desktop") : t("app.mode.web")}
           </span>
-          <span className="ml-3 text-gray-400">{t("app.title")}</span>
+          <span className="ml-3 text-[var(--color-text-tertiary)]">{t("app.title")}</span>
         </div>
       )}
 
@@ -82,26 +82,26 @@ export function AppLayout({
         {!isMobile && <ActivityBar />}
 
         {showSidebar && isPinned && !isMobile && (
-          <div className="bg-gray-850 border-r border-gray-700 flex flex-col flex-shrink-0 overflow-hidden relative"
+          <div className="bg-[var(--color-bg-primary)] border-r border-[var(--color-border-primary)] flex flex-col flex-shrink-0 overflow-hidden relative"
             style={{ width: sidebarWidth }}>
             {sidebarContent}
             <div
-              className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-gray-700 hover:bg-indigo-500/50 active:bg-indigo-500 transition-colors z-10"
+              className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-[var(--color-border-primary)] hover:bg-indigo-500/50 active:bg-indigo-500 transition-colors z-10"
               onMouseDown={handleResizeStart}
             />
           </div>
         )}
 
         <div className="flex-1 flex flex-col overflow-hidden relative">
-          <div className="flex items-center bg-gray-800 border-b border-gray-700 flex-shrink-0">
+          <div className="flex items-center bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-primary)] flex-shrink-0">
             {centerTabs.map(({ id, icon: Icon, label }) => (
               <button
                 key={id}
                 onClick={() => setCenterTab(id)}
                 className={`flex items-center gap-1.5 px-4 py-1.5 text-xs border-b-2 transition-colors ${
                   centerTab === id
-                    ? "border-indigo-500 text-white"
-                    : "border-transparent text-gray-500 hover:text-gray-300"
+                    ? "border-[var(--color-accent)] text-[var(--color-text-primary)]"
+                    : "border-transparent text-[var(--color-text-placeholder)] hover:text-[var(--color-text-secondary)]"
                 }`}
               >
                 <Icon className="w-3.5 h-3.5" />
@@ -132,7 +132,7 @@ export function AppLayout({
             onClick={() => setDrawerOpen(false)}
           />
           <div
-            className="fixed left-0 top-0 w-60 z-50 bg-gray-850 border-r border-gray-700 flex flex-col overflow-hidden"
+            className="fixed left-0 top-0 w-60 z-50 bg-[var(--color-bg-primary)] border-r border-[var(--color-border-primary)] flex flex-col overflow-hidden"
             style={isMobile ? { top: 0, bottom: 56 } : { top: 0, bottom: 0 }}
           >
             {sidebarContent}

@@ -25,6 +25,15 @@ export function createViteConfig(dirname: string) {
     build: {
       outDir: "../../dist",
       emptyOutDir: true,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            "vendor-react": ["react", "react-dom"],
+            "vendor-state": ["zustand"],
+            "vendor-i18n": ["i18next", "react-i18next"],
+          },
+        },
+      },
     },
     server: {
       port: parseInt(process.env.VITE_PORT || "5173"),

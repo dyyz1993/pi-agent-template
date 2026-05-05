@@ -40,11 +40,11 @@ export function DebugPanel() {
 
   if (collapsed) {
     return (
-      <div className="w-12 bg-gray-850 border-l border-gray-700 flex flex-col items-center justify-start pt-2 flex-shrink-0">
+      <div className="w-12 bg-[var(--color-bg-primary)] border-l border-[var(--color-border-primary)] flex flex-col items-center justify-start pt-2 flex-shrink-0">
         <button
           onClick={() => setCollapsed(false)}
           title="Expand Debug Panel"
-          className="w-10 h-6 flex items-center gap-1 text-xs text-gray-400 hover:text-white transition-colors"
+          className="w-10 h-6 flex items-center gap-1 text-xs text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] transition-colors"
         >
           <ChevronRight className="w-3 h-3" />
           {t("tabs.debug")}
@@ -54,13 +54,12 @@ export function DebugPanel() {
   }
 
   return (
-    <div className="w-72 bg-gray-850 border-l border-gray-700 flex flex-col flex-shrink-0 overflow-y-auto">
-      {/* Collapse toggle */}
-      <div className="flex items-center justify-between px-2 py-1.5 border-b border-gray-700">
+    <div className="w-72 bg-[var(--color-bg-primary)] border-l border-[var(--color-border-primary)] flex flex-col flex-shrink-0 overflow-y-auto">
+      <div className="flex items-center justify-between px-2 py-1.5 border-b border-[var(--color-border-primary)]">
         <button
           onClick={() => setCollapsed(true)}
           title="Collapse Debug Panel"
-          className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-white transition-colors"
+          className="flex items-center gap-1 text-[11px] text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] transition-colors"
         >
           <ChevronDown className="w-3 h-3" />
           {t("tabs.debug")}
@@ -68,17 +67,17 @@ export function DebugPanel() {
         <button
           onClick={clearDebug}
           title="Clear all debug data"
-          className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-red-400 transition-colors"
+          className="flex items-center gap-1 text-[11px] text-[var(--color-text-placeholder)] hover:text-red-400 transition-colors"
         >
           <Trash2 className="w-3 h-3" />
           Clear
         </button>
       </div>
       {/* RPC Calls */}
-      <div className="p-3 border-b border-gray-700">
+      <div className="p-3 border-b border-[var(--color-border-primary)]">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-xs font-semibold flex items-center gap-1.5">
-            <Send className="w-3.5 h-3.5 text-indigo-400" />
+            <Send className="w-3.5 h-3.5 text-[var(--color-text-accent)]" />
             {t("debug.rpcCalls")}
           </h2>
         </div>
@@ -86,7 +85,7 @@ export function DebugPanel() {
           <select
             value={method}
             onChange={(e) => setMethod(e.target.value as DemoMethod)}
-            className="flex-1 px-2 py-1 text-xs bg-gray-700 rounded text-white border border-gray-600"
+            className="flex-1 px-2 py-1 text-xs bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-primary)] border border-[var(--color-border-secondary)]"
           >
             <option value="system.ping">system.ping</option>
             <option value="system.hello">system.hello</option>
@@ -95,15 +94,15 @@ export function DebugPanel() {
           </select>
           <button
             onClick={() => callRPC("")}
-            className="px-3 py-1 text-xs bg-indigo-600 hover:bg-indigo-700 rounded transition-colors flex items-center gap-1"
+            className="px-3 py-1 text-xs bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] rounded transition-colors flex items-center gap-1"
           >
             <Play className="w-3 h-3" />
             {t("debug.call")}
           </button>
         </div>
         {!!result && (
-          <div className="bg-gray-700 rounded p-2">
-            <pre className="text-green-400 text-[11px] overflow-x-auto whitespace-pre-wrap">
+          <div className="bg-[var(--color-bg-tertiary)] rounded p-2">
+            <pre className="text-[var(--color-text-success)] text-[11px] overflow-x-auto whitespace-pre-wrap">
               {JSON.stringify(result, null, 2)}
             </pre>
           </div>
@@ -111,13 +110,13 @@ export function DebugPanel() {
       </div>
 
       {/* Subscriptions */}
-      <div className="p-3 border-b border-gray-700">
+      <div className="p-3 border-b border-[var(--color-border-primary)]">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-xs font-semibold flex items-center gap-1.5">
             {timerRunning ? (
               <Square className="w-3.5 h-3.5 text-green-400 fill-green-400" />
             ) : (
-              <Play className="w-3.5 h-3.5 text-gray-400" />
+              <Play className="w-3.5 h-3.5 text-[var(--color-text-tertiary)]" />
             )}
             {t("debug.subscriptions")}
             {timerRunning && (
@@ -127,7 +126,7 @@ export function DebugPanel() {
             )}
           </h2>
           <div className="flex gap-2 items-center">
-            <span className="text-[11px] text-gray-400">
+            <span className="text-[11px] text-[var(--color-text-tertiary)]">
               {t("debug.events", { count: tickCount })}
             </span>
             {!subscriptionId ? (
@@ -147,9 +146,9 @@ export function DebugPanel() {
             )}
           </div>
         </div>
-        <div className="bg-gray-700 rounded p-2 max-h-32 overflow-y-auto font-mono text-[11px]">
+        <div className="bg-[var(--color-bg-tertiary)] rounded p-2 max-h-32 overflow-y-auto font-mono text-[11px]">
           {tickEvents.length === 0 ? (
-            <div className="text-gray-500 text-center py-1">{t("debug.noEvents")}</div>
+            <div className="text-[var(--color-text-placeholder)] text-center py-1">{t("debug.noEvents")}</div>
           ) : (
             tickEvents.map((ev, i) => (
               <div key={i} className="text-cyan-400">{ev}</div>
@@ -161,7 +160,7 @@ export function DebugPanel() {
       {/* Logs */}
       <div className="p-3 flex flex-col flex-1 min-h-0">
         <h2 className="text-xs font-semibold mb-2 flex-shrink-0 flex items-center gap-1.5">
-          <File className="w-3.5 h-3.5 text-gray-400" />
+          <File className="w-3.5 h-3.5 text-[var(--color-text-tertiary)]" />
           {t("debug.logs")}
         </h2>
         <div className="flex-1 bg-black rounded p-2 overflow-y-auto font-mono text-[11px]">
