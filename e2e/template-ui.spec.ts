@@ -146,7 +146,7 @@ const isAgent = process.env.TEMPLATE_TYPE === "agent";
     await waitForAppReady(page);
 
     await expect(
-      page.locator("text=Enter path and click refresh").or(page.locator("text=Explorer"))
+      page.locator("text=Enter path and click refresh").first()
     ).toBeVisible();
   });
 });
