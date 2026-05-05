@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { apiClient } from "../lib/api-client";
 import type { RPCMethods } from "../lib/api-client";
+import { rpcCache } from "../lib/rpc-cache";
 import type { TreeNode, FilePreview, EditingNode } from "../types";
 import { isTextFile, isImageFile, formatSize } from "../utils/file-utils";
 import { MAX_PREVIEW_SIZE } from "../utils/constants";
@@ -216,6 +217,7 @@ export const useExplorerStore = create<ExplorerState>((set, get) => ({
     const addLog = useLogStore.getState().addLog;
     try {
       await apiClient.call("file.createFile", { dirPath, name });
+      rpcCache.invalidate("file.listDir");
       addLog(`Created file: ${name}`);
       set({ editingNode: null });
       await get().refreshDir(dirPath);
@@ -229,6 +231,7 @@ export const useExplorerStore = create<ExplorerState>((set, get) => ({
     const addLog = useLogStore.getState().addLog;
     try {
       await apiClient.call("file.createDir", { dirPath, name });
+      rpcCache.invalidate("file.listDir");
       addLog(`Created directory: ${name}`);
       set({ editingNode: null });
       await get().refreshDir(dirPath);
@@ -243,6 +246,7 @@ export const useExplorerStore = create<ExplorerState>((set, get) => ({
     const addLog = useLogStore.getState().addLog;
     try {
       const res = await apiClient.call("file.rename", { oldPath, newName });
+      rpcCache.invalidate("file.listDir");
       addLog(`Renamed to: ${newName}`);
       set({
         treeNodes: renameInTree(treeNodes, oldPath, res.newPath, newName),
@@ -260,6 +264,7 @@ export const useExplorerStore = create<ExplorerState>((set, get) => ({
     const addLog = useLogStore.getState().addLog;
     try {
       await apiClient.call("file.delete", { path });
+      rpcCache.invalidate("file.listDir");
       addLog(`Deleted: ${path}`);
       // Find parent dir to refresh
       const pathParts = path.split("/");
