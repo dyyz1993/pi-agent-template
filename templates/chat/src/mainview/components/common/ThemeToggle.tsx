@@ -6,6 +6,7 @@ export function ThemeToggle() {
 
   return (
     <button
+      data-testid="theme-toggle"
       onClick={toggleTheme}
       className="p-1.5 rounded-md hover:bg-[var(--color-bg-hover)] transition-colors"
       title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}

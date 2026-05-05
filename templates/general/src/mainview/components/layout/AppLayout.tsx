@@ -13,6 +13,8 @@ import { FeedPanel } from "../feed/FeedPanel";
 import { FilePreviewOverlay } from "../file-preview/FilePreviewOverlay";
 import { DiffViewerPanel } from "../diff/DiffViewerPanel";
 import { DebugPanel } from "../debug/DebugPanel";
+import { ThemeToggle } from "../common/ThemeToggle";
+import { LanguageSwitcher } from "../common/LanguageSwitcher";
 
 export type CenterTab = "chat" | "feed";
 
@@ -75,6 +77,10 @@ export function AppLayout({
             {mode === "desktop" ? t("app.mode.desktop") : t("app.mode.web")}
           </span>
           <span className="ml-3 text-[var(--color-text-tertiary)]">{t("app.title")}</span>
+          <div className="ml-auto flex items-center gap-1">
+            <LanguageSwitcher />
+            <ThemeToggle />
+          </div>
         </div>
       )}
 

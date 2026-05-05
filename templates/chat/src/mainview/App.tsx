@@ -10,6 +10,8 @@ import { useBreakpointSync } from "./hooks/use-breakpoint";
 import { ActivityBar } from "./components/activity-bar/ActivityBar";
 import { MobileTabBar } from "./components/activity-bar/MobileTabBar";
 import { ChatPanel } from "./components/chat/ChatPanel";
+import { ThemeToggle } from "./components/common/ThemeToggle";
+import { LanguageSwitcher } from "./components/common/LanguageSwitcher";
 
 function App() {
   const { t } = useTranslation();
@@ -90,6 +92,10 @@ function App() {
             {mode === "desktop" ? t("app.mode.desktop") : t("app.mode.web")}
           </span>
           <span className="ml-3 text-[var(--color-text-tertiary)]">{t("app.title")}</span>
+          <div className="ml-auto flex items-center gap-1">
+            <LanguageSwitcher />
+            <ThemeToggle />
+          </div>
         </div>
       )}
 
