@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { Folder, RefreshCw, File, FolderPlus, Pencil, Trash2, Copy } from "lucide-react";
 import type { TreeNode } from "../../types";
 import { readDropItems } from "../../utils/drop-handler";
@@ -16,6 +17,7 @@ interface ContextMenuState {
 }
 
 export function ExplorerSidebar({ hideOuterShell }: { hideOuterShell?: boolean }) {
+  const { t } = useTranslation();
   const treeNodes = useExplorerStore((s) => s.treeNodes);
   const currentPath = useExplorerStore((s) => s.currentPath);
   const selectedPath = useExplorerStore((s) => s.selectedPath);
@@ -74,26 +76,26 @@ export function ExplorerSidebar({ hideOuterShell }: { hideOuterShell?: boolean }
 
     if (!node) {
       return [
-        { label: "New File", icon: <File className="w-3 h-3" />, onClick: () => startEditing(currentPath, "newFile") },
-        { label: "New Folder", icon: <FolderPlus className="w-3 h-3" />, onClick: () => startEditing(currentPath, "newDir") },
-        { label: "Refresh", icon: <RefreshCw className="w-3 h-3" />, onClick: listRootDir, divider: true },
+        { label: t("explorer.newFile"), icon: <File className="w-3 h-3" />, onClick: () => startEditing(currentPath, "newFile") },
+        { label: t("explorer.newFolder"), icon: <FolderPlus className="w-3 h-3" />, onClick: () => startEditing(currentPath, "newDir") },
+        { label: t("explorer.refresh"), icon: <RefreshCw className="w-3 h-3" />, onClick: listRootDir, divider: true },
       ];
     }
 
     const items: MenuItem[] = [];
     if (node.type === "directory") {
       items.push(
-        { label: "New File", icon: <File className="w-3 h-3" />, onClick: () => startEditing(node.path, "newFile") },
-        { label: "New Folder", icon: <FolderPlus className="w-3 h-3" />, onClick: () => startEditing(node.path, "newDir") },
+        { label: t("explorer.newFile"), icon: <File className="w-3 h-3" />, onClick: () => startEditing(node.path, "newFile") },
+        { label: t("explorer.newFolder"), icon: <FolderPlus className="w-3 h-3" />, onClick: () => startEditing(node.path, "newDir") },
       );
     }
     items.push(
-      { label: "Rename", icon: <Pencil className="w-3 h-3" />, onClick: () => startEditing(node.path, "rename"), divider: items.length > 0 },
-      { label: "Delete", icon: <Trash2 className="w-3 h-3" />, onClick: () => setPendingDelete(node.path), danger: true },
-      { label: "Copy Path", icon: <Copy className="w-3 h-3" />, onClick: () => navigator.clipboard.writeText(node.path) },
+      { label: t("explorer.rename"), icon: <Pencil className="w-3 h-3" />, onClick: () => startEditing(node.path, "rename"), divider: items.length > 0 },
+      { label: t("explorer.delete"), icon: <Trash2 className="w-3 h-3" />, onClick: () => setPendingDelete(node.path), danger: true },
+      { label: t("explorer.copyPath"), icon: <Copy className="w-3 h-3" />, onClick: () => navigator.clipboard.writeText(node.path) },
     );
     return items;
-  }, [contextMenu, currentPath, listRootDir, startEditing]);
+  }, [contextMenu, currentPath, listRootDir, startEditing, t]);
 
   const handleSubmitEdit = useCallback(
     (value: string) => {
@@ -109,17 +111,16 @@ export function ExplorerSidebar({ hideOuterShell }: { hideOuterShell?: boolean }
     [editingNode, renameNode, createFile, createDir],
   );
 
-  // Is root-level editing?
   const isRootEditing =
     editingNode &&
     editingNode.path === currentPath &&
     (editingNode.type === "newFile" || editingNode.type === "newDir");
 
   const header = (
-    <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-700 flex items-center justify-between">
+    <div className="px-3 py-2 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wide border-b border-[var(--color-border-primary)] flex items-center justify-between">
       <div className="flex items-center gap-1.5">
         <Folder className="w-3.5 h-3.5" />
-        Explorer
+        {t("explorer.title")}
       </div>
       <PinButton />
     </div>
@@ -129,26 +130,26 @@ export function ExplorerSidebar({ hideOuterShell }: { hideOuterShell?: boolean }
     <>
       {header}
       <div className="flex-1 overflow-hidden flex flex-col">
-        <div className="flex gap-2 p-2 border-b border-gray-700">
+        <div className="flex gap-2 p-2 border-b border-[var(--color-border-primary)]">
           <input
             type="text"
             value={currentPath}
             onChange={(e) => setCurrentPath(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && listRootDir()}
-            placeholder="Path"
-            className="flex-1 px-2 py-1 text-xs bg-gray-700 rounded text-white border border-gray-600 focus:border-indigo-500 focus:outline-none"
+            placeholder={t("explorer.pathPlaceholder")}
+            className="flex-1 px-2 py-1 text-xs bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-primary)] border border-[var(--color-border-secondary)] focus:border-[var(--color-accent)] focus:outline-none"
           />
           <button
             onClick={listRootDir}
-            className="px-2 py-1 text-xs bg-indigo-600 hover:bg-indigo-700 rounded transition-colors"
-            title="List directory"
+            className="px-2 py-1 text-xs bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] rounded transition-colors"
+            title={t("explorer.listDirectory")}
           >
             <RefreshCw className="w-3 h-3" />
           </button>
         </div>
         <div
           className={`flex-1 overflow-y-auto p-1 transition-colors ${
-            isDragOver ? "bg-indigo-900/30 ring-1 ring-inset ring-indigo-500/50" : ""
+            isDragOver ? "bg-[var(--color-accent)]/30 ring-1 ring-inset ring-[var(--color-accent)]/50" : ""
           }`}
           onContextMenu={handleBlankContextMenu}
           onDragOver={handleDragOver}
@@ -156,7 +157,7 @@ export function ExplorerSidebar({ hideOuterShell }: { hideOuterShell?: boolean }
           onDrop={handleDrop}
         >
           {treeNodes.length === 0 ? (
-            <div className="text-gray-500 text-xs text-center py-4">Enter path and click refresh</div>
+            <div className="text-[var(--color-text-placeholder)] text-xs text-center py-4">{t("explorer.emptyHint")}</div>
           ) : (
             <ul className="space-y-0.5">
               {treeNodes.map((node) => (
@@ -196,8 +197,8 @@ export function ExplorerSidebar({ hideOuterShell }: { hideOuterShell?: boolean }
 
       {pendingDelete && (
         <ConfirmDialog
-          title="Confirm Delete"
-          message={`Are you sure you want to delete "${pendingDelete.split("/").pop()}"? This action cannot be undone.`}
+          title={t("explorer.confirmDelete")}
+          message={t("explorer.confirmDeleteMessage", { name: pendingDelete.split("/").pop() })}
           onConfirm={() => {
             deleteNode(pendingDelete);
             setPendingDelete(null);
@@ -213,7 +214,7 @@ export function ExplorerSidebar({ hideOuterShell }: { hideOuterShell?: boolean }
   }
 
   return (
-    <div className="w-60 bg-gray-850 border-r border-gray-700 flex flex-col flex-shrink-0">
+    <div className="w-60 bg-[var(--color-bg-primary)] border-r border-[var(--color-border-primary)] flex flex-col flex-shrink-0">
       {content}
     </div>
   );

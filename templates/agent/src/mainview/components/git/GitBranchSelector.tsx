@@ -52,7 +52,7 @@ export function GitBranchSelector({ onClose }: GitBranchSelectorProps) {
     <button
       key={b.name}
       className={`w-full text-left px-3 py-1.5 text-xs flex items-center gap-2 transition-colors ${
-        b.isCurrent ? "text-indigo-400" : "text-gray-200 hover:bg-gray-700"
+        b.isCurrent ? "text-[var(--color-text-accent)]" : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]"
       }`}
       onClick={() => handleCheckout(b)}
       disabled={loadingAction === "checkout"}
@@ -67,22 +67,22 @@ export function GitBranchSelector({ onClose }: GitBranchSelectorProps) {
   return (
     <div
       ref={ref}
-      className="fixed z-50 w-56 max-h-64 overflow-y-auto bg-gray-800 border border-gray-600 rounded-md shadow-xl py-1"
+      className="fixed z-50 w-56 max-h-64 overflow-y-auto bg-[var(--color-bg-secondary)] border border-[var(--color-border-secondary)] rounded-md shadow-xl py-1"
       style={{ /* positioned by parent via absolute */ }}
     >
       {loadingBranches ? (
-        <div className="text-gray-500 text-xs text-center py-4">Loading branches...</div>
+        <div className="text-[var(--color-text-placeholder)] text-xs text-center py-4">Loading branches...</div>
       ) : (
         <>
           {localBranches.length > 0 && (
             <>
-              <div className="px-3 py-1 text-[10px] uppercase tracking-wide text-gray-500 font-semibold">Local</div>
+              <div className="px-3 py-1 text-[10px] uppercase tracking-wide text-[var(--color-text-placeholder)] font-semibold">Local</div>
               {localBranches.map(renderBranch)}
             </>
           )}
           {remoteBranches.length > 0 && (
             <>
-              <div className="px-3 py-1 mt-1 text-[10px] uppercase tracking-wide text-gray-500 font-semibold border-t border-gray-700 pt-1">Remote</div>
+              <div className="px-3 py-1 mt-1 text-[10px] uppercase tracking-wide text-[var(--color-text-placeholder)] font-semibold border-t border-[var(--color-border-primary)] pt-1">Remote</div>
               {remoteBranches.map(renderBranch)}
             </>
           )}

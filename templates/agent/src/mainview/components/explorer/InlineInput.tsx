@@ -48,7 +48,7 @@ export function InlineInput({ defaultValue = "", depth, onSubmit, onCancel }: In
         defaultValue={defaultValue}
         onKeyDown={handleKeyDown}
         onBlur={handleBlur}
-        className="w-full px-1 py-0.5 text-xs bg-gray-700 text-white border border-indigo-500 rounded outline-none"
+        className="w-full px-1 py-0.5 text-xs bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] border border-[var(--color-accent)] rounded outline-none"
       />
     </div>
   );

@@ -1,13 +1,8 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Plus, Trash2, Circle, Clock, CheckCircle2, ListTodo } from "lucide-react";
 import { useTodoStore } from "../../stores/use-todo-store";
 import type { TodoStatus } from "../../../shared/modules/todo";
-
-const statusConfig: Record<TodoStatus, { icon: typeof Circle; color: string; label: string; circleColor: string }> = {
-  pending: { icon: Circle, color: "text-gray-400", label: "pending", circleColor: "border-gray-500" },
-  in_progress: { icon: Clock, color: "text-yellow-400", label: "in progress", circleColor: "border-yellow-400 bg-yellow-400/20" },
-  completed: { icon: CheckCircle2, color: "text-green-400", label: "completed", circleColor: "border-green-400 bg-green-400/20" },
-};
 
 const nextStatus: Record<TodoStatus, TodoStatus> = {
   pending: "in_progress",
@@ -18,6 +13,7 @@ const nextStatus: Record<TodoStatus, TodoStatus> = {
 const statusFlow = ["pending", "in_progress", "completed"] as const;
 
 export function TodoPanel() {
+  const { t } = useTranslation();
   const [showInput, setShowInput] = useState(false);
   const [input, setInput] = useState("");
   const items = useTodoStore((s) => s.items);
@@ -42,36 +38,42 @@ export function TodoPanel() {
     if (e.key === "Escape") setShowInput(false);
   };
 
+  const statusConfig: Record<TodoStatus, { icon: typeof Circle; color: string; label: string; circleColor: string }> = {
+    pending: { icon: Circle, color: "text-gray-400", label: t("todo.statusPending"), circleColor: "border-gray-500" },
+    in_progress: { icon: Clock, color: "text-yellow-400", label: t("todo.statusInProgress"), circleColor: "border-yellow-400 bg-yellow-400/20" },
+    completed: { icon: CheckCircle2, color: "text-green-400", label: t("todo.statusCompleted"), circleColor: "border-green-400 bg-green-400/20" },
+  };
+
   return (
     <div className="flex flex-col h-full">
-      <div className="p-3 border-b border-gray-700 flex items-center justify-between">
-        <span className="text-sm text-gray-300">Todo</span>
+      <div className="p-3 border-b border-[var(--color-border-primary)] flex items-center justify-between">
+        <span className="text-sm text-[var(--color-text-secondary)]">{t("todo.title")}</span>
         <button
           onClick={() => setShowInput(!showInput)}
-          className="flex items-center gap-1 px-2 py-1 text-xs bg-indigo-600 hover:bg-indigo-500 rounded text-white"
+          className="flex items-center gap-1 px-2 py-1 text-xs bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] rounded text-[var(--color-text-primary)]"
         >
           <Plus className="w-3 h-3" />
-          Add Todo
+          {t("todo.add")}
         </button>
       </div>
 
       {showInput && (
-        <div className="p-3 border-b border-gray-700 bg-gray-800 flex items-center gap-2">
+        <div className="p-3 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] flex items-center gap-2">
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="What needs to be done?"
+            placeholder={t("todo.placeholder")}
             autoFocus
-            className="flex-1 bg-gray-900 text-gray-100 px-3 py-1.5 rounded text-sm border border-gray-600 focus:border-indigo-500 focus:outline-none"
+            className="flex-1 bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] px-3 py-1.5 rounded text-sm border border-[var(--color-border-secondary)] focus:border-[var(--color-accent)] focus:outline-none"
           />
           <button
             onClick={handleAdd}
             disabled={!input.trim()}
             className="px-3 py-1 text-xs bg-green-600 hover:bg-green-500 disabled:opacity-40 rounded text-white"
           >
-            Add
+            {t("todo.save")}
           </button>
         </div>
       )}
@@ -80,8 +82,8 @@ export function TodoPanel() {
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-600">
             <ListTodo className="w-12 h-12 mb-3 opacity-30" />
-            <span className="text-sm">No tasks yet</span>
-            <span className="text-xs mt-1">Click "Add Todo" to create one</span>
+            <span className="text-sm">{t("todo.empty")}</span>
+            <span className="text-xs mt-1">{t("todo.emptyHint")}</span>
           </div>
         ) : (
           <div className="space-y-2.5">
@@ -91,7 +93,7 @@ export function TodoPanel() {
               return (
                 <div
                   key={item.id}
-                  className="group relative bg-gray-800/60 border border-gray-700/80 rounded-lg p-3 hover:bg-gray-800 hover:border-gray-600 transition-all"
+                  className="group relative bg-[var(--color-bg-secondary)]/60 border border-[var(--color-border-primary)]/80 rounded-lg p-3 hover:bg-[var(--color-bg-secondary)] hover:border-[var(--color-border-secondary)] transition-all"
                 >
                   <div className="flex items-start gap-3">
                     <button
@@ -102,12 +104,12 @@ export function TodoPanel() {
                     </button>
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm leading-relaxed ${
-                        item.status === "completed" ? "text-gray-500 line-through" : "text-gray-200"
+                        item.status === "completed" ? "text-[var(--color-text-placeholder)] line-through" : "text-[var(--color-text-secondary)]"
                       }`}>
                         {item.content}
                       </p>
-                      <div className="flex items-center gap-1.5 mt-2 text-[11px] text-gray-500">
-                        <span>Status:</span>
+                      <div className="flex items-center gap-1.5 mt-2 text-[11px] text-[var(--color-text-placeholder)]">
+                        <span>{t("todo.status")}</span>
                         {statusFlow.map((s) => {
                           const sc = statusConfig[s];
                           const isActive = s === item.status;
@@ -123,7 +125,7 @@ export function TodoPanel() {
                     </div>
                     <button
                       onClick={() => removeItem(item.id)}
-                      className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 self-start mt-0.5"
+                      className="text-gray-600 hover:text-[var(--color-text-error)] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 self-start mt-0.5"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
