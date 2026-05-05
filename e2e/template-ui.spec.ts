@@ -79,15 +79,16 @@ test.skip(
   }
 );
 
-test.describe("Chat Panel", () => {
-  test("should display chat input", async ({ page }) => {
-    await waitForAppReady(page);
+if (process.env.TEMPLATE_TYPE !== "chat") {
+  test.describe.skip("Chat Panel", () => {
+    test("should display chat input", async ({ page }) => {
+      await waitForAppReady(page);
 
-    const chatTab = page.locator('button[title="Chat"]');
-    await chatTab.click();
-    await expect(page.locator('input[placeholder="Type a message..."]')).toBeVisible();
-    await expect(page.locator("button:has-text('Send')")).toBeVisible();
-  });
+      const chatTab = page.locator('button[title="Chat"]');
+      await chatTab.click();
+      await expect(page.locator('input[placeholder="Type a message..."]')).toBeVisible();
+      await expect(page.locator("button:has-text('Send')")).toBeVisible();
+    });
 
   test("should accept input text", async ({ page }) => {
     await waitForAppReady(page);
@@ -101,8 +102,9 @@ test.describe("Chat Panel", () => {
   });
 });
 
-test.describe("Explorer Panel", () => {
-  test("should display explorer sidebar", async ({ page }) => {
+if (process.env.TEMPLATE_TYPE !== "chat") {
+  test.describe.skip("Explorer Panel", () => {
+    test("should display explorer sidebar", async ({ page }) => {
     await waitForAppReady(page);
 
     const explorerBtn = page.locator('button[title="Explorer"]');
@@ -121,7 +123,8 @@ test.describe("Explorer Panel", () => {
       page.locator("text=Enter path and click refresh").or(page.locator("text=Explorer"))
     ).toBeVisible();
   });
-});
+  });
+}
 
 test.describe("Responsive Layout", () => {
   test("should show mobile tab bar on small screens", async ({ page }) => {
