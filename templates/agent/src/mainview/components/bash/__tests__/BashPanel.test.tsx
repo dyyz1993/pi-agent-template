@@ -1,4 +1,19 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
+
+vi.mock("@tanstack/react-virtual", () => ({
+  useVirtualizer: (options: { count: number }) => ({
+    getVirtualItems: () =>
+      Array.from({ length: options.count }).map((_, i) => ({
+        index: i,
+        key: i,
+        start: i * 20,
+        size: 20,
+      })),
+    getTotalSize: () => options.count * 20,
+    scrollToIndex: vi.fn(),
+  }),
+}));
+
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import React from "react";
 
