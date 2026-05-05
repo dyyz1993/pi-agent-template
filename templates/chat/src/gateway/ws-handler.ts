@@ -5,11 +5,19 @@
 
 import type { Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
+import { timingSafeEqual } from "crypto";
 import { RPCServer, type Transport } from "@dyyz1993/rpc-core";
 import { registerAllHandlers } from "../shared/register-all-handlers";
 import { createLogger } from "../shared/lib/logger";
 
 const log = createLogger("gateway");
+
+function safeEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
+}
 
 export interface WsHandlerDeps {
   config: { readonly port: number; readonly authToken: string; readonly maxUploadSize: number };
@@ -23,7 +31,7 @@ export function createWsHandler(httpServer: Server, deps: WsHandlerDeps): WebSoc
     // Token 验证
     const url = req.url ? new URL(req.url, "http://localhost") : null;
     const token = url?.searchParams.get("token");
-    if (token !== cfg.authToken) {
+    if (!safeEqual(token || "", cfg.authToken)) {
       log.warn("Connection rejected: invalid token");
       ws.close(4001, "Unauthorized");
       return;
