@@ -15,7 +15,7 @@ export function ActivityBar() {
   ];
 
   return (
-    <div className="w-12 bg-gray-900 border-r border-gray-700 flex flex-col items-center py-2 gap-1 flex-shrink-0">
+    <div className="w-12 bg-[var(--color-bg-primary)] border-r border-[var(--color-border-primary)] flex flex-col items-center py-2 gap-1 flex-shrink-0">
       {items.map(({ id, icon: Icon, label }) => (
         <button
           key={id}
@@ -23,8 +23,8 @@ export function ActivityBar() {
           onClick={() => togglePanel(id)}
           className={`w-10 h-10 flex items-center justify-center rounded transition-colors ${
             activePanel === id
-              ? "bg-gray-700 text-white border-l-2 border-white"
-              : "text-gray-500 hover:text-gray-300"
+              ? "bg-[var(--color-bg-tertiary)] text-[var(--color-text-primary)] border-l-2 border-[var(--color-text-primary)]"
+              : "text-[var(--color-text-placeholder)] hover:text-[var(--color-text-secondary)]"
           }`}
         >
           <Icon className="w-5 h-5" />

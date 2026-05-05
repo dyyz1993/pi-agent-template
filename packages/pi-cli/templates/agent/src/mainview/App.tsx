@@ -4,6 +4,7 @@ import { useBreakpointSync } from "./hooks/use-breakpoint";
 import { useRpcInit } from "./hooks/use-rpc-init";
 import { useSidebarResize } from "./hooks/use-sidebar-resize";
 import { AppLayout, type CenterTab } from "./components/layout/AppLayout";
+import { ErrorBoundary } from "./components/common/ErrorBoundary";
 
 function App() {
   const ready = useConnectionStore((s) => s.ready);
@@ -26,12 +27,14 @@ function App() {
   }
 
   return (
-    <AppLayout
-      centerTab={centerTab}
-      setCenterTab={setCenterTab}
-      sidebarWidth={sidebarWidth}
-      handleResizeStart={handleResizeStart}
-    />
+    <ErrorBoundary>
+      <AppLayout
+        centerTab={centerTab}
+        setCenterTab={setCenterTab}
+        sidebarWidth={sidebarWidth}
+        handleResizeStart={handleResizeStart}
+      />
+    </ErrorBoundary>
   );
 }
 

@@ -55,28 +55,28 @@ export function DiffViewerPanel() {
   const fileName = currentDiff?.filePath.split("/").pop() || "";
 
   return (
-    <div className="absolute inset-0 bg-gray-900 flex flex-col" style={{ zIndex: 40 }}>
-      <div className="h-9 bg-gray-800 border-b border-gray-700 flex items-center px-3 text-xs flex-shrink-0 gap-2">
-        <span className="text-gray-300 font-medium">{fileName}</span>
-        <span className="text-gray-500 truncate text-[10px]">{currentDiff?.filePath}</span>
+    <div className="absolute inset-0 bg-[var(--color-bg-primary)] flex flex-col" style={{ zIndex: 40 }}>
+      <div className="h-9 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-primary)] flex items-center px-3 text-xs flex-shrink-0 gap-2">
+        <span className="text-[var(--color-text-secondary)] font-medium">{fileName}</span>
+        <span className="text-[var(--color-text-placeholder)] truncate text-[10px]">{currentDiff?.filePath}</span>
         <div className="ml-auto flex items-center gap-1">
           <button
             onClick={() => setSplitView(false)}
-            className={`p-1 rounded transition-colors ${!splitView ? "bg-gray-600 text-white" : "text-gray-500 hover:text-white"}`}
+            className={`p-1 rounded transition-colors ${!splitView ? "bg-[var(--color-bg-input)] text-[var(--color-text-primary)]" : "text-[var(--color-text-placeholder)] hover:text-[var(--color-text-primary)]"}`}
             title={t("diff.lineByLine")}
           >
             <Rows3 className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => setSplitView(true)}
-            className={`p-1 rounded transition-colors ${splitView ? "bg-gray-600 text-white" : "text-gray-500 hover:text-white"}`}
+            className={`p-1 rounded transition-colors ${splitView ? "bg-[var(--color-bg-input)] text-[var(--color-text-primary)]" : "text-[var(--color-text-placeholder)] hover:text-[var(--color-text-primary)]"}`}
             title={t("diff.sideBySide")}
           >
             <Columns2 className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={clearDiff}
-            className="ml-1 text-gray-500 hover:text-white transition-colors"
+            className="ml-1 text-[var(--color-text-placeholder)] hover:text-[var(--color-text-primary)] transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -85,7 +85,7 @@ export function DiffViewerPanel() {
 
       <div className="flex-1 overflow-auto">
         {loadingDiff ? (
-          <div className="flex items-center justify-center h-full text-gray-500">
+          <div className="flex items-center justify-center h-full text-[var(--color-text-placeholder)]">
             {t("diff.loading")}
           </div>
         ) : currentDiff ? (

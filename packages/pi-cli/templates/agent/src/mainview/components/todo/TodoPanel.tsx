@@ -46,11 +46,11 @@ export function TodoPanel() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-3 border-b border-gray-700 flex items-center justify-between">
-        <span className="text-sm text-gray-300">{t("todo.title")}</span>
+      <div className="p-3 border-b border-[var(--color-border-primary)] flex items-center justify-between">
+        <span className="text-sm text-[var(--color-text-secondary)]">{t("todo.title")}</span>
         <button
           onClick={() => setShowInput(!showInput)}
-          className="flex items-center gap-1 px-2 py-1 text-xs bg-indigo-600 hover:bg-indigo-500 rounded text-white"
+          className="flex items-center gap-1 px-2 py-1 text-xs bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] rounded text-[var(--color-text-primary)]"
         >
           <Plus className="w-3 h-3" />
           {t("todo.add")}
@@ -58,7 +58,7 @@ export function TodoPanel() {
       </div>
 
       {showInput && (
-        <div className="p-3 border-b border-gray-700 bg-gray-800 flex items-center gap-2">
+        <div className="p-3 border-b border-[var(--color-border-primary)] bg-[var(--color-bg-secondary)] flex items-center gap-2">
           <input
             type="text"
             value={input}
@@ -66,7 +66,7 @@ export function TodoPanel() {
             onKeyDown={handleKeyDown}
             placeholder={t("todo.placeholder")}
             autoFocus
-            className="flex-1 bg-gray-900 text-gray-100 px-3 py-1.5 rounded text-sm border border-gray-600 focus:border-indigo-500 focus:outline-none"
+            className="flex-1 bg-[var(--color-bg-primary)] text-[var(--color-text-secondary)] px-3 py-1.5 rounded text-sm border border-[var(--color-border-secondary)] focus:border-[var(--color-accent)] focus:outline-none"
           />
           <button
             onClick={handleAdd}
@@ -93,7 +93,7 @@ export function TodoPanel() {
               return (
                 <div
                   key={item.id}
-                  className="group relative bg-gray-800/60 border border-gray-700/80 rounded-lg p-3 hover:bg-gray-800 hover:border-gray-600 transition-all"
+                  className="group relative bg-[var(--color-bg-secondary)]/60 border border-[var(--color-border-primary)]/80 rounded-lg p-3 hover:bg-[var(--color-bg-secondary)] hover:border-[var(--color-border-secondary)] transition-all"
                 >
                   <div className="flex items-start gap-3">
                     <button
@@ -104,11 +104,11 @@ export function TodoPanel() {
                     </button>
                     <div className="flex-1 min-w-0">
                       <p className={`text-sm leading-relaxed ${
-                        item.status === "completed" ? "text-gray-500 line-through" : "text-gray-200"
+                        item.status === "completed" ? "text-[var(--color-text-placeholder)] line-through" : "text-[var(--color-text-secondary)]"
                       }`}>
                         {item.content}
                       </p>
-                      <div className="flex items-center gap-1.5 mt-2 text-[11px] text-gray-500">
+                      <div className="flex items-center gap-1.5 mt-2 text-[11px] text-[var(--color-text-placeholder)]">
                         <span>{t("todo.status")}</span>
                         {statusFlow.map((s) => {
                           const sc = statusConfig[s];
@@ -125,7 +125,7 @@ export function TodoPanel() {
                     </div>
                     <button
                       onClick={() => removeItem(item.id)}
-                      className="text-gray-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 self-start mt-0.5"
+                      className="text-gray-600 hover:text-[var(--color-text-error)] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 self-start mt-0.5"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

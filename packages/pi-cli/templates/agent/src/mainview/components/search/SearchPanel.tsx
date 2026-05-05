@@ -213,22 +213,22 @@ export function SearchPanel() {
   const modKey = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent) ? "⌘" : "Ctrl";
 
   return (
-    <div className="flex flex-col h-full bg-gray-900">
+    <div className="flex flex-col h-full bg-[var(--color-bg-primary)]">
       {/* Header */}
-      <div className="px-3 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-700 flex items-center justify-between flex-shrink-0">
+      <div className="px-3 py-2 text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wide border-b border-[var(--color-border-primary)] flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-1.5">
           <Search className="w-3.5 h-3.5" />
           Search
         </div>
-        <kbd className="px-1.5 py-0.5 text-[10px] text-gray-500 bg-gray-800 border border-gray-700 rounded font-mono">
+        <kbd className="px-1.5 py-0.5 text-[10px] text-[var(--color-text-placeholder)] bg-[var(--color-bg-secondary)] border border-[var(--color-border-primary)] rounded font-mono">
           {modKey}⇧F
         </kbd>
       </div>
 
       {/* Search input */}
-      <div className="p-2 border-b border-gray-700 flex-shrink-0">
+      <div className="p-2 border-b border-[var(--color-border-primary)] flex-shrink-0">
         <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--color-text-placeholder)]" />
           <input
             ref={inputRef}
             type="text"
@@ -236,7 +236,7 @@ export function SearchPanel() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Search in files..."
-            className="w-full pl-7 pr-7 py-1.5 text-xs bg-gray-800 rounded text-white border border-gray-600 focus:border-indigo-500 focus:outline-none"
+            className="w-full pl-7 pr-7 py-1.5 text-xs bg-[var(--color-bg-secondary)] rounded text-[var(--color-text-primary)] border border-[var(--color-border-secondary)] focus:border-[var(--color-accent)] focus:outline-none"
           />
           {query && (
             <button
@@ -244,7 +244,7 @@ export function SearchPanel() {
                 setQuery("");
                 inputRef.current?.focus();
               }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-text-placeholder)] hover:text-[var(--color-text-secondary)]"
             >
               <X className="w-3 h-3" />
             </button>
@@ -257,8 +257,8 @@ export function SearchPanel() {
             onClick={() => setCaseSensitive((v) => !v)}
             className={`p-1 rounded text-xs transition-colors ${
               caseSensitive
-                ? "bg-indigo-600/30 text-indigo-300 border border-indigo-500/50"
-                : "text-gray-500 hover:text-gray-300 border border-transparent"
+                ? "bg-[var(--color-accent)]/30 text-[var(--color-text-accent)] border border-[var(--color-accent)]/50"
+                : "text-[var(--color-text-placeholder)] hover:text-[var(--color-text-secondary)] border border-transparent"
             }`}
             title="Match Case"
           >
@@ -268,8 +268,8 @@ export function SearchPanel() {
             onClick={() => setWholeWord((v) => !v)}
             className={`p-1 rounded text-xs transition-colors ${
               wholeWord
-                ? "bg-indigo-600/30 text-indigo-300 border border-indigo-500/50"
-                : "text-gray-500 hover:text-gray-300 border border-transparent"
+                ? "bg-[var(--color-accent)]/30 text-[var(--color-text-accent)] border border-[var(--color-accent)]/50"
+                : "text-[var(--color-text-placeholder)] hover:text-[var(--color-text-secondary)] border border-transparent"
             }`}
             title="Match Whole Word"
           >
@@ -279,8 +279,8 @@ export function SearchPanel() {
             onClick={() => setUseRegex((v) => !v)}
             className={`p-1 rounded text-xs transition-colors ${
               useRegex
-                ? "bg-indigo-600/30 text-indigo-300 border border-indigo-500/50"
-                : "text-gray-500 hover:text-gray-300 border border-transparent"
+                ? "bg-[var(--color-accent)]/30 text-[var(--color-text-accent)] border border-[var(--color-accent)]/50"
+                : "text-[var(--color-text-placeholder)] hover:text-[var(--color-text-secondary)] border border-transparent"
             }`}
             title="Use Regular Expression"
           >
@@ -292,7 +292,7 @@ export function SearchPanel() {
           {isSearching ? (
             <button
               onClick={cancelSearch}
-              className="px-2 py-1 text-xs text-red-400 hover:text-red-300 transition-colors flex items-center gap-1"
+              className="px-2 py-1 text-xs text-[var(--color-text-error)] hover:text-red-300 transition-colors flex items-center gap-1"
             >
               <Loader2 className="w-3 h-3 animate-spin" />
               Cancel
@@ -301,7 +301,7 @@ export function SearchPanel() {
             query.trim() && (
               <button
                 onClick={performSearch}
-                className="px-2 py-1 text-xs bg-indigo-600 hover:bg-indigo-700 rounded transition-colors"
+                className="px-2 py-1 text-xs bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] rounded transition-colors"
               >
                 Search
               </button>
@@ -312,11 +312,11 @@ export function SearchPanel() {
 
       {/* Results header */}
       {hasSearched && !isSearching && (
-        <div className="px-3 py-1.5 text-[11px] text-gray-500 border-b border-gray-800 flex-shrink-0">
+        <div className="px-3 py-1.5 text-[11px] text-[var(--color-text-placeholder)] border-b border-[var(--color-bg-secondary)] flex-shrink-0">
           {totalMatches > 0 ? (
             <>
-              <span className="text-indigo-400 font-medium">{totalMatches}</span> result{totalMatches !== 1 && "s"} in{" "}
-              <span className="text-indigo-400 font-medium">{results.length}</span> file
+              <span className="text-[var(--color-text-accent)] font-medium">{totalMatches}</span> result{totalMatches !== 1 && "s"} in{" "}
+              <span className="text-[var(--color-text-accent)] font-medium">{results.length}</span> file
               {results.length !== 1 && "s"}
               <span className="ml-2 text-gray-600">({filesSearched} files searched)</span>
             </>
@@ -328,7 +328,7 @@ export function SearchPanel() {
 
       {/* Loading state */}
       {isSearching && (
-        <div className="flex items-center justify-center py-8 text-gray-500 text-sm flex-shrink-0">
+        <div className="flex items-center justify-center py-8 text-[var(--color-text-placeholder)] text-sm flex-shrink-0">
           <Loader2 className="w-4 h-4 animate-spin mr-2" />
           Searching...
         </div>
@@ -357,15 +357,15 @@ export function SearchPanel() {
                 {/* File group header */}
                 <button
                   onClick={() => toggleGroup(gi)}
-                  className="w-full flex items-center gap-1 px-2 py-1 text-xs hover:bg-gray-800 transition-colors text-left"
+                  className="w-full flex items-center gap-1 px-2 py-1 text-xs hover:bg-[var(--color-bg-secondary)] transition-colors text-left"
                 >
                   {group.expanded ? (
-                    <ChevronDown className="w-3 h-3 text-gray-500 flex-shrink-0" />
+                    <ChevronDown className="w-3 h-3 text-[var(--color-text-placeholder)] flex-shrink-0" />
                   ) : (
-                    <ChevronRight className="w-3 h-3 text-gray-500 flex-shrink-0" />
+                    <ChevronRight className="w-3 h-3 text-[var(--color-text-placeholder)] flex-shrink-0" />
                   )}
-                  <FileText className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
-                  <span className="text-gray-300 truncate flex-1">{group.relativePath}</span>
+                  <FileText className="w-3.5 h-3.5 text-[var(--color-text-placeholder)] flex-shrink-0" />
+                  <span className="text-[var(--color-text-secondary)] truncate flex-1">{group.relativePath}</span>
                   <span className="text-[10px] text-gray-600 flex-shrink-0 ml-1">
                     {group.matches.length}
                   </span>
@@ -378,14 +378,14 @@ export function SearchPanel() {
                       <button
                         key={mi}
                         onClick={() => handleOpenFile(match.file, match.line)}
-                        className="w-full text-left px-2 py-0.5 text-[11px] hover:bg-gray-800 transition-colors group flex items-start gap-2"
+                        className="w-full text-left px-2 py-0.5 text-[11px] hover:bg-[var(--color-bg-secondary)] transition-colors group flex items-start gap-2"
                       >
                         <span className="text-gray-600 w-6 text-right flex-shrink-0 select-none pt-px">
                           {match.line}
                         </span>
-                        <span className="text-gray-400 truncate font-mono leading-relaxed">
+                        <span className="text-[var(--color-text-tertiary)] truncate font-mono leading-relaxed">
                           {match.text.slice(0, match.highlightStart)}
-                          <span className="bg-indigo-600/40 text-indigo-200">
+                          <span className="bg-[var(--color-accent)]/40 text-[var(--color-text-accent)]">
                             {match.text.slice(match.highlightStart, match.highlightEnd)}
                           </span>
                           {match.text.slice(match.highlightEnd)}

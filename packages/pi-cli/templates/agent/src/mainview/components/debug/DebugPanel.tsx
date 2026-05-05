@@ -19,11 +19,11 @@ export function DebugPanel() {
   const handleUnsubscribe = useAppStore((s) => s.handleUnsubscribe);
 
   return (
-    <div className="w-72 bg-gray-850 border-l border-gray-700 flex flex-col flex-shrink-0 overflow-y-auto">
-      <div className="p-3 border-b border-gray-700">
+    <div className="w-72 bg-[var(--color-bg-primary)] border-l border-[var(--color-border-primary)] flex flex-col flex-shrink-0 overflow-y-auto">
+      <div className="p-3 border-b border-[var(--color-border-primary)]">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-xs font-semibold flex items-center gap-1.5">
-            <Send className="w-3.5 h-3.5 text-indigo-400" />
+            <Send className="w-3.5 h-3.5 text-[var(--color-text-accent)]" />
             {t("debug.rpcCalls")}
           </h2>
         </div>
@@ -31,7 +31,7 @@ export function DebugPanel() {
           <select
             value={method}
             onChange={(e) => setMethod(e.target.value as DemoMethod)}
-            className="flex-1 px-2 py-1 text-xs bg-gray-700 rounded text-white border border-gray-600"
+            className="flex-1 px-2 py-1 text-xs bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-primary)] border border-[var(--color-border-secondary)]"
           >
             <option value="system.ping">system.ping</option>
             <option value="system.hello">system.hello</option>
@@ -40,28 +40,28 @@ export function DebugPanel() {
           </select>
           <button
             onClick={() => callRPC("")}
-            className="px-3 py-1 text-xs bg-indigo-600 hover:bg-indigo-700 rounded transition-colors flex items-center gap-1"
+            className="px-3 py-1 text-xs bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] rounded transition-colors flex items-center gap-1"
           >
             <Play className="w-3 h-3" />
             {t("debug.call")}
           </button>
         </div>
         {!!result && (
-          <div className="bg-gray-700 rounded p-2">
-            <pre className="text-green-400 text-[11px] overflow-x-auto whitespace-pre-wrap">
+          <div className="bg-[var(--color-bg-tertiary)] rounded p-2">
+            <pre className="text-[var(--color-text-success)] text-[11px] overflow-x-auto whitespace-pre-wrap">
               {JSON.stringify(result, null, 2)}
             </pre>
           </div>
         )}
       </div>
 
-      <div className="p-3 border-b border-gray-700">
+      <div className="p-3 border-b border-[var(--color-border-primary)]">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-xs font-semibold flex items-center gap-1.5">
             {timerRunning ? (
-              <Square className="w-3.5 h-3.5 text-green-400 fill-green-400" />
+              <Square className="w-3.5 h-3.5 text-[var(--color-text-success)] fill-green-400" />
             ) : (
-              <Play className="w-3.5 h-3.5 text-gray-400" />
+              <Play className="w-3.5 h-3.5 text-[var(--color-text-tertiary)]" />
             )}
             {t("debug.subscriptions")}
             {timerRunning && (
@@ -71,7 +71,7 @@ export function DebugPanel() {
             )}
           </h2>
           <div className="flex gap-2 items-center">
-            <span className="text-[11px] text-gray-400">
+            <span className="text-[11px] text-[var(--color-text-tertiary)]">
               {t("debug.events", { count: tickCount })}
             </span>
             {!subscriptionId ? (
@@ -91,12 +91,12 @@ export function DebugPanel() {
             )}
           </div>
         </div>
-        <div className="bg-gray-700 rounded p-2 max-h-32 overflow-y-auto font-mono text-[11px]">
+        <div className="bg-[var(--color-bg-tertiary)] rounded p-2 max-h-32 overflow-y-auto font-mono text-[11px]">
           {tickEvents.length === 0 ? (
-            <div className="text-gray-500 text-center py-1">{t("debug.noEvents")}</div>
+            <div className="text-[var(--color-text-placeholder)] text-center py-1">{t("debug.noEvents")}</div>
           ) : (
             tickEvents.map((ev, i) => (
-              <div key={i} className="text-cyan-400">{ev}</div>
+              <div key={i} className="text-[var(--color-text-info)]">{ev}</div>
             ))
           )}
         </div>
@@ -104,12 +104,12 @@ export function DebugPanel() {
 
       <div className="p-3 flex flex-col flex-1 min-h-0">
         <h2 className="text-xs font-semibold mb-2 flex-shrink-0 flex items-center gap-1.5">
-          <File className="w-3.5 h-3.5 text-gray-400" />
+          <File className="w-3.5 h-3.5 text-[var(--color-text-tertiary)]" />
           {t("debug.logs")}
         </h2>
         <div className="flex-1 bg-black rounded p-2 overflow-y-auto font-mono text-[11px]">
           {logs.map((log, i) => (
-            <div key={i} className={log.includes("Error") ? "text-red-400" : "text-green-400"}>
+            <div key={i} className={log.includes("Error") ? "text-[var(--color-text-error)]" : "text-[var(--color-text-success)]"}>
               {log}
             </div>
           ))}
