@@ -110,8 +110,36 @@ jobs:
       - name: Create ${{ matrix.template }} project from template
         run: HUSKY=0 bun run scripts/create.ts ci-test /tmp/ci-test-${{ matrix.template }} --type ${{ matrix.template }}
 
-      - name: Verify ${{ matrix.template }} project created
-        run: test -f /tmp/ci-test-${{ matrix.template }}/package.json
+      - name: Verify project structure
+        run: |
+          cd /tmp/ci-test-${{ matrix.template }}
+          echo "=== Checking project structure ==="
+          test -f package.json || (echo "FAIL: package.json missing" && exit 1)
+          test -f src/server.ts || (echo "FAIL: src/server.ts missing" && exit 1)
+          test -f src/mainview/main.tsx || (echo "FAIL: src/mainview/main.tsx missing" && exit 1)
+          test -f vite.config.ts || (echo "FAIL: vite.config.ts missing" && exit 1)
+          echo "=== Project structure OK ==="
+
+      - name: Install dependencies
+        run: |
+          cd /tmp/ci-test-${{ matrix.template }}
+          bun install
+
+      - name: Build frontend
+        run: |
+          cd /tmp/ci-test-${{ matrix.template }}
+          npx vite build
+
+      - name: Verify build output
+        run: |
+          cd /tmp/ci-test-${{ matrix.template }}
+          echo "=== Checking build output ==="
+          test -d dist || (echo "FAIL: dist/ directory missing" && exit 1)
+          test -f dist/index.html || (echo "FAIL: dist/index.html missing" && exit 1)
+          echo "=== Build output OK ==="
+          echo "=== Build artifacts ==="
+          du -sh dist/
+          du -sh dist/assets/*
 
   integration-test:
     runs-on: ubuntu-latest

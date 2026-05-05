@@ -88,7 +88,25 @@ build-verify-general:
     - *before_bun
   script:
     - HUSKY=0 bun run scripts/create.ts ci-test /tmp/ci-test-general --type general
-    - test -f /tmp/ci-test-general/package.json
+    - |
+      cd /tmp/ci-test-general
+      echo "=== Checking project structure ==="
+      test -f package.json || (echo "FAIL: package.json missing" && exit 1)
+      test -f src/server.ts || (echo "FAIL: src/server.ts missing" && exit 1)
+      test -f src/mainview/main.tsx || (echo "FAIL: src/mainview/main.tsx missing" && exit 1)
+      test -f vite.config.ts || (echo "FAIL: vite.config.ts missing" && exit 1)
+      echo "=== Project structure OK ==="
+    - cd /tmp/ci-test-general && bun install
+    - cd /tmp/ci-test-general && npx vite build
+    - |
+      cd /tmp/ci-test-general
+      echo "=== Checking build output ==="
+      test -d dist || (echo "FAIL: dist/ directory missing" && exit 1)
+      test -f dist/index.html || (echo "FAIL: dist/index.html missing" && exit 1)
+      echo "=== Build output OK ==="
+      echo "=== Build artifacts ==="
+      du -sh dist/
+      du -sh dist/assets/*
 
 build-verify-chat:
   stage: build-verify
@@ -97,7 +115,25 @@ build-verify-chat:
     - *before_bun
   script:
     - HUSKY=0 bun run scripts/create.ts ci-test /tmp/ci-test-chat --type chat
-    - test -f /tmp/ci-test-chat/package.json
+    - |
+      cd /tmp/ci-test-chat
+      echo "=== Checking project structure ==="
+      test -f package.json || (echo "FAIL: package.json missing" && exit 1)
+      test -f src/server.ts || (echo "FAIL: src/server.ts missing" && exit 1)
+      test -f src/mainview/main.tsx || (echo "FAIL: src/mainview/main.tsx missing" && exit 1)
+      test -f vite.config.ts || (echo "FAIL: vite.config.ts missing" && exit 1)
+      echo "=== Project structure OK ==="
+    - cd /tmp/ci-test-chat && bun install
+    - cd /tmp/ci-test-chat && npx vite build
+    - |
+      cd /tmp/ci-test-chat
+      echo "=== Checking build output ==="
+      test -d dist || (echo "FAIL: dist/ directory missing" && exit 1)
+      test -f dist/index.html || (echo "FAIL: dist/index.html missing" && exit 1)
+      echo "=== Build output OK ==="
+      echo "=== Build artifacts ==="
+      du -sh dist/
+      du -sh dist/assets/*
 
 build-verify-agent:
   stage: build-verify
@@ -106,7 +142,25 @@ build-verify-agent:
     - *before_bun
   script:
     - HUSKY=0 bun run scripts/create.ts ci-test /tmp/ci-test-agent --type agent
-    - test -f /tmp/ci-test-agent/package.json
+    - |
+      cd /tmp/ci-test-agent
+      echo "=== Checking project structure ==="
+      test -f package.json || (echo "FAIL: package.json missing" && exit 1)
+      test -f src/server.ts || (echo "FAIL: src/server.ts missing" && exit 1)
+      test -f src/mainview/main.tsx || (echo "FAIL: src/mainview/main.tsx missing" && exit 1)
+      test -f vite.config.ts || (echo "FAIL: vite.config.ts missing" && exit 1)
+      echo "=== Project structure OK ==="
+    - cd /tmp/ci-test-agent && bun install
+    - cd /tmp/ci-test-agent && npx vite build
+    - |
+      cd /tmp/ci-test-agent
+      echo "=== Checking build output ==="
+      test -d dist || (echo "FAIL: dist/ directory missing" && exit 1)
+      test -f dist/index.html || (echo "FAIL: dist/index.html missing" && exit 1)
+      echo "=== Build output OK ==="
+      echo "=== Build artifacts ==="
+      du -sh dist/
+      du -sh dist/assets/*
 
 integration-test-general:
   stage: integration-test
