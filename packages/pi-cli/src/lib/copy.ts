@@ -124,13 +124,6 @@ function cleanSharedViteConfig(sharedDir: string): void {
 			/,?\s*\n?\s*"@dyyz1993\/rpc-core":\s*resolve\(\s*\n?\s*dirname,\s*\n?\s*"\.\.",\s*\n?\s*"\.\.",\s*\n?\s*"packages",\s*\n?\s*"rpc-core",\s*\n?\s*"src",\s*\n?\s*"index\.ts"\s*\n?\s*\),?\s*\n?/g,
 			""
 		);
-		if (!config.includes("@dyyz1993/rpc-core")) {
-			config = config.replace(/import\s*\{\s*resolve\s*\}\s*from\s*["']path["'];?\n?/g, "");
-			config = config.replace(
-				/export function create(Vite|Vitest)Config\(dirname: string\)/g,
-				"export function create$1Config()"
-			);
-		}
 		writeFileSync(configPath, config);
 	}
 }
