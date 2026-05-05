@@ -64,6 +64,15 @@ export default tseslint.config(
     },
   },
   {
+    files: ['e2e/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+    },
+  },
+  {
     files: ['packages/pi-cli/src/**/*.ts'],
     rules: {
       'no-console': 'off',

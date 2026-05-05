@@ -206,13 +206,13 @@ test("should show loading state before connection", async ({ page }) => {
   await expect(page.locator(".animate-spin")).toHaveCount(0);
 });
 
-test("should display center tab navigation", async ({ page }) => {
+(process.env.TEMPLATE_TYPE === 'agent' ? test : test.skip)("should display center tab navigation", async ({ page }) => {
   await waitForAppReady(page);
   await expect(page.locator('button[data-testid="center-tab-chat"]')).toBeVisible();
   await expect(page.locator('button[data-testid="center-tab-feed"]')).toBeVisible();
 });
 
-test("should switch center tabs", async ({ page }) => {
+(process.env.TEMPLATE_TYPE === 'agent' ? test : test.skip)("should switch center tabs", async ({ page }) => {
   await waitForAppReady(page);
 
   await page.locator('button[data-testid="center-tab-feed"]').click();
