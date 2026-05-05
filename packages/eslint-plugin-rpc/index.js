@@ -17,6 +17,7 @@ const schemaMergeOnly = require("./rules/schema-merge-only");
 const moduleFileNaming = require("./rules/module-file-naming");
 const requireTypedRegister = require("./rules/require-typed-register");
 const requireApiClient = require("./rules/require-api-client");
+const noHardcodedStrings = require("./rules/no-hardcoded-strings");
 
 module.exports = {
   meta: {
@@ -30,6 +31,7 @@ module.exports = {
     "module-file-naming": moduleFileNaming,
     "require-typed-register": requireTypedRegister,
     "require-api-client": requireApiClient,
+    "no-hardcoded-strings": noHardcodedStrings,
   },
   configs: {
     recommended: {
@@ -41,6 +43,7 @@ module.exports = {
         "rpc/module-file-naming": "error",
         "rpc/require-typed-register": "error",
         "rpc/require-api-client": "error",
+        "rpc/no-hardcoded-strings": "warn",
       },
     },
   },

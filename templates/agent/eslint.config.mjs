@@ -44,6 +44,7 @@ export default tseslint.config(
       'rpc/module-file-naming': 'error',
       'rpc/require-typed-register': 'error',
       'rpc/require-api-client': 'error',
+      'rpc/no-hardcoded-strings': 'warn',
     },
   },
   {
