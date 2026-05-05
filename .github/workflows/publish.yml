@@ -23,6 +23,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          registry-url: 'https://registry.npmjs.org'
       - uses: oven-sh/setup-bun@v2
 
       - name: Verify version matches tag
@@ -47,7 +48,7 @@ jobs:
         run: cd templates/agent && npx vitest run
 
       - name: Setup npm auth
-        run: echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > packages/rpc-core/.npmrc
+        run: echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -63,6 +64,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Verify version matches tag
         run: |
@@ -89,7 +94,7 @@ jobs:
           done
 
       - name: Setup npm auth
-        run: echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > packages/pi-cli/.npmrc
+        run: echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
