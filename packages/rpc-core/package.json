@@ -1,36 +1,36 @@
 {
-  "name": "@dyyz1993/rpc-core",
-  "version": "1.3.0",
-  "description": "Type-safe RPC communication framework with request-response and pub-sub patterns",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/dyyz1993/pi-agent-template"
-  },
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "default": "./src/index.ts"
-    }
-  },
-  "files": [
-    "dist",
-    "src"
-  ],
-  "dependencies": {},
-  "scripts": {
-    "build": "bun run build:js && bun run build:types",
-    "build:js": "bun build src/index.ts --outdir dist --target bun --splitting",
-    "build:types": "tsc --emitDeclarationOnly --declaration --outDir dist",
-    "prepublishOnly": "bun run build",
-    "test": "bun test tests/",
-    "version": "changeset version",
-    "release": "bun run build && changeset publish"
-  },
-  "devDependencies": {
-    "typescript": "^5.7.0"
-  }
+	"name": "@dyyz1993/rpc-core",
+	"version": "2.0.0",
+	"description": "Type-safe RPC communication framework with request-response and pub-sub patterns",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/dyyz1993/pi-agent-template"
+	},
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./src/index.ts"
+		}
+	},
+	"files": [
+		"dist",
+		"src"
+	],
+	"dependencies": {},
+	"scripts": {
+		"build": "bun run build:js && bun run build:types",
+		"build:js": "bun build src/index.ts --outdir dist --target bun --splitting",
+		"build:types": "tsc --emitDeclarationOnly --declaration --outDir dist",
+		"prepublishOnly": "bun run build",
+		"test": "bun test tests/",
+		"version": "changeset version",
+		"release": "bun run build && changeset publish"
+	},
+	"devDependencies": {
+		"typescript": "^5.7.0"
+	}
 }
