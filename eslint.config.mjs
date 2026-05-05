@@ -12,9 +12,35 @@ export default tseslint.config(
       '**/dist/**',
       'templates/**',
       'packages/pi-cli/templates/**',
+      'packages/eslint-plugin-rpc/**',
       '!eslint.config.mjs',
       '!**/.eslintrc*',
     ],
+  },
+  {
+    files: ['commitlint.config.js'],
+    languageOptions: {
+      globals: {
+        module: 'readonly',
+      },
+    },
+  },
+  {
+    files: ['packages/eslint-plugin-rpc/**/*.js'],
+    languageOptions: {
+      globals: {
+        module: 'readonly',
+        require: 'readonly',
+      },
+    },
+  },
+  {
+    files: ['packages/pi-cli/scripts/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+      },
+    },
   },
   {
     files: ['scripts/**/*.ts'],

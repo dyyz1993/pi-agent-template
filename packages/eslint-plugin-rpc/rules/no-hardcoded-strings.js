@@ -34,7 +34,7 @@ module.exports = {
   create(context) {
     const options = context.options[0] || {};
     const ignoreAttributes = new Set(options.ignoreAttributes || ["className", "style", "id", "key", "ref", "type", "name", "data-testid", "viewBox", "d", "points", "x1", "x2", "y1", "y2", "strokeWidth", "strokeLinecap", "strokeLinejoin", "fill", "stroke", "xmlns"]);
-    const ignoreComponents = new Set(options.ignoreComponents || []);
+    new Set(options.ignoreComponents || []);
 
     return {
       JSXText(node) {

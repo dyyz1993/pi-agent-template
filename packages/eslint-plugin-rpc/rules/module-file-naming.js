@@ -1,7 +1,6 @@
 /**
  * @fileoverview 强制 RPC 模块文件的命名和导出规范
  */
-
 "use strict";
 
 function getModuleName(filename) {

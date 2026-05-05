@@ -3,7 +3,7 @@ import { createTypedServer, createTypedClient, defineRPC, defineModule } from ".
 import { InMemoryTransport } from "../src/transports/in-memory";
 
 interface TestMethods {
-  "test.ping": { params: {}; result: { pong: boolean } };
+  "test.ping": { params: object; result: { pong: boolean } };
   "test.echo": { params: { message: string }; result: { echo: string } };
   "test.add": { params: { a: number; b: number }; result: { sum: number } };
 }
@@ -46,7 +46,7 @@ describe("typed RPC", () => {
 
     const client = createTypedClient<TestMethods, TestEvents>(clientTransport);
 
-    const received: any[] = [];
+    const received: Array<{ text: string }> = [];
     client.subscribe("test.notification", (payload) => {
       received.push(payload);
     });
@@ -66,7 +66,7 @@ describe("typed RPC", () => {
   test("calling missing method should throw", async () => {
     const { client: clientTransport, server: serverTransport } = InMemoryTransport.createPair();
 
-    const server = createTypedServer<TestMethods, TestEvents>(serverTransport);
+    createTypedServer<TestMethods, TestEvents>(serverTransport);
     const client = createTypedClient<TestMethods, TestEvents>(clientTransport);
 
     try {
@@ -85,7 +85,7 @@ describe("typed RPC", () => {
     const server = createTypedServer<TestMethods, TestEvents>(serverTransport);
     const client = createTypedClient<TestMethods, TestEvents>(clientTransport);
 
-    const received: any[] = [];
+    const received: Array<{ text: string }> = [];
     const subId = client.subscribe("test.notification", (payload) => {
       received.push(payload);
     });
@@ -118,7 +118,7 @@ describe("defineRPC / defineModule", () => {
   test("defineRPC should build module with methods", async () => {
     const rpc = defineRPC();
     const mod = rpc
-      .method<{}, { pong: boolean }>("test.ping", async () => ({ pong: true }))
+      .method<object, { pong: boolean }>("test.ping", async () => ({ pong: true }))
       .method<{ n: number }, { doubled: number }>("test.double", async (p) => ({ doubled: p.n * 2 }))
       .toModule();
 
@@ -154,11 +154,11 @@ describe("defineRPC / defineModule", () => {
     const { client: clientTransport, server: serverTransport } = InMemoryTransport.createPair();
 
     const rpc = defineRPC();
-    const server = rpc
-      .method<{}, { ok: boolean }>("health", async () => ({ ok: true }))
+    rpc
+      .method<object, { ok: boolean }>("health", async () => ({ ok: true }))
       .createServer(serverTransport);
 
-    const client = createTypedClient<{ health: { params: {}; result: { ok: boolean } } }, {}>(clientTransport);
+    const client = createTypedClient<{ health: { params: object; result: { ok: boolean } } }, object>(clientTransport);
 
     const result = await client.call("health", {});
     expect(result.ok).toBe(true);
@@ -170,9 +170,9 @@ describe("defineRPC / defineModule", () => {
     const { client: clientTransport, server: serverTransport } = InMemoryTransport.createPair();
 
     const rpc = defineRPC();
-    rpc.method<{}, { version: string }>("version", async () => ({ version: "1.0.0" }));
+    rpc.method<object, { version: string }>("version", async () => ({ version: "1.0.0" }));
 
-    const server = rpc.createServer(serverTransport);
+    rpc.createServer(serverTransport);
     const client = rpc.createClient(clientTransport);
 
     const result = await client.call("version", {});
