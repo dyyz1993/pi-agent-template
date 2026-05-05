@@ -1,5 +1,16 @@
 # @dyyz1993/create-agent
 
+## 1.9.0
+
+### Minor Changes
+
+- Rename package from @dyyz1993/pi-cli to @dyyz1993/create-agent
+
+  - CLI command: `pi` → `create-agent`
+  - Usage: `create-agent create my-app --type agent`
+  - Usage: `npx @dyyz1993/create-agent create my-app`
+  - Old package @dyyz1993/pi-cli is deprecated
+
 ## 1.8.0
 
 ### Minor Changes
