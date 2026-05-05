@@ -11,27 +11,48 @@ const mockCall = vi.fn();
 const mockChatAddMessage = vi.fn();
 const mockChatSetMessages = vi.fn();
 
-let mockAppState: Record<string, any>;
+let mockConnectionState: Record<string, any>;
+let mockLogState: Record<string, any>;
 
-function resetMockAppState(overrides?: Partial<Record<string, any>>) {
-  mockAppState = {
+function resetMockConnectionState(overrides?: Partial<Record<string, any>>) {
+  mockConnectionState = {
     ready: false,
-    mode: "web",
     initializeConnection: mockInitializeConnection,
+    ...overrides,
+  };
+}
+
+function resetMockLogState(overrides?: Partial<Record<string, any>>) {
+  mockLogState = {
     addLog: mockAddLog,
     ...overrides,
   };
 }
 
-vi.mock("../../stores/use-app-store", () => {
+vi.mock("../../stores/use-connection-store", () => {
   return {
-    useAppStore: Object.assign(
-      (selector: (s: any) => any) => selector(mockAppState),
+    useConnectionStore: Object.assign(
+      (selector: (s: any) => any) => selector(mockConnectionState),
       {
-        getState: () => mockAppState,
+        getState: () => mockConnectionState,
         setState: (partial: any) => {
-          const next = typeof partial === "function" ? partial(mockAppState) : partial;
-          mockAppState = { ...mockAppState, ...next };
+          const next = typeof partial === "function" ? partial(mockConnectionState) : partial;
+          mockConnectionState = { ...mockConnectionState, ...next };
+        },
+      }
+    ),
+  };
+});
+
+vi.mock("../../stores/use-log-store", () => {
+  return {
+    useLogStore: Object.assign(
+      (selector: (s: any) => any) => selector(mockLogState),
+      {
+        getState: () => mockLogState,
+        setState: (partial: any) => {
+          const next = typeof partial === "function" ? partial(mockLogState) : partial;
+          mockLogState = { ...mockLogState, ...next };
         },
       }
     ),
@@ -72,17 +93,18 @@ describe("useRpcInit", () => {
     vi.clearAllMocks();
     mockSubscribe.mockResolvedValue("sub-1");
     mockCall.mockResolvedValue({ messages: [] });
+    resetMockLogState();
   });
 
   it("should call initializeConnection on mount", async () => {
-    resetMockAppState({ ready: false });
+    resetMockConnectionState({ ready: false });
     const { useRpcInit } = await import("../../hooks/use-rpc-init");
     renderHook(() => useRpcInit());
     expect(mockInitializeConnection).toHaveBeenCalledTimes(1);
   });
 
   it("should not subscribe when not ready", async () => {
-    resetMockAppState({ ready: false });
+    resetMockConnectionState({ ready: false });
     const { useRpcInit } = await import("../../hooks/use-rpc-init");
     renderHook(() => useRpcInit());
     expect(mockSubscribe).not.toHaveBeenCalled();
@@ -91,7 +113,7 @@ describe("useRpcInit", () => {
   });
 
   it("should subscribe, load history and init explorer when ready", async () => {
-    resetMockAppState({ ready: true });
+    resetMockConnectionState({ ready: true });
     const { useRpcInit } = await import("../../hooks/use-rpc-init");
     renderHook(() => useRpcInit());
 
@@ -119,7 +141,7 @@ describe("useRpcInit", () => {
     ];
     mockCall.mockResolvedValue({ messages });
 
-    resetMockAppState({ ready: true });
+    resetMockConnectionState({ ready: true });
     const { useRpcInit } = await import("../../hooks/use-rpc-init");
     renderHook(() => useRpcInit());
 
@@ -138,7 +160,7 @@ describe("useRpcInit", () => {
   });
 
   it("should unsubscribe on cleanup when ready", async () => {
-    resetMockAppState({ ready: true });
+    resetMockConnectionState({ ready: true });
     const { useRpcInit } = await import("../../hooks/use-rpc-init");
     const { unmount } = renderHook(() => useRpcInit());
 
@@ -152,7 +174,7 @@ describe("useRpcInit", () => {
 
   it("should handle history load failure gracefully", async () => {
     mockCall.mockRejectedValue(new Error("Network error"));
-    resetMockAppState({ ready: true });
+    resetMockConnectionState({ ready: true });
     const { useRpcInit } = await import("../../hooks/use-rpc-init");
     renderHook(() => useRpcInit());
 
@@ -170,7 +192,7 @@ describe("useRpcInit", () => {
       return "sub-1";
     });
 
-    resetMockAppState({ ready: true });
+    resetMockConnectionState({ ready: true });
     const { useRpcInit } = await import("../../hooks/use-rpc-init");
     renderHook(() => useRpcInit());
 

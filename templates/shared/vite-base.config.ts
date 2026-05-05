@@ -31,6 +31,8 @@ export function createViteConfig(dirname: string) {
             "vendor-react": ["react", "react-dom"],
             "vendor-state": ["zustand"],
             "vendor-i18n": ["i18next", "react-i18next"],
+            "vendor-markdown": ["react-markdown", "remark-gfm", "prism-react-renderer"],
+            "vendor-diff": ["react-diff-viewer-continued"],
           },
         },
       },

@@ -1,3 +1,4 @@
+import React, { Suspense } from "react";
 import { useTranslation } from "react-i18next";
 import { Wifi, Monitor, MessageSquare, Rss, Terminal, ListTodo } from "lucide-react";
 import { useConnectionStore } from "../../stores/use-connection-store";
@@ -6,17 +7,26 @@ import { useSidebarStore } from "../../stores/use-sidebar-store";
 import { ActivityBar } from "../activity-bar/ActivityBar";
 import { MobileTabBar } from "../activity-bar/MobileTabBar";
 import { ExplorerSidebar } from "../explorer/ExplorerSidebar";
-import { GitPanel } from "../git/GitPanel";
-import { SearchPanel } from "../search/SearchPanel";
-import { RulesPanel } from "../rules/RulesPanel";
 import { ChatPanel } from "../chat/ChatPanel";
-import { FeedPanel } from "../feed/FeedPanel";
-import { BashPanel } from "../bash/BashPanel";
-import { TodoPanel } from "../todo/TodoPanel";
-import { FilePreviewOverlay } from "../file-preview/FilePreviewOverlay";
-import { DiffViewerPanel } from "../diff/DiffViewerPanel";
-import { DebugPanel } from "../debug/DebugPanel";
 import { ThemeToggle } from "../common/ThemeToggle";
+
+const GitPanel = React.lazy(() => import("../git/GitPanel").then((m) => ({ default: m.GitPanel })));
+const SearchPanel = React.lazy(() => import("../search/SearchPanel").then((m) => ({ default: m.SearchPanel })));
+const RulesPanel = React.lazy(() => import("../rules/RulesPanel").then((m) => ({ default: m.RulesPanel })));
+const FeedPanel = React.lazy(() => import("../feed/FeedPanel").then((m) => ({ default: m.FeedPanel })));
+const BashPanel = React.lazy(() => import("../bash/BashPanel").then((m) => ({ default: m.BashPanel })));
+const TodoPanel = React.lazy(() => import("../todo/TodoPanel").then((m) => ({ default: m.TodoPanel })));
+const FilePreviewOverlay = React.lazy(() => import("../file-preview/FilePreviewOverlay").then((m) => ({ default: m.FilePreviewOverlay })));
+const DiffViewerPanel = React.lazy(() => import("../diff/DiffViewerPanel").then((m) => ({ default: m.DiffViewerPanel })));
+const DebugPanel = React.lazy(() => import("../debug/DebugPanel").then((m) => ({ default: m.DebugPanel })));
+
+function PanelFallback() {
+  return (
+    <div className="flex items-center justify-center h-full">
+      <div className="animate-pulse text-[var(--color-text-tertiary)] text-sm">Loading...</div>
+    </div>
+  );
+}
 
 export type CenterTab = "chat" | "feed" | "bash" | "todo";
 
@@ -54,11 +64,11 @@ export function AppLayout({
   const sidebarContent = activePanel === "explorer" ? (
     <ExplorerSidebar hideOuterShell />
   ) : activePanel === "git" ? (
-    <GitPanel hideOuterShell />
+    <Suspense fallback={<PanelFallback />}><GitPanel hideOuterShell /></Suspense>
   ) : activePanel === "search" ? (
-    <SearchPanel />
+    <Suspense fallback={<PanelFallback />}><SearchPanel /></Suspense>
   ) : activePanel === "rules" ? (
-    <RulesPanel />
+    <Suspense fallback={<PanelFallback />}><RulesPanel /></Suspense>
   ) : null;
 
   const centerTabs: { id: CenterTab; icon: typeof MessageSquare; label: string }[] = [
@@ -119,20 +129,22 @@ export function AppLayout({
           </div>
 
           {centerTab === "chat" && <ChatPanel />}
-          {centerTab === "feed" && <FeedPanel />}
-          {centerTab === "bash" && <BashPanel />}
-          {centerTab === "todo" && <TodoPanel />}
+          {centerTab === "feed" && <Suspense fallback={<PanelFallback />}><FeedPanel /></Suspense>}
+          {centerTab === "bash" && <Suspense fallback={<PanelFallback />}><BashPanel /></Suspense>}
+          {centerTab === "todo" && <Suspense fallback={<PanelFallback />}><TodoPanel /></Suspense>}
           {filePreview && (
-            <FilePreviewOverlay
-              preview={filePreview}
-              loading={loadingFile}
-              onClose={closePreview}
-            />
+            <Suspense fallback={<PanelFallback />}>
+              <FilePreviewOverlay
+                preview={filePreview}
+                loading={loadingFile}
+                onClose={closePreview}
+              />
+            </Suspense>
           )}
-          <DiffViewerPanel />
+          <Suspense fallback={null}><DiffViewerPanel /></Suspense>
         </div>
 
-        {showDebug && <DebugPanel />}
+        {showDebug && <Suspense fallback={<PanelFallback />}><DebugPanel /></Suspense>}
       </div>
 
       {sidebarIsDrawer && showSidebar && (

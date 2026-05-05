@@ -7,9 +7,17 @@ import type { IncomingMessage, ServerResponse } from "http";
 import { stat, readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { extname, basename, dirname, resolve } from "path";
+import { timingSafeEqual } from "crypto";
 import { createLogger } from "./logger";
 
 const log = createLogger("gateway");
+
+function safeEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return timingSafeEqual(bufA, bufB);
+}
 
 const MIME_TYPES: Record<string, string> = {
   ".html": "text/html",
@@ -42,12 +50,13 @@ function isPathAllowed(requestedPath: string): boolean {
 
 function verifyToken(req: IncomingMessage, authToken: string): boolean {
   const auth = req.headers["authorization"];
-  if (auth === `Bearer ${authToken}`) return true;
+  if (auth && safeEqual(auth, `Bearer ${authToken}`)) return true;
 
   if (req.url) {
     try {
       const url = new URL(req.url, "http://localhost");
-      if (url.searchParams.get("token") === authToken) return true;
+      const token = url.searchParams.get("token");
+      if (token && safeEqual(token, authToken)) return true;
     } catch { /* invalid URL */ }
   }
   return false;

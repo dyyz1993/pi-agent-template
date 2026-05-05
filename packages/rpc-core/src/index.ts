@@ -1,5 +1,6 @@
 export { RPCClient, type RPCClientOptions } from './client';
 export { RPCServer, type RPCServerOptions } from './server';
+export { BaseTransport } from './transports/base-transport';
 export { IPCTransport, type IPCTransportOptions } from './transports/ipc';
 export { WebSocketTransport, type WebSocketTransportOptions } from './transports/websocket';
 export { InMemoryTransport, type InMemoryTransportOptions } from './transports/in-memory';

@@ -31,4 +31,5 @@ export interface RPCEvents extends TimerEvents, ChatEvents, FeedEvents, BashEven
  */
 export interface HandlerOptions {
   platform: "desktop" | "web";
+  enableBash?: boolean;
 }

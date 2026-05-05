@@ -3,6 +3,7 @@ import { RPCServer } from "@dyyz1993/rpc-core";
 import { ElectrobunTransport } from "../gateway/ipc-transport";
 import { registerAllHandlers } from "../shared/register-all-handlers";
 import { createLogger, configureLogDir } from "../shared/lib/logger";
+import { config } from "../server-config";
 
 configureLogDir("logs");
 const log = createLogger("server");
@@ -28,7 +29,7 @@ const transport = new ElectrobunTransport();
 const server = new RPCServer(transport);
 
 // --- 注册 RPC handlers（自动导入 handlers barrel） ---
-registerAllHandlers(server, { platform: "desktop" });
+registerAllHandlers(server, { platform: "desktop", enableBash: config.enableBash });
 
 // --- 创建窗口 ---
 

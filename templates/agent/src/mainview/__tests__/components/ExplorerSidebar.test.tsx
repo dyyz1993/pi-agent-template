@@ -1,6 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: "en", changeLanguage: vi.fn() },
+  }),
+  initReactI18next: { type: "3rdParty", init: vi.fn() },
+}));
+
 vi.mock("../../stores/use-explorer-store", () => {
   const toggleNode = vi.fn();
   const openFile = vi.fn();
@@ -111,7 +119,7 @@ describe("ExplorerSidebar (no props drilling)", () => {
     );
     render(<ExplorerSidebar />);
 
-    const input = screen.getByPlaceholderText("Path") as HTMLInputElement;
+    const input = screen.getByPlaceholderText("explorer.pathPlaceholder") as HTMLInputElement;
     expect(input.value).toBe("/project");
   });
 
@@ -124,7 +132,7 @@ describe("ExplorerSidebar (no props drilling)", () => {
     );
     render(<ExplorerSidebar />);
 
-    const refreshBtn = screen.getByTitle("List directory");
+    const refreshBtn = screen.getByTitle("explorer.listDirectory");
     fireEvent.click(refreshBtn);
 
     const store = useExplorerStore((s: any) => s);

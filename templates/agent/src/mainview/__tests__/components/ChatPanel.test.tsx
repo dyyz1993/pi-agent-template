@@ -5,14 +5,33 @@ import { ChatPanel } from "../../components/chat/ChatPanel";
 import { useChatStore } from "../../stores/use-chat-store";
 import { act } from "@testing-library/react";
 
+vi.mock("../../lib/i18n", () => ({
+  default: {
+    isInitialized: true,
+    language: "en",
+    changeLanguage: vi.fn(),
+    t: (key: string) => key,
+    getResource: vi.fn(),
+  },
+  supportedLocales: ["en", "zh"],
+}));
+
+vi.mock("react-i18next", () => ({
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: { language: "en", changeLanguage: vi.fn() },
+  }),
+  initReactI18next: { type: "3rdParty", init: vi.fn() },
+}));
+
 vi.mock("../../lib/api-client", () => ({
   apiClient: {
     call: vi.fn().mockResolvedValue({ ok: true }),
   },
 }));
 
-vi.mock("../../stores/use-app-store", () => ({
-  useAppStore: {
+vi.mock("../../stores/use-log-store", () => ({
+  useLogStore: {
     getState: () => ({ addLog: vi.fn() }),
   },
 }));
@@ -26,12 +45,12 @@ describe("ChatPanel", () => {
 
   it("renders empty state", () => {
     render(<ChatPanel />);
-    expect(screen.getByText("Start a conversation...")).toBeInTheDocument();
+    expect(screen.getByText("chat.empty")).toBeInTheDocument();
   });
 
   it("renders messages header", () => {
     render(<ChatPanel />);
-    expect(screen.getByText("Messages")).toBeInTheDocument();
+    expect(screen.getByText("chat.title")).toBeInTheDocument();
   });
 
   it("shows message count badge", () => {
@@ -62,7 +81,7 @@ describe("ChatPanel", () => {
 
   it("has input field", () => {
     render(<ChatPanel />);
-    expect(screen.getByPlaceholderText("Type a message...")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("chat.placeholder")).toBeInTheDocument();
   });
 
   it("has send button", () => {
@@ -73,7 +92,7 @@ describe("ChatPanel", () => {
   it("typing updates input", async () => {
     const user = userEvent.setup();
     render(<ChatPanel />);
-    const input = screen.getByPlaceholderText("Type a message...");
+    const input = screen.getByPlaceholderText("chat.placeholder");
     await user.type(input, "hello");
     expect(input).toHaveValue("hello");
   });

@@ -64,8 +64,8 @@ describe("MessageBubble", () => {
     const { container: assistantContainer } = render(
       <MessageBubble message={createMessage({ role: "assistant" })} />
     );
-    const userBubble = userContainer.querySelector(".bg-indigo-600");
-    const assistantBubble = assistantContainer.querySelector(".bg-gray-700");
+    const userBubble = userContainer.querySelector('[class*="bg-\\[var\\(--color-accent\\)\\]"]');
+    const assistantBubble = assistantContainer.querySelector('[class*="bg-\\[var\\(--color-bg-tertiary\\)\\]"]');
     expect(userBubble).toBeInTheDocument();
     expect(assistantBubble).toBeInTheDocument();
   });

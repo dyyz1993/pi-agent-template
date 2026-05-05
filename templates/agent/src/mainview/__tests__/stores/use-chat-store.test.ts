@@ -8,8 +8,8 @@ vi.mock("../../lib/api-client", () => ({
   },
 }));
 
-vi.mock("../../stores/use-app-store", () => ({
-  useAppStore: {
+vi.mock("../../stores/use-log-store", () => ({
+  useLogStore: {
     getState: () => ({ addLog: vi.fn() }),
   },
 }));
