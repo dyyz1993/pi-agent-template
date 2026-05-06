@@ -20,10 +20,6 @@ import { spawn, execSync } from "child_process";
 import { existsSync, mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
-import { createRequire } from "module";
-
-const require = createRequire(import.meta.url);
-const WS = require("ws") as typeof import("ws");
 
 const TEMPLATE = process.argv[2] || "agent";
 const PORT = 3700;
@@ -155,26 +151,39 @@ async function main() {
 			throw new Error(`Unexpected health status: ${healthData.status}`);
 
 		const wsUrl = `ws://localhost:${PORT}/ws?token=${encodeURIComponent(authToken)}`;
-		const ws = new WS(wsUrl);
-		await new Promise<void>((resolve, reject) => {
-			ws.on("open", () => resolve());
-			ws.on("error", (e) => reject(new Error(`WS error: ${String(e)}`)));
-			setTimeout(() => reject(new Error("WS timeout")), 5000);
+		const ws = new WebSocket(wsUrl);
+
+		const wsOpen = await new Promise<boolean>((resolve) => {
+			ws.onopen = () => resolve(true);
+			ws.onerror = () => resolve(false);
+			setTimeout(() => resolve(false), 5000);
 		});
+		if (!wsOpen) throw new Error("WebSocket connection failed");
 
 		const rpcResponse = await new Promise<{ error?: { message: string }; result?: unknown }>(
 			(resolve, reject) => {
 				const timer = setTimeout(() => {
-					reject(new Error("RPC timeout — server logs:\n" + serverLogs.slice(-10).join("\n")));
+					reject(
+						new Error(
+							"RPC timeout — readyState=" +
+								ws.readyState +
+								" logs:\n" +
+								serverLogs.slice(-10).join("\n")
+						)
+					);
 				}, 10000);
-				ws.on("message", (data: Buffer) => {
+				ws.onmessage = (ev) => {
 					clearTimeout(timer);
 					try {
-						resolve(JSON.parse(data.toString()));
+						const data =
+							typeof ev.data === "string"
+								? ev.data
+								: new TextDecoder().decode(ev.data as ArrayBuffer);
+						resolve(JSON.parse(data));
 					} catch (err) {
 						reject(new Error(`Parse error: ${String(err)}`));
 					}
-				});
+				};
 				ws.send(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "system.ping", params: {} }));
 			}
 		);
