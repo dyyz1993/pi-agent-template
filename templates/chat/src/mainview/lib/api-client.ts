@@ -7,6 +7,7 @@ import type {
 	EventMetadata,
 } from "@dyyz1993/rpc-core";
 import type { RPCMethods, RPCEvents } from "../../shared/rpc-schema";
+import { rpcCache, CACHEABLE_METHODS } from "./rpc-cache";
 
 /**
  * Token 来源优先级：
@@ -44,6 +45,9 @@ class APIClientImpl {
 		this._baseUrl = null; // 桌面端不走 HTTP
 		this.client = createTypedClient<RPCMethods, RPCEvents>(ipcTransport);
 		this.setupElectrobunBridge(ipcTransport);
+		if (import.meta.env.DEV) {
+			console.warn("[APIClient] Desktop (IPC) initialized synchronously");
+		}
 	}
 
 	/**
@@ -155,8 +159,21 @@ class APIClientImpl {
 		method: K,
 		params: MethodParams<RPCMethods, K>
 	): Promise<MethodResult<RPCMethods, K>> {
+		const methodStr = method as string;
+		const ttl = CACHEABLE_METHODS[methodStr];
+		if (ttl !== undefined) {
+			const cached = rpcCache.get<MethodResult<RPCMethods, K>>(methodStr, params, ttl);
+			if (cached !== null) return cached;
+		}
+
 		await this.initialize();
-		return this.client!.call(method, params);
+		const result = await this.client!.call(method, params);
+
+		if (ttl !== undefined) {
+			rpcCache.set(methodStr, params, result);
+		}
+
+		return result;
 	}
 
 	async subscribe<K extends keyof RPCEvents>(

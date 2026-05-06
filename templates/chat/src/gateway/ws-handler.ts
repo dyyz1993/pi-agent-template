@@ -43,6 +43,27 @@ export function createWsHandler(httpServer: Server, deps: WsHandlerDeps): WebSoc
 
 		log.info("Client connected", { total: wss.clients.size });
 
+		const PING_INTERVAL = 30000;
+		let pongReceived = true;
+		const pingTimer = setInterval(() => {
+			if (ws.readyState !== WebSocket.OPEN) {
+				clearInterval(pingTimer);
+				return;
+			}
+			if (!pongReceived) {
+				log.warn("Client heartbeat timeout, closing connection");
+				clearInterval(pingTimer);
+				ws.terminate();
+				return;
+			}
+			pongReceived = false;
+			ws.ping();
+		}, PING_INTERVAL);
+
+		ws.on("pong", () => {
+			pongReceived = true;
+		});
+
 		const wsTransport = {
 			send: async (message: unknown): Promise<void> => {
 				if (ws.readyState === WebSocket.OPEN) {
@@ -79,6 +100,7 @@ export function createWsHandler(httpServer: Server, deps: WsHandlerDeps): WebSoc
 		registerAllHandlers(rpcServer, { platform: "web" });
 
 		ws.on("close", () => {
+			if (pingTimer) clearInterval(pingTimer);
 			log.info("Client disconnected", { total: wss.clients.size });
 			rpcServer.close();
 		});

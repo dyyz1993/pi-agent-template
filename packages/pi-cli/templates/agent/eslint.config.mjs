@@ -1,6 +1,9 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
-import rpcPlugin from './eslint-plugin-rpc/index.js';
+import rpcPlugin from '@dyyz1993/eslint-plugin-rpc';
+import reactHooks from 'eslint-plugin-react-hooks';
+import reactRefresh from 'eslint-plugin-react-refresh';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 
 export default tseslint.config(
   js.configs.recommended,
@@ -10,7 +13,6 @@ export default tseslint.config(
       'node_modules/**',
       'build/**',
       'dist/**',
-      'eslint-plugin-rpc/**',
       'postcss.config.js',
       'tailwind.config.js',
     ],
@@ -19,8 +21,19 @@ export default tseslint.config(
     files: ['src/**/*.{ts,tsx}'],
     plugins: {
       rpc: rpcPlugin,
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
+      'jsx-a11y': jsxA11y,
     },
     rules: {
+      ...reactHooks.configs.recommended.rules,
+      'react-hooks/rules-of-hooks': 'warn',
+      'react-hooks/exhaustive-deps': 'warn',
+      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      ...jsxA11y.configs.recommended.rules,
+      'jsx-a11y/click-events-have-key-events': 'warn',
+      'jsx-a11y/no-static-element-interactions': 'warn',
+      'jsx-a11y/no-autofocus': 'warn',
       // TS 严格规则
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-empty-object-type': ['error', { allowObjectTypes: 'always', allowInterfaces: 'with-single-extends' }],

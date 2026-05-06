@@ -333,3 +333,48 @@ refactor(scope): 重构
 | handler 多连接状态冲突              | 模块级变量被所有连接共享                 | 状态移入 register() 闭包            |
 | shared/ 在独立项目中不存在          | monorepo 的相对路径超出项目根            | http-routes.ts 内联到每个模板       |
 | 符号链接路径穿越                    | resolve() 跟随符号链接                   | 建议生产环境用 `fs.realpath()` 校验 |
+
+---
+
+## 九、E2E 测试规范
+
+### 9.1 Playwright 配置
+
+- 配置文件：`playwright.config.ts`（根目录）
+- 测试目录：`e2e/`
+- headless: true, workers: 3
+- 浏览器：chromium only
+- 重试：1 次
+
+### 9.2 真实后端连接
+
+- **禁止使用 MockWebSocket**
+- 通过 `e2e/fixtures.ts` 的 `page.addInitScript` 在 localStorage 注入 `rpc-websocket-url` 和 `rpc-auth-token`
+- 前端从 localStorage 读取 WS URL + token，直连真实 Bun 后端
+- 后端 AUTH_TOKEN 设为固定值 `pi-agent-template-token`（与前端默认值一致）
+
+### 9.3 全局错误收集
+
+- `e2e/fixtures.ts` 的 `browserErrors` fixture（`{ auto: true }`）自动收集：
+  - `console.error` — 控制台错误
+  - `pageerror` — 未捕获 JS 运行时异常
+  - `requestfailed` — 网络请求失败
+- 每个 test 结束后自动断言 `expect(filtered).toEqual([])`
+- 允许的错误（过滤列表）：favicon、404、net::ERR_CONNECTION_REFUSED、WebSocket
+
+### 9.4 测试启动流程（CI）
+
+1. `bun run scripts/create.ts` 创建临时项目
+2. `AUTH_TOKEN=pi-agent-template-token bun src/server.ts` 启动后端
+3. `npx vite build` 构建前端
+4. `Bun.serve()` 在 5173 端口 serve 静态文件
+5. `npx playwright test` 运行测试
+
+### 9.5 桌面端测试
+
+- CI 上无法启动 Electrobun GUI（无 headless 模式、macOS runner 无活跃 WindowServer）
+- 桌面端通过分层测试覆盖：
+  - Playwright Web E2E → UI/DOM/交互（90% 业务逻辑）
+  - `build-desktop` → 构建产物验证（macOS/Win/Linux）
+  - `tsc --noEmit --project tsconfig.ipc.json` → IPC Transport 编译检查
+  - 本地手动 → electrobun dev 真实桌面验证
