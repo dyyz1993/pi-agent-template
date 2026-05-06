@@ -21,7 +21,7 @@
 		"test:e2e-ui:all": "bun run test:e2e-ui:general && bun run test:e2e-ui:chat && bun run test:e2e-ui:agent",
 		"test:integration:all": "HUSKY=0 bun run scripts/e2e-test.ts --type general && HUSKY=0 bun run scripts/e2e-test.ts --type chat && HUSKY=0 bun run scripts/e2e-test.ts --type agent",
 		"test:e2e-ui:headed": "npx playwright test --headed",
-		"type-check": "tsc --noEmit",
+		"type-check": "bunx tsc --noEmit",
 		"changeset": "changeset",
 		"version-packages": "changeset version",
 		"release": "pnpm run build && changeset publish",
