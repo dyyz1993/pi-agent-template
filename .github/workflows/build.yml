@@ -188,7 +188,7 @@ jobs:
       - name: Verify IPC transport compiles
         run: |
           cd templates/agent
-          bunx tsc --noEmit src/bun/index.ts
+          bunx tsc --noEmit --project tsconfig.ipc.json
 
       - name: Cleanup
         if: always()

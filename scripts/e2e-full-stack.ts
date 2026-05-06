@@ -314,8 +314,8 @@ serve({
 			}
 		}
 
-		// Test 7: file.listDir
-		{
+		// Test 7: file.listDir (only agent/general templates have this)
+		if (template !== "chat") {
 			const name = "file.listDir";
 			try {
 				const r = await rpcClient.call<{ entries: unknown[] }>("file.listDir", { path: "." });

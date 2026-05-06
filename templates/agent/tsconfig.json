@@ -17,10 +17,18 @@
 		"noFallthroughCasesInSwitch": true,
 		"baseUrl": ".",
 		"paths": {
-			"@dyyz1993/rpc-core": ["../packages/rpc-core/src/index.ts"],
+			"@dyyz1993/rpc-core": ["../../packages/rpc-core/src/index.ts"],
 			"@shared/*": ["../shared/*"]
 		}
 	},
 	"include": ["src", "../shared"],
-	"exclude": ["node_modules", "dist", "build", "../../package/dist", "**/__tests__/**", "**/*.test.ts", "**/*.test.tsx"]
+	"exclude": [
+		"node_modules",
+		"dist",
+		"build",
+		"../../package/dist",
+		"**/__tests__/**",
+		"**/*.test.ts",
+		"**/*.test.tsx"
+	]
 }
