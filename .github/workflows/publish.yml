@@ -91,7 +91,7 @@ jobs:
 
       - name: Sync templates
         run: |
-          for t in general chat agent; do
+          for t in general chat agent shared; do
             rm -rf packages/pi-cli/templates/$t
             cp -r templates/$t packages/pi-cli/templates/$t
           done

@@ -229,6 +229,23 @@ export async function copyTemplate(options: CopyOptions): Promise<void> {
 	if (isMonorepo) {
 		copyTraeRules(localRoot, targetDir, projectName);
 		copySharedModules(localRoot, targetDir, projectName);
+	} else {
+		const publishedShared = resolve(import.meta.dir, "..", "..", "templates", "shared");
+		if (existsSync(publishedShared)) {
+			copyAndReplace(publishedShared, join(targetDir, "shared"), projectName);
+			for (const f of ["http-routes.ts", "logger.ts"]) {
+				const p = join(targetDir, "shared", f);
+				if (existsSync(p)) unlinkSync(p);
+			}
+			const tsconfigPath = join(targetDir, "tsconfig.json");
+			if (existsSync(tsconfigPath)) {
+				let tsconfig = readFileSync(tsconfigPath, "utf-8");
+				tsconfig = tsconfig.replace(/"\.\.\/shared\/\*"/g, '"./shared/*"');
+				tsconfig = tsconfig.replace(/"\.\.\/shared"/g, '"./shared"');
+				writeFileSync(tsconfigPath, tsconfig);
+			}
+			cleanSharedViteConfig(join(targetDir, "shared"));
+		}
 	}
 	cleanViteConfig(targetDir);
 	updatePackageJson(targetDir, projectName);
