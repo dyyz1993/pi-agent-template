@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from "fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, unlinkSync } from "fs";
 import { join, resolve } from "path";
 import { execSync } from "child_process";
 
@@ -72,6 +72,11 @@ function copySharedModules(monorepoRoot: string, targetDir: string, projectName:
 
 	const destSharedDir = join(targetDir, "shared");
 	copyAndReplace(sharedDir, destSharedDir, projectName);
+
+	for (const f of ["http-routes.ts", "logger.ts"]) {
+		const p = join(destSharedDir, f);
+		if (existsSync(p)) unlinkSync(p);
+	}
 
 	const tsconfigPath = join(targetDir, "tsconfig.json");
 	if (existsSync(tsconfigPath)) {

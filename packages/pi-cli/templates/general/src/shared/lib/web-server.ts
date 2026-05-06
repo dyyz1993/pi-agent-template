@@ -1,8 +1,8 @@
 import { createServer, type Server } from "http";
 import { networkInterfaces } from "os";
-import { createHttpHandler } from "../../../../shared/http-routes";
+import { createHttpHandler } from "../http-routes";
 import { createWsHandler } from "../../gateway/ws-handler";
-import { createLogger } from "../../../../shared/logger";
+import { createLogger } from "./logger";
 
 const log = createLogger("web-server");
 
