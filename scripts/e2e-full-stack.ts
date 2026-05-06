@@ -87,13 +87,14 @@ function createRpcClient(): Promise<{ client: RPCClient; transport: WebSocketTra
 }
 
 async function main() {
+	const template = process.env.TEMPLATE || "agent";
 	const rootDir = resolve(import.meta.dir, "..");
 	const tmpBase = mkdtempSync(join(tmpdir(), "e2e-fullstack-"));
 	projectDir = join(tmpBase, "e2e-fullstack");
 	autoCreated = true;
 
-	log("setup", `Creating general project at: ${projectDir}`);
-	execSync(`HUSKY=0 bun run scripts/create.ts ${PROJECT_NAME} ${projectDir} --type general`, {
+	log("setup", `Creating ${template} project at: ${projectDir}`);
+	execSync(`HUSKY=0 bun run scripts/create.ts ${PROJECT_NAME} ${projectDir} --type ${template}`, {
 		cwd: rootDir,
 		stdio: "pipe",
 	});

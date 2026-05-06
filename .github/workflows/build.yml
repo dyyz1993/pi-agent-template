@@ -158,6 +158,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        template: [agent, general]
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -165,6 +168,8 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Test hybrid mode (IPC + WS + multi-client)
         run: bun scripts/smoke-hybrid-full.ts
+        env:
+          TEMPLATE: ${{ matrix.template }}
 
   smoke-desktop-dev:
     runs-on: macos-latest

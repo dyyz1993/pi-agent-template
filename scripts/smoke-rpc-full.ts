@@ -87,7 +87,7 @@ function createRpcClient(
 }
 
 async function main() {
-	let templateType = "general";
+	let templateType = process.env.TEMPLATE || "agent";
 	for (let i = 2; i < process.argv.length; i++) {
 		if (process.argv[i] === "--type" && process.argv[i + 1]) {
 			templateType = process.argv[++i];
