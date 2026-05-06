@@ -4,16 +4,14 @@
 import { spawn, execSync } from "child_process";
 import { existsSync, mkdtempSync, rmSync, readFileSync } from "fs";
 import { tmpdir } from "os";
-import { join, resolve, extname } from "path";
-import http from "node:http";
-import net from "node:net";
+import { join, resolve } from "path";
 
 const MAX_WAIT_MS = 30_000;
 const POLL_MS = 200;
 const AUTH_TOKEN = "pi-agent-template-token";
 
 let backendProc: ReturnType<typeof spawn> | null = null;
-let proxyServer: http.Server | null = null;
+let staticServer: Bun.Server<undefined> | null = null;
 let projectDir: string;
 let autoCreated = false;
 
@@ -22,7 +20,7 @@ function log(tag: string, msg: string) {
 }
 
 function cleanup(code: number) {
-	if (proxyServer) proxyServer.close();
+	if (staticServer) staticServer.stop();
 	if (backendProc && !backendProc.killed) backendProc.kill("SIGTERM");
 	if (autoCreated && projectDir && existsSync(projectDir)) {
 		try {
@@ -68,101 +66,20 @@ async function waitForUrl(url: string, maxMs: number): Promise<void> {
 	throw new Error(`Timed out waiting for ${url}`);
 }
 
-const MIME_TYPES: Record<string, string> = {
-	".html": "text/html",
-	".js": "application/javascript",
-	".mjs": "application/javascript",
-	".css": "text/css",
-	".json": "application/json",
-	".png": "image/png",
-	".jpg": "image/jpeg",
-	".svg": "image/svg+xml",
-	".ico": "image/x-icon",
-	".woff": "font/woff",
-	".woff2": "font/woff2",
-	".map": "application/json",
-	".txt": "text/plain",
-};
-
-const API_PREFIXES = ["/health", "/info", "/file", "/upload", "/api"];
-
-function startProxyServer(distDir: string, backendPort: number, frontendPort: number): http.Server {
-	const server = http.createServer((req, res) => {
-		const urlPath = (req.url || "/").split("?")[0];
-
-		if (API_PREFIXES.some((p) => urlPath.startsWith(p))) {
-			const proxyReq = http.request(
-				{
-					hostname: "127.0.0.1",
-					port: backendPort,
-					method: req.method || "GET",
-					path: req.url,
-					headers: { ...req.headers, host: `localhost:${backendPort}` },
-				},
-				(proxyRes) => {
-					res.writeHead(proxyRes.statusCode || 200, proxyRes.headers as Record<string, string>);
-					proxyRes.pipe(res);
-				}
-			);
-			proxyReq.on("error", () => {
-				res.writeHead(502);
-				res.end("Bad Gateway");
-			});
-			req.pipe(proxyReq);
-			return;
-		}
-
-		let filePath = join(distDir, urlPath === "/" ? "index.html" : urlPath);
-		if (!existsSync(filePath) || !filePath.startsWith(distDir)) {
-			filePath = join(distDir, "index.html");
-		}
-		try {
-			const data = readFileSync(filePath);
-			const contentType = MIME_TYPES[extname(filePath)] || "application/octet-stream";
-			res.writeHead(200, { "Content-Type": contentType });
-			res.end(data);
-		} catch {
-			res.writeHead(404);
-			res.end("Not found");
-		}
-	});
-
-	server.on("upgrade", (req, clientSocket, head) => {
-		const backend = net.createConnection(backendPort, "127.0.0.1", () => {
-			let rawRequest = `${req.method || "GET"} ${req.url} HTTP/1.1\r\n`;
-			for (const [key, value] of Object.entries(req.headers)) {
-				if (value != null) {
-					rawRequest += `${key}: ${Array.isArray(value) ? value.join(", ") : value}\r\n`;
-				}
+function startStaticServer(distDir: string, port: number): Bun.Server<undefined> {
+	const resolvedDistDir = resolve(distDir);
+	return Bun.serve({
+		port,
+		fetch(req) {
+			const url = new URL(req.url);
+			let filePath = join(distDir, url.pathname === "/" ? "index.html" : url.pathname);
+			const resolvedPath = resolve(filePath);
+			if (!existsSync(resolvedPath) || !resolvedPath.startsWith(resolvedDistDir)) {
+				filePath = join(distDir, "index.html");
 			}
-			rawRequest += `Host: localhost:${backendPort}\r\n\r\n`;
-			backend.write(rawRequest);
-			if (head.length > 0) backend.write(head);
-		});
-
-		let buffer = Buffer.alloc(0);
-		let headersDone = false;
-
-		function onBackendData(chunk: Buffer) {
-			if (headersDone) return;
-			buffer = Buffer.concat([buffer, chunk]);
-			const idx = buffer.indexOf("\r\n\r\n");
-			if (idx !== -1) {
-				headersDone = true;
-				backend.removeListener("data", onBackendData);
-				clientSocket.write(buffer);
-				backend.pipe(clientSocket);
-				clientSocket.pipe(backend);
-			}
-		}
-
-		backend.on("data", onBackendData);
-		backend.on("error", () => clientSocket.destroy());
-		clientSocket.on("error", () => backend.destroy());
+			return new Response(Bun.file(filePath));
+		},
 	});
-
-	server.listen(frontendPort);
-	return server;
 }
 
 async function main() {
@@ -222,18 +139,24 @@ async function main() {
 		return;
 	}
 
-	log("serve", "Starting proxy server on port 5173...");
-	proxyServer = startProxyServer(distDir, parseInt(backendPort), 5173);
+	log("serve", "Starting static server on port 5173...");
+	staticServer = startStaticServer(distDir, 5173);
 
 	await waitForUrl("http://localhost:5173", MAX_WAIT_MS);
-	log("serve", "Proxy server ready on http://localhost:5173 (static + WS proxy to backend)");
+	log("serve", "Static server ready on http://localhost:5173");
 
 	log("test", "Running Playwright E2E UI tests...");
 	try {
+		const wsUrl = `ws://localhost:${backendPort}/ws`;
 		execSync("npx playwright test --reporter=list", {
 			cwd: rootDir,
 			stdio: "inherit",
-			env: { ...process.env, TEMPLATE_TYPE: templateType },
+			env: {
+				...process.env,
+				TEMPLATE_TYPE: templateType,
+				E2E_WS_URL: wsUrl,
+				E2E_TOKEN: AUTH_TOKEN,
+			},
 			timeout: 90_000,
 		});
 		log("test", "Playwright tests PASSED");
