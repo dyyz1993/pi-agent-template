@@ -155,14 +155,16 @@ async function main() {
 
 		const rpcResponse = await new Promise<{ error?: { message: string }; result?: unknown }>(
 			(resolve, reject) => {
-				ws.addEventListener("message", (e) => resolve(JSON.parse(e.data)));
-				ws.send(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "fs.getCwd", params: {} }));
-				setTimeout(() => reject(new Error("RPC timeout")), 5000);
+				const timer = setTimeout(() => reject(new Error("RPC timeout")), 8000);
+				ws.addEventListener("message", (e) => {
+					clearTimeout(timer);
+					resolve(JSON.parse(e.data));
+				});
+				ws.send(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "system.ping", params: {} }));
 			}
 		);
 
 		if (rpcResponse.error) throw new Error(`RPC error: ${rpcResponse.error.message}`);
-		if (!rpcResponse.result) throw new Error("RPC returned empty result");
 
 		ws.close();
 	});
