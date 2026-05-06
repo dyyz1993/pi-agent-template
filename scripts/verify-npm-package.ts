@@ -94,11 +94,10 @@ async function main() {
 	process.on("exit", cleanup);
 
 	await runStep("npx create-agent", async () => {
-		execSync(`npx @dyyz1993/create-agent@latest create ${projectDir} --type ${TEMPLATE}`, {
-			stdio: "pipe",
-			timeout: 60_000,
-			env: { ...process.env, HUSKY: "0" },
-		});
+		execSync(
+			`npx @dyyz1993/create-agent@latest create verify-app --type ${TEMPLATE} --dir ${projectDir}`,
+			{ stdio: "pipe", timeout: 60_000, env: { ...process.env, HUSKY: "0" } }
+		);
 	});
 
 	await runStep("project structure", () => {
