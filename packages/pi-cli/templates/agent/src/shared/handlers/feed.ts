@@ -6,48 +6,47 @@ import { createLogger } from "../lib/logger";
 
 const log = createLogger("feed");
 
-// 内存存储
-const posts: FeedPost[] = [];
-
 type RegisterFn = <K extends keyof RPCMethods & string>(
-  method: K,
-  handler: (params: MethodParams<RPCMethods, K>) => Promise<MethodResult<RPCMethods, K>>,
+	method: K,
+	handler: (params: MethodParams<RPCMethods, K>) => Promise<MethodResult<RPCMethods, K>>
 ) => void;
 
 export function register(server: RPCServer, _options: HandlerOptions): void {
-  const r: RegisterFn = (method, handler) => {
-    server.register(method, handler as (params: unknown) => Promise<unknown>);
-  };
+	const posts: FeedPost[] = [];
 
-  r("feed.post", async (params) => {
-    const category = params.category as FeedCategory;
-    const author = (params.author as string) || "anonymous";
+	const r: RegisterFn = (method, handler) => {
+		server.register(method, handler as (params: unknown) => Promise<unknown>);
+	};
 
-    const post: FeedPost = {
-      id: `feed-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      content: params.content,
-      category,
-      author,
-      timestamp: Date.now(),
-    };
+	r("feed.post", async (params) => {
+		const category = params.category as FeedCategory;
+		const author = (params.author as string) || "anonymous";
 
-    posts.push(post);
-    log.info(`New post: ${post.id} [${category}] by ${author}`);
+		const post: FeedPost = {
+			id: `feed-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+			content: params.content,
+			category,
+			author,
+			timestamp: Date.now(),
+		};
 
-    // 发送事件 — metadata 用于过滤
-    server.emitEvent("feed.update", post, { category, author });
+		posts.push(post);
+		log.info(`New post: ${post.id} [${category}] by ${author}`);
 
-    return { id: post.id };
-  });
+		// 发送事件 — metadata 用于过滤
+		server.emitEvent("feed.update", post, { category, author });
 
-  r("feed.list", async (params) => {
-    const limit = params.limit ?? 50;
-    let filtered = posts;
+		return { id: post.id };
+	});
 
-    if (params.category) {
-      filtered = posts.filter((p) => p.category === params.category);
-    }
+	r("feed.list", async (params) => {
+		const limit = params.limit ?? 50;
+		let filtered = posts;
 
-    return { posts: filtered.slice(-limit) };
-  });
+		if (params.category) {
+			filtered = posts.filter((p) => p.category === params.category);
+		}
+
+		return { posts: filtered.slice(-limit) };
+	});
 }

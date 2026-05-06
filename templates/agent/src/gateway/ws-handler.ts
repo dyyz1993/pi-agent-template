@@ -44,11 +44,8 @@ export function createWsHandler(httpServer: Server, deps: WsHandlerDeps): WebSoc
 		log.info("Client connected", { total: wss.clients.size });
 
 		const PING_INTERVAL = 30000;
-		const PING_TIMEOUT = 10000;
 		let pongReceived = true;
-		let pingTimer: ReturnType<typeof setInterval> | undefined;
-
-		pingTimer = setInterval(() => {
+		const pingTimer = setInterval(() => {
 			if (ws.readyState !== WebSocket.OPEN) {
 				clearInterval(pingTimer);
 				return;

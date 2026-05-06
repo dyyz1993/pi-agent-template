@@ -8,3 +8,4 @@ export { register as feed } from "./feed";
 export { register as bash } from "./bash";
 export { register as rules } from "./rules";
 export { register as todo } from "./todo";
+export { register as debug } from "./debug";

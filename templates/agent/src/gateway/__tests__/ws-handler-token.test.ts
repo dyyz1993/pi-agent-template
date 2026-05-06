@@ -30,20 +30,21 @@ function createMockReq(url: string, headers: Record<string, string> = {}) {
 }
 
 describe("WS Handler Token 安全", () => {
-	let wssInstance: EventEmitter & { clients: Set<any> };
+	let _wssInstance: EventEmitter & { clients: Set<any> };
 
 	beforeEach(async () => {
 		vi.resetModules();
 
 		const { WebSocketServer } = await import("ws");
-		const originalWSS = WebSocketServer;
+		const _originalWSS = WebSocketServer;
 
 		vi.doMock("ws", () => {
 			class MockWSS extends EventEmitter {
 				clients = new Set();
-				constructor(opts: any) {
+				constructor(_opts: any) {
 					super();
-					wssInstance = this;
+					// eslint-disable-next-line @typescript-eslint/no-this-alias
+					_wssInstance = this;
 				}
 			}
 			return { WebSocketServer: MockWSS, WebSocket: { OPEN: 1 } };

@@ -1,1 +1,1 @@
-export { createHttpHandler, type HttpRouteDeps } from "@shared/http-routes";
+export { createHttpHandler, type HttpRouteDeps } from "../../../shared/http-routes";

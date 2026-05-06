@@ -10,99 +10,118 @@ import { useBreakpointSync } from "./hooks/use-breakpoint";
 import { ActivityBar } from "./components/activity-bar/ActivityBar";
 import { MobileTabBar } from "./components/activity-bar/MobileTabBar";
 import { ChatPanel } from "./components/chat/ChatPanel";
+import { ThemeToggle } from "./components/common/ThemeToggle";
+import { LanguageSwitcher } from "./components/common/LanguageSwitcher";
 
 function App() {
-  const { t } = useTranslation();
-  const mode = useConnectionStore((s) => s.mode);
-  const ready = useConnectionStore((s) => s.ready);
-  const initializeConnection = useConnectionStore((s) => s.initializeConnection);
-  const addLog = useLogStore((s) => s.addLog);
+	const { t } = useTranslation();
+	const mode = useConnectionStore((s) => s.mode);
+	const ready = useConnectionStore((s) => s.ready);
+	const initializeConnection = useConnectionStore((s) => s.initializeConnection);
+	const addLog = useLogStore((s) => s.addLog);
 
-  const breakpoint = useSidebarStore((s) => s.breakpoint);
+	const breakpoint = useSidebarStore((s) => s.breakpoint);
 
-  useBreakpointSync();
+	useBreakpointSync();
 
-  const isMobile = breakpoint === "mobile";
+	const isMobile = breakpoint === "mobile";
 
-  useEffect(() => {
-    initializeConnection();
-  }, [initializeConnection]);
+	useEffect(() => {
+		initializeConnection();
+	}, [initializeConnection]);
 
-  useEffect(() => {
-    if (!ready) return;
+	useEffect(() => {
+		if (!ready) return;
 
-    let subscriptionId: string | null = null;
+		let subscriptionId: string | null = null;
 
-    const setup = async () => {
-      subscriptionId = await apiClient.subscribe("chat.message", (payload) => {
-        useChatStore.getState().addMessage({
-          id: payload.id,
-          role: payload.role,
-          content: payload.content,
-          timestamp: payload.timestamp,
-        });
-      }, {});
-      addLog("Subscribed to chat.message");
+		const setup = async () => {
+			subscriptionId = await apiClient.subscribe(
+				"chat.message",
+				(payload) => {
+					useChatStore.getState().addMessage({
+						id: payload.id,
+						role: payload.role,
+						content: payload.content,
+						timestamp: payload.timestamp,
+					});
+				},
+				{}
+			);
+			addLog("Subscribed to chat.message");
 
-      try {
-        const history = await apiClient.call("chat.list", { limit: 100 });
-        if (history.messages.length > 0) {
-          useChatStore.getState().setMessages(
-            history.messages.map((m: { id: string; role: "user" | "assistant"; content: string; timestamp: number }) => ({
-              id: m.id,
-              role: m.role,
-              content: m.content,
-              timestamp: m.timestamp,
-            }))
-          );
-          addLog(`Loaded ${history.messages.length} history messages`);
-        }
-      } catch (err) {
-        addLog(`Failed to load history: ${err instanceof Error ? err.message : String(err)}`);
-      }
-    };
-    setup();
+			try {
+				const history = await apiClient.call("chat.list", { limit: 100 });
+				if (history.messages.length > 0) {
+					useChatStore.getState().setMessages(
+						history.messages.map(
+							(m: {
+								id: string;
+								role: "user" | "assistant";
+								content: string;
+								timestamp: number;
+							}) => ({
+								id: m.id,
+								role: m.role,
+								content: m.content,
+								timestamp: m.timestamp,
+							})
+						)
+					);
+					addLog(`Loaded ${history.messages.length} history messages`);
+				}
+			} catch (err) {
+				addLog(`Failed to load history: ${err instanceof Error ? err.message : String(err)}`);
+			}
+		};
+		setup();
 
-    return () => {
-      if (subscriptionId) {
-        apiClient.unsubscribe(subscriptionId);
-      }
-    };
-  }, [ready, addLog]);
+		return () => {
+			if (subscriptionId) {
+				apiClient.unsubscribe(subscriptionId);
+			}
+		};
+	}, [ready, addLog]);
 
-  if (!ready) {
-    return (
-      <div className="h-screen bg-[var(--color-bg-primary)] flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block w-8 h-8 border-2 border-[var(--color-text-accent)] border-t-transparent rounded-full animate-spin mb-4" />
-          <div className="text-[var(--color-text-tertiary)] text-sm">{t("app.connecting")}</div>
-        </div>
-      </div>
-    );
-  }
+	if (!ready) {
+		return (
+			<div className="h-screen bg-[var(--color-bg-primary)] flex items-center justify-center">
+				<div className="text-center">
+					<div className="inline-block w-8 h-8 border-2 border-[var(--color-text-accent)] border-t-transparent rounded-full animate-spin mb-4" />
+					<div className="text-[var(--color-text-tertiary)] text-sm">{t("app.connecting")}</div>
+				</div>
+			</div>
+		);
+	}
 
-  return (
-    <div className="h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] flex flex-col overflow-hidden">
-      {!isMobile && (
-        <div className="h-8 bg-[var(--color-bg-secondary)] flex items-center px-3 text-xs border-b border-[var(--color-border-primary)] flex-shrink-0">
-          <span className={`px-2 py-0.5 rounded flex items-center gap-1 ${mode === "desktop" ? "bg-green-600" : "bg-blue-600"}`}>
-            {mode === "desktop" ? <Monitor className="w-3 h-3" /> : <Wifi className="w-3 h-3" />}
-            {mode === "desktop" ? t("app.mode.desktop") : t("app.mode.web")}
-          </span>
-          <span className="ml-3 text-[var(--color-text-tertiary)]">{t("app.title")}</span>
-        </div>
-      )}
+	return (
+		<div className="h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] flex flex-col overflow-hidden">
+			{!isMobile && (
+				<div className="h-8 bg-[var(--color-bg-secondary)] flex items-center px-3 text-xs border-b border-[var(--color-border-primary)] flex-shrink-0">
+					<span
+						className={`px-2 py-0.5 rounded flex items-center gap-1 ${mode === "desktop" ? "bg-green-600" : "bg-blue-600"}`}
+					>
+						{mode === "desktop" ? <Monitor className="w-3 h-3" /> : <Wifi className="w-3 h-3" />}
+						{mode === "desktop" ? t("app.mode.desktop") : t("app.mode.web")}
+					</span>
+					<span className="ml-3 text-[var(--color-text-tertiary)]">{t("app.title")}</span>
+					<div className="ml-auto flex items-center gap-1">
+						<LanguageSwitcher />
+						<ThemeToggle />
+					</div>
+				</div>
+			)}
 
-      <div className="flex-1 flex overflow-hidden relative">
-        {!isMobile && <ActivityBar />}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <ChatPanel />
-        </div>
-      </div>
+			<div className="flex-1 flex overflow-hidden relative">
+				{!isMobile && <ActivityBar />}
+				<div className="flex-1 flex flex-col overflow-hidden">
+					<ChatPanel />
+				</div>
+			</div>
 
-      {isMobile && <MobileTabBar />}
-    </div>
-  );
+			{isMobile && <MobileTabBar />}
+		</div>
+	);
 }
 
 export default App;

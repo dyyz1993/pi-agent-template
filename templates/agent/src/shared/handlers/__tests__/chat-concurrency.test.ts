@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { join } from "path";
 import { homedir } from "os";
-import { readFile, unlink } from "fs/promises";
+import { unlink } from "fs/promises";
 import { existsSync } from "fs";
 
 vi.mock("../../lib/logger", () => ({
