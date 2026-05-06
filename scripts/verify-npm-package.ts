@@ -20,6 +20,10 @@ import { spawn, execSync } from "child_process";
 import { existsSync, mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
+const WS = require("ws") as typeof import("ws");
 
 const TEMPLATE = process.argv[2] || "agent";
 const PORT = 3700;
@@ -146,19 +150,30 @@ async function main() {
 		const health = await fetch(`http://localhost:${PORT}/health`);
 		if (!health.ok) throw new Error(`Health check failed: ${health.status}`);
 
-		const ws = new WebSocket(`ws://localhost:${PORT}/ws?token=${authToken}`);
+		const healthData = (await health.json()) as { status: string; uptime: number };
+		if (healthData.status !== "ok")
+			throw new Error(`Unexpected health status: ${healthData.status}`);
+
+		const wsUrl = `ws://localhost:${PORT}/ws?token=${encodeURIComponent(authToken)}`;
+		const ws = new WS(wsUrl);
 		await new Promise<void>((resolve, reject) => {
-			ws.addEventListener("open", () => resolve());
-			ws.addEventListener("error", (e) => reject(new Error(`WS error: ${String(e)}`)));
+			ws.on("open", () => resolve());
+			ws.on("error", (e) => reject(new Error(`WS error: ${String(e)}`)));
 			setTimeout(() => reject(new Error("WS timeout")), 5000);
 		});
 
 		const rpcResponse = await new Promise<{ error?: { message: string }; result?: unknown }>(
 			(resolve, reject) => {
-				const timer = setTimeout(() => reject(new Error("RPC timeout")), 8000);
-				ws.addEventListener("message", (e) => {
+				const timer = setTimeout(() => {
+					reject(new Error("RPC timeout — server logs:\n" + serverLogs.slice(-10).join("\n")));
+				}, 10000);
+				ws.on("message", (data: Buffer) => {
 					clearTimeout(timer);
-					resolve(JSON.parse(e.data));
+					try {
+						resolve(JSON.parse(data.toString()));
+					} catch (err) {
+						reject(new Error(`Parse error: ${String(err)}`));
+					}
 				});
 				ws.send(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "system.ping", params: {} }));
 			}
