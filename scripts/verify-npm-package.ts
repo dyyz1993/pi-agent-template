@@ -25,6 +25,7 @@ const TEMPLATE = process.argv[2] || "agent";
 const PORT = 3700;
 const TIMEOUT_MS = 20_000;
 
+let tmpBase: string;
 let projectDir: string;
 let serverProcess: ReturnType<typeof spawn> | null = null;
 const serverLogs: string[] = [];
@@ -43,10 +44,10 @@ function cleanup(code: number) {
 		serverProcess.kill("SIGTERM");
 		serverProcess = null;
 	}
-	if (projectDir && existsSync(projectDir)) {
-		log("cleanup", `Removing temp project: ${projectDir}`);
+	if (tmpBase && existsSync(tmpBase)) {
+		log("cleanup", `Removing temp dir: ${tmpBase}`);
 		try {
-			rmSync(projectDir, { recursive: true, force: true });
+			rmSync(tmpBase, { recursive: true, force: true });
 		} catch {
 			/* ignore */
 		}
@@ -88,7 +89,8 @@ async function main() {
 	const version = execSync("npm view @dyyz1993/create-agent version", { encoding: "utf-8" }).trim();
 	log("INFO", `Verifying @dyyz1993/create-agent@${version}, template=${TEMPLATE}`);
 
-	projectDir = mkdtempSync(join(tmpdir(), `npm-verify-${TEMPLATE}-`));
+	const tmpBase = mkdtempSync(join(tmpdir(), `npm-verify-${TEMPLATE}-`));
+	projectDir = join(tmpBase, "project");
 
 	process.on("SIGINT", () => cleanup(1));
 	process.on("exit", cleanup);
