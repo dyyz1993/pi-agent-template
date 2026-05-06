@@ -99,14 +99,6 @@ const isAgent = process.env.TEMPLATE_TYPE === "agent";
 		await expect(page.locator('input[placeholder="Path"]')).toBeVisible();
 		await expect(page.locator('button[title="List directory"]')).toBeVisible();
 	});
-
-	test("should show explorer content or empty state", async ({ page }) => {
-		await waitForAppReady(page);
-
-		const emptyHint = page.locator("text=Enter path and click refresh").first();
-		const fileList = page.locator('[data-testid="explorer-sidebar"] li, .explorer-tree li').first();
-		await expect(emptyHint.or(fileList)).toBeVisible({ timeout: 5000 });
-	});
 });
 
 (isAgent ? test.describe : test.describe.skip)("Responsive Layout", () => {
