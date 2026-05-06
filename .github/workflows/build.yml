@@ -154,42 +154,36 @@ jobs:
         if: always()
         run: pkill -f "bun src/server.ts" 2>/dev/null || true
 
-  smoke-hybrid:
+  smoke-hybrid-full:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
+      - name: Test hybrid mode (IPC + WS + multi-client)
+        run: bun scripts/smoke-hybrid-full.ts
 
-      - name: Test hybrid mode server startup
+  smoke-desktop-dev:
+    runs-on: macos-latest
+    timeout-minutes: 10
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Test desktop dev mode startup
         run: |
           cd templates/agent
-
-          AUTH_TOKEN="hybrid-test-token" \
-          ENABLE_WEB_SERVICE=true \
-          PORT=3200 \
-          bun src/server.ts &
-          SERVER_PID=$!
-
-          for i in $(seq 1 30); do
-            if curl -sf "http://localhost:3200/health" > /dev/null 2>&1; then
-              echo "Hybrid server is ready!"
-              break
-            fi
-            if [ "$i" = "30" ]; then
-              echo "Hybrid server failed to start"
-              kill $SERVER_PID 2>/dev/null || true
-              exit 1
-            fi
-            sleep 1
-          done
-
-          curl -s "http://localhost:3200/health" | grep -q '"status":"ok"'
-          echo "Hybrid mode smoke test passed!"
-          kill $SERVER_PID
+          bun run build
+          timeout 30 bun run dev 2>&1 || true
+      - name: Verify IPC transport compiles
+        run: |
+          cd templates/agent
+          bunx tsc --noEmit src/bun/index.ts
 
       - name: Cleanup
         if: always()

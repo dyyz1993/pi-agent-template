@@ -224,15 +224,66 @@ jobs:
           path: e2e-ui-results/
           retention-days: 7
 
+  smoke-dev-web:
+    needs: [lint, type-check]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        template: [agent, chat, general]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Test dev:web mode
+        run: bun scripts/smoke-dev-web.ts
+        env:
+          TEMPLATE: ${{ matrix.template }}
+
+  e2e-full-stack:
+    needs: [lint, type-check]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        template: [agent, chat, general]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Test full stack (frontend build + backend WS)
+        run: bun scripts/e2e-full-stack.ts
+        env:
+          TEMPLATE: ${{ matrix.template }}
+
+  smoke-rpc-full:
+    needs: [lint, type-check]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        template: [agent, general]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+      - name: Full RPC test (file ops, timer events, bash, path security)
+        run: bun scripts/smoke-rpc-full.ts
+        env:
+          TEMPLATE: ${{ matrix.template }}
+
   notify-result:
     runs-on: ubuntu-latest
-    needs: [lint, type-check, test, template-test, smoke-test, build-verify, integration-test, rpc-api-test, e2e-ui]
+    needs: [lint, type-check, test, template-test, smoke-test, build-verify, integration-test, rpc-api-test, e2e-ui, smoke-dev-web, e2e-full-stack, smoke-rpc-full]
     if: always()
     steps:
       - name: Check CI result
         id: check
         run: |
-          if echo "${{ needs.lint.result }} ${{ needs.type-check.result }} ${{ needs.test.result }} ${{ needs.template-test.result }} ${{ needs.smoke-test.result }} ${{ needs.build-verify.result }} ${{ needs.integration-test.result }} ${{ needs.rpc-api-test.result }} ${{ needs.e2e-ui.result }}" | grep -q "failure"; then
+          if echo "${{ needs.lint.result }} ${{ needs.type-check.result }} ${{ needs.test.result }} ${{ needs.template-test.result }} ${{ needs.smoke-test.result }} ${{ needs.build-verify.result }} ${{ needs.integration-test.result }} ${{ needs.rpc-api-test.result }} ${{ needs.e2e-ui.result }} ${{ needs.smoke-dev-web.result }} ${{ needs.e2e-full-stack.result }} ${{ needs.smoke-rpc-full.result }}" | grep -q "failure"; then
             echo "status=FAILED" >> $GITHUB_OUTPUT
           else
             echo "status=PASSED" >> $GITHUB_OUTPUT
@@ -254,10 +305,10 @@ jobs:
   feishu-notify:
     name: Feishu Notification
     if: always()
-    needs: [lint, type-check, test, template-test, smoke-test, build-verify, integration-test, rpc-api-test, e2e-ui, notify-result]
+    needs: [lint, type-check, test, template-test, smoke-test, build-verify, integration-test, rpc-api-test, e2e-ui, smoke-dev-web, e2e-full-stack, smoke-rpc-full, notify-result]
     uses: dyyz1993/ci-tools/.github/workflows/feishu-notify.yml@main
     with:
-      jobs: '{"lint":"${{ needs.lint.result }}","type-check":"${{ needs.type-check.result }}","test":"${{ needs.test.result }}","template-test":"${{ needs.template-test.result }}","smoke-test":"${{ needs.smoke-test.result }}","build-verify":"${{ needs.build-verify.result }}","integration-test":"${{ needs.integration-test.result }}","rpc-api-test":"${{ needs.rpc-api-test.result }}","e2e-ui":"${{ needs.e2e-ui.result }}","notify-result":"${{ needs.notify-result.result }}"}'
+      jobs: '{"lint":"${{ needs.lint.result }}","type-check":"${{ needs.type-check.result }}","test":"${{ needs.test.result }}","template-test":"${{ needs.template-test.result }}","smoke-test":"${{ needs.smoke-test.result }}","build-verify":"${{ needs.build-verify.result }}","integration-test":"${{ needs.integration-test.result }}","rpc-api-test":"${{ needs.rpc-api-test.result }}","e2e-ui":"${{ needs.e2e-ui.result }}","smoke-dev-web":"${{ needs.smoke-dev-web.result }}","e2e-full-stack":"${{ needs.e2e-full-stack.result }}","smoke-rpc-full":"${{ needs.smoke-rpc-full.result }}","notify-result":"${{ needs.notify-result.result }}"}'
       sha: ${{ github.sha }}
       ref: ${{ github.ref_name }}
       actor: ${{ github.actor }}
