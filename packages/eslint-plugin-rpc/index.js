@@ -8,6 +8,7 @@
  *   - rpc/module-file-naming      : 模块文件命名、导出、方法前缀强制规范
  *   - rpc/require-typed-register  : 入口文件必须导入 registerAllHandlers
  *   - rpc/require-api-client      : 前端必须通过 apiClient 调用 RPC
+ *   - rpc/no-deep-relative-imports : 禁止超过 2 层 ../ 的相对路径导入
  */
 "use strict";
 
@@ -18,6 +19,7 @@ const moduleFileNaming = require("./rules/module-file-naming");
 const requireTypedRegister = require("./rules/require-typed-register");
 const requireApiClient = require("./rules/require-api-client");
 const noHardcodedStrings = require("./rules/no-hardcoded-strings");
+const noDeepRelativeImports = require("./rules/no-deep-relative-imports");
 
 module.exports = {
   meta: {
@@ -32,6 +34,7 @@ module.exports = {
     "require-typed-register": requireTypedRegister,
     "require-api-client": requireApiClient,
     "no-hardcoded-strings": noHardcodedStrings,
+    "no-deep-relative-imports": noDeepRelativeImports,
   },
   configs: {
     recommended: {
@@ -44,6 +47,7 @@ module.exports = {
         "rpc/require-typed-register": "error",
         "rpc/require-api-client": "error",
         "rpc/no-hardcoded-strings": "warn",
+        "rpc/no-deep-relative-imports": "error",
       },
     },
   },
