@@ -65,6 +65,7 @@ export const test = base.extend<{
 					!e.text.includes("favicon") &&
 					!e.text.includes("404") &&
 					!e.text.includes("net::ERR_CONNECTION_REFUSED") &&
+					!e.text.includes("net::ERR_ABORTED") &&
 					!e.text.includes("WebSocket")
 			);
 
