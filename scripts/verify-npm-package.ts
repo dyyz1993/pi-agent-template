@@ -131,9 +131,10 @@ async function main() {
 	});
 
 	await runStep("production server + HTTP/WS", async () => {
+		const authToken = `npm-verify-${TEMPLATE}`;
 		serverProcess = spawn("bun", ["run", "src/server.ts"], {
 			cwd: projectDir,
-			env: { ...process.env, PORT: String(PORT), TOKEN: `npm-verify-${TEMPLATE}` },
+			env: { ...process.env, PORT: String(PORT), AUTH_TOKEN: authToken, NODE_ENV: "development" },
 			stdio: ["pipe", "pipe", "pipe"],
 		});
 
@@ -145,7 +146,7 @@ async function main() {
 		const health = await fetch(`http://localhost:${PORT}/health`);
 		if (!health.ok) throw new Error(`Health check failed: ${health.status}`);
 
-		const ws = new WebSocket(`ws://localhost:${PORT}/ws?token=npm-verify-${TEMPLATE}`);
+		const ws = new WebSocket(`ws://localhost:${PORT}/ws?token=${authToken}`);
 		await new Promise<void>((resolve, reject) => {
 			ws.addEventListener("open", () => resolve());
 			ws.addEventListener("error", (e) => reject(new Error(`WS error: ${String(e)}`)));
