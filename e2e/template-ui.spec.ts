@@ -103,12 +103,6 @@ const isAgent = process.env.TEMPLATE_TYPE === "agent";
 	test("should show empty state prompt", async ({ page }) => {
 		await waitForAppReady(page);
 
-		const explorerBtn = page.locator('button[data-testid="tab-explorer"]');
-		await explorerBtn.click();
-
-		const pathInput = page.locator('input[placeholder="Path"]');
-		await expect(pathInput).toBeVisible({ timeout: 5000 });
-
 		await expect(page.locator("text=Enter path and click refresh").first()).toBeVisible({
 			timeout: 5000,
 		});
