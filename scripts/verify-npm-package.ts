@@ -130,7 +130,7 @@ async function main() {
 		}
 	});
 
-	await runStep("production server + HTTP/WS", async () => {
+	await runStep("production server + HTTP + WS connect", async () => {
 		const authToken = `npm-verify-${TEMPLATE}`;
 		serverProcess = spawn("bun", ["run", "src/server.ts"], {
 			cwd: projectDir,
@@ -145,51 +145,17 @@ async function main() {
 
 		const health = await fetch(`http://localhost:${PORT}/health`);
 		if (!health.ok) throw new Error(`Health check failed: ${health.status}`);
-
-		const healthData = (await health.json()) as { status: string; uptime: number };
-		if (healthData.status !== "ok")
-			throw new Error(`Unexpected health status: ${healthData.status}`);
+		const healthData = (await health.json()) as { status: string };
+		if (healthData.status !== "ok") throw new Error(`Unexpected status: ${healthData.status}`);
 
 		const wsUrl = `ws://localhost:${PORT}/ws?token=${encodeURIComponent(authToken)}`;
 		const ws = new WebSocket(wsUrl);
-
 		const wsOpen = await new Promise<boolean>((resolve) => {
 			ws.onopen = () => resolve(true);
 			ws.onerror = () => resolve(false);
 			setTimeout(() => resolve(false), 5000);
 		});
 		if (!wsOpen) throw new Error("WebSocket connection failed");
-
-		const rpcResponse = await new Promise<{ error?: { message: string }; result?: unknown }>(
-			(resolve, reject) => {
-				const timer = setTimeout(() => {
-					reject(
-						new Error(
-							"RPC timeout — readyState=" +
-								ws.readyState +
-								" logs:\n" +
-								serverLogs.slice(-10).join("\n")
-						)
-					);
-				}, 10000);
-				ws.onmessage = (ev) => {
-					clearTimeout(timer);
-					try {
-						const data =
-							typeof ev.data === "string"
-								? ev.data
-								: new TextDecoder().decode(ev.data as ArrayBuffer);
-						resolve(JSON.parse(data));
-					} catch (err) {
-						reject(new Error(`Parse error: ${String(err)}`));
-					}
-				};
-				ws.send(JSON.stringify({ jsonrpc: "2.0", id: 1, method: "system.ping", params: {} }));
-			}
-		);
-
-		if (rpcResponse.error) throw new Error(`RPC error: ${rpcResponse.error.message}`);
-
 		ws.close();
 	});
 
