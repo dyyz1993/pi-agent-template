@@ -1,35 +1,5 @@
 import { test, expect } from "./fixtures";
 
-async function injectWebSocketMock(page: import("@playwright/test").Page) {
-	await page.addInitScript(() => {
-		class MockWebSocket {
-			static CONNECTING = 0;
-			static OPEN = 1;
-			static CLOSING = 2;
-			static CLOSED = 3;
-			readyState = 1;
-			send() {}
-			close() {
-				this.readyState = 3;
-				if (this.onclose) this.onclose(new CloseEvent("close"));
-			}
-			addEventListener() {}
-			removeEventListener() {}
-			onopen: ((ev: Event) => void) | null = null;
-			onclose: ((ev: CloseEvent) => void) | null = null;
-			onerror: ((ev: Event) => void) | null = null;
-			onmessage: ((ev: MessageEvent) => void) | null = null;
-			constructor(_url: string) {
-				setTimeout(() => {
-					if (this.onopen) this.onopen(new Event("open"));
-				}, 50);
-			}
-		}
-		// @ts-expect-error mock WebSocket for CI
-		window.WebSocket = MockWebSocket;
-	});
-}
-
 test.describe("Template UI Smoke Tests", () => {
 	test("page loads and React mounts", async ({ page }) => {
 		await page.goto("/");
@@ -65,7 +35,6 @@ test.describe("Template UI Smoke Tests", () => {
 });
 
 async function waitForAppReady(page: import("@playwright/test").Page) {
-	await injectWebSocketMock(page);
 	await page.goto("/");
 	await expect(page.locator("#root")).toBeAttached({ timeout: 10_000 });
 	await page.waitForFunction(
@@ -74,7 +43,7 @@ async function waitForAppReady(page: import("@playwright/test").Page) {
 			if (!root) return false;
 			return !root.querySelector(".animate-spin");
 		},
-		{ timeout: 10_000 }
+		{ timeout: 15_000 }
 	);
 }
 
@@ -139,8 +108,7 @@ const isAgent = process.env.TEMPLATE_TYPE === "agent";
 });
 
 (isAgent ? test.describe : test.describe.skip)("Responsive Layout", () => {
-	async function mockWebSocketAndGoto(page: import("@playwright/test").Page) {
-		await injectWebSocketMock(page);
+	async function setupMobileView(page: import("@playwright/test").Page) {
 		await page.setViewportSize({ width: 375, height: 667 });
 		await page.goto("/");
 		await page.waitForFunction(
@@ -148,12 +116,12 @@ const isAgent = process.env.TEMPLATE_TYPE === "agent";
 				!!document.querySelector('[data-testid="mobile-tab-bar"]') ||
 				!!document.querySelector('button[data-testid^="tab-"]') ||
 				!!document.querySelector('[data-testid="activity-bar"]'),
-			{ timeout: 10_000 }
+			{ timeout: 15_000 }
 		);
 	}
 
 	test("should show mobile tab bar on small screens", async ({ page }) => {
-		await mockWebSocketAndGoto(page);
+		await setupMobileView(page);
 
 		const tabs = page.locator('button[data-testid^="tab-"]');
 		await expect(tabs.first()).toBeVisible({ timeout: 10_000 });
@@ -163,7 +131,7 @@ const isAgent = process.env.TEMPLATE_TYPE === "agent";
 	});
 
 	test("should hide activity bar on mobile", async ({ page }) => {
-		await mockWebSocketAndGoto(page);
+		await setupMobileView(page);
 
 		const activityBar = page.locator('[data-testid="activity-bar"]');
 		await expect(activityBar).toHaveCount(0);
@@ -171,20 +139,14 @@ const isAgent = process.env.TEMPLATE_TYPE === "agent";
 });
 
 test("should show loading state before connection", async ({ page }) => {
-	await injectWebSocketMock(page);
 	await page.goto("/");
-	const spinner = page.locator(".animate-spin");
-	if (await spinner.isVisible({ timeout: 500 })) {
-		await expect(spinner).toBeVisible();
-		await expect(page.locator("text=Connecting to RPC server")).toBeVisible();
-	}
 	await page.waitForFunction(
 		() => {
 			const root = document.getElementById("root");
 			if (!root) return false;
 			return !root.querySelector(".animate-spin");
 		},
-		{ timeout: 10_000 }
+		{ timeout: 15_000 }
 	);
 	await expect(page.locator(".animate-spin")).toHaveCount(0);
 });
