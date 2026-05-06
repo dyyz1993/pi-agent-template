@@ -105,7 +105,9 @@ const isAgent = process.env.TEMPLATE_TYPE === "agent";
 
 		const explorerBtn = page.locator('button[data-testid="tab-explorer"]');
 		await explorerBtn.click();
-		await page.waitForTimeout(300);
+
+		const pathInput = page.locator('input[placeholder="Path"]');
+		await expect(pathInput).toBeVisible({ timeout: 5000 });
 
 		await expect(page.locator("text=Enter path and click refresh").first()).toBeVisible({
 			timeout: 5000,
