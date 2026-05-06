@@ -146,9 +146,9 @@ async function main() {
 	log("serve", "Static server ready on http://localhost:5173");
 
 	log("test", "Running Playwright E2E UI tests...");
-	try {
-		const wsUrl = `ws://localhost:${backendPort}/ws`;
-		execSync("npx playwright test --reporter=list", {
+	const wsUrl = `ws://localhost:${backendPort}/ws`;
+	const testPassed = await new Promise<boolean>((resolve) => {
+		const pw = spawn("npx", ["playwright", "test", "--reporter=list"], {
 			cwd: rootDir,
 			stdio: "inherit",
 			env: {
@@ -157,10 +157,13 @@ async function main() {
 				E2E_WS_URL: wsUrl,
 				E2E_TOKEN: AUTH_TOKEN,
 			},
-			timeout: 90_000,
 		});
+		pw.on("close", (code) => resolve(code === 0));
+		pw.on("error", () => resolve(false));
+	});
+	if (testPassed) {
 		log("test", "Playwright tests PASSED");
-	} catch {
+	} else {
 		console.error("Playwright tests FAILED");
 		cleanup(1);
 		return;

@@ -16,8 +16,12 @@ export const test = base.extend<{
 		if (E2E_WS_URL && E2E_TOKEN) {
 			await page.addInitScript(
 				({ wsUrl, token }) => {
-					localStorage.setItem("rpc-websocket-url", wsUrl);
-					localStorage.setItem("rpc-auth-token", token);
+					try {
+						localStorage.setItem("rpc-websocket-url", wsUrl);
+						localStorage.setItem("rpc-auth-token", token);
+					} catch {
+						// localStorage may not be available on error pages
+					}
 				},
 				{ wsUrl: E2E_WS_URL, token: E2E_TOKEN }
 			);
