@@ -79,7 +79,7 @@ class APIClientImpl {
 					url: wsUrl,
 					authToken: AUTH_TOKEN,
 					reconnect: true,
-				});
+				} as never);
 				await this.wsTransport.connect();
 				this.client = createTypedClient<RPCMethods, RPCEvents>(this.wsTransport);
 

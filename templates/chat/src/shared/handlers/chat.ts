@@ -69,7 +69,7 @@ export function generateReply(input: string): string {
 			"Hello! Great to see you. What would you like to know?",
 			"Hi! I'm your desktop assistant. Ask me anything!",
 		];
-		return greetings[Math.floor(Math.random() * greetings.length)];
+		return greetings[Math.floor(Math.random() * greetings.length)]!;
 	}
 
 	if (
@@ -90,9 +90,9 @@ export function generateReply(input: string): string {
 		/(?:what(?:'s| is)\s+)?(\d+(?:\.\d+)?)\s*([+\-*/x×÷^])\s*(\d+(?:\.\d+)?)/
 	);
 	if (mathMatch) {
-		const a = parseFloat(mathMatch[1]);
-		const op = mathMatch[2];
-		const b = parseFloat(mathMatch[3]);
+		const a = parseFloat(mathMatch[1]!);
+		const op = mathMatch[2]!;
+		const b = parseFloat(mathMatch[3]!);
 		let result: number;
 		switch (op) {
 			case "+":
@@ -166,7 +166,7 @@ export function generateReply(input: string): string {
 		"I wish I could help with that! For now I can answer questions about time, math, files, and git. Type **help** to see what I can do.",
 		"Hmm, I'm not sure about that one. But I *can* do math, tell you the time, and talk about files and git. Give it a shot!",
 	];
-	return defaults[Math.floor(Math.random() * defaults.length)];
+	return defaults[Math.floor(Math.random() * defaults.length)]!;
 }
 
 export function register(server: RPCServer, options: HandlerOptions): void {

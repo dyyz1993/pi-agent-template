@@ -178,7 +178,7 @@ async function handleFileContent(
 		const range = req.headers["range"];
 		if (range) {
 			const parts = range.replace(/bytes=/, "").split("-");
-			const start = parseInt(parts[0], 10);
+			const start = parseInt(parts[0]!, 10);
 			const end = parts[1] ? parseInt(parts[1], 10) : s.size - 1;
 			const chunkSize = end - start + 1;
 

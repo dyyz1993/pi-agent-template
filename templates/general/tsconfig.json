@@ -19,8 +19,18 @@
 		"paths": {
 			"@dyyz1993/rpc-core": ["../packages/rpc-core/src/index.ts"],
 			"@shared/*": ["../shared/*"]
-		}
+		},
+		"noUncheckedIndexedAccess": true,
+		"noImplicitReturns": true
 	},
 	"include": ["src", "../shared"],
-	"exclude": ["node_modules", "dist", "build", "../../package/dist", "**/__tests__/**", "**/*.test.ts", "**/*.test.tsx"]
+	"exclude": [
+		"node_modules",
+		"dist",
+		"build",
+		"../../package/dist",
+		"**/__tests__/**",
+		"**/*.test.ts",
+		"**/*.test.tsx"
+	]
 }

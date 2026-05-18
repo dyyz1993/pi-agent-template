@@ -548,9 +548,9 @@ async function runTests(templateType: string, client: RPCClient): Promise<TestRe
 async function main() {
 	let templateType = "general";
 	for (let i = 2; i < process.argv.length; i++) {
-		const arg = process.argv[i];
+		const arg = process.argv[i]!;
 		if (arg === "--type" && process.argv[i + 1]) {
-			templateType = process.argv[++i];
+			templateType = process.argv[++i]!;
 		}
 	}
 

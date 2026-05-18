@@ -106,7 +106,7 @@ export function TodoPanel() {
 				) : (
 					<div className="space-y-2.5">
 						{items.map((item) => {
-							const cfg = statusConfig[item.status as TodoStatus];
+							const cfg = statusConfig[item.status as TodoStatus]!;
 							const Icon = cfg.icon;
 							return (
 								<div
@@ -115,7 +115,7 @@ export function TodoPanel() {
 								>
 									<div className="flex items-start gap-3">
 										<button
-											onClick={() => updateItem(item.id, nextStatus[item.status as TodoStatus])}
+											onClick={() => updateItem(item.id, nextStatus[item.status as TodoStatus]!)}
 											className={`flex-shrink-0 mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${cfg.circleColor} ${cfg.color} hover:scale-110`}
 										>
 											<Icon className="w-3 h-3" />
@@ -133,7 +133,7 @@ export function TodoPanel() {
 											<div className="flex items-center gap-1.5 mt-2 text-[11px] text-[var(--color-text-placeholder)]">
 												<span>{t("todo.status")}</span>
 												{statusFlow.map((s) => {
-													const sc = statusConfig[s];
+													const sc = statusConfig[s]!;
 													const isActive = s === item.status;
 													return (
 														<span

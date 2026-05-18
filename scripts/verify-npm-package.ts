@@ -25,7 +25,7 @@ const TEMPLATE = process.argv[2] || "agent";
 const PORT = 3700;
 const TIMEOUT_MS = 20_000;
 
-let tmpBase: string;
+const tmpBase = "";
 let projectDir: string;
 let serverProcess: ReturnType<typeof spawn> | null = null;
 const serverLogs: string[] = [];

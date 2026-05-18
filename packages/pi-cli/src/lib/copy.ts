@@ -178,6 +178,7 @@ function updatePackageJson(targetDir: string, _projectName: string): void {
 		let inRpcSection = false;
 		for (let i = 0; i < lines.length; i++) {
 			const line = lines[i];
+			if (line === undefined) continue;
 
 			if (line.includes("import rpcPlugin") && line.includes("@dyyz1993/eslint-plugin-rpc")) {
 				continue;

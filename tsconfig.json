@@ -1,16 +1,27 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "allowSyntheticDefaultImports": true,
-    "types": ["bun"]
-  },
-  "include": ["packages/**/*", "scripts/**/*"],
-  "exclude": ["node_modules", "templates", "packages/pi-cli/templates", "**/*.test.ts", "**/__tests__/**", "**/__wip__/**", "**/tests/**"]
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"strict": true,
+		"esModuleInterop": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
+		"allowSyntheticDefaultImports": true,
+		"types": ["bun"],
+		"noUncheckedIndexedAccess": true,
+		"noImplicitReturns": true,
+		"noFallthroughCasesInSwitch": true
+	},
+	"include": ["packages/**/*", "scripts/**/*"],
+	"exclude": [
+		"node_modules",
+		"templates",
+		"packages/pi-cli/templates",
+		"**/*.test.ts",
+		"**/__tests__/**",
+		"**/__wip__/**",
+		"**/tests/**"
+	]
 }

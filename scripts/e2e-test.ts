@@ -101,9 +101,9 @@ async function main() {
 	let templateType = "general";
 	const positional: string[] = [];
 	for (let i = 2; i < process.argv.length; i++) {
-		const arg = process.argv[i];
+		const arg = process.argv[i]!;
 		if (arg === "--type" && process.argv[i + 1]) {
-			templateType = process.argv[++i];
+			templateType = process.argv[++i]!;
 		} else if (!arg.startsWith("--")) {
 			positional.push(arg);
 		}
