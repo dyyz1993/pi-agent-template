@@ -22,7 +22,7 @@ export function parseEnvInt(
 	if (value === undefined || value === "") return defaultValue;
 	const parsed = parseInt(value, 10);
 	if (isNaN(parsed) || parsed < min || parsed > max) {
-		console.warn(`[config] Invalid ${key}: "${value}", using default: ${defaultValue}`);
+		process.stderr.write(`[config] Invalid ${key}: "${value}", using default: ${defaultValue}\n`);
 		return defaultValue;
 	}
 	return parsed;

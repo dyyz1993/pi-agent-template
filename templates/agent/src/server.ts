@@ -68,8 +68,7 @@ async function start() {
 	log.info(`WebSocket: ws://localhost:${port}/ws (auth required)`);
 	log.info(`Available RPC methods: ${discoverMethodNames().join(", ")}`);
 	log.info("File endpoints: GET /file/{path}, GET /info/{path}");
-	// eslint-disable-next-line no-console
-	console.log("\n" + formatRegistryForOutput() + "\n");
+	log.info(formatRegistryForOutput());
 }
 
 start().catch((err) => {
