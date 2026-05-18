@@ -1,6 +1,11 @@
 import type { Transport, MessageHandler, ErrorHandler, DisconnectHandler } from "../core/transport";
 import type { RPCLogger } from "../core/types";
 
+interface ExtendedWebSocket extends WebSocket {
+	ping?(data?: string | ArrayBufferLike): void;
+	onpong: ((data: ArrayBuffer) => void) | null;
+}
+
 export interface WebSocketTransportOptions {
 	url?: string;
 	logger?: RPCLogger;
@@ -15,7 +20,7 @@ export interface WebSocketTransportOptions {
 
 export class WebSocketTransport implements Transport {
 	private url: string;
-	private ws: WebSocket | null = null;
+	private ws: ExtendedWebSocket | null = null;
 	private messageHandlers: Set<MessageHandler> = new Set();
 	private errorHandlers: Set<ErrorHandler> = new Set();
 	private disconnectHandlers: Set<DisconnectHandler> = new Set();
@@ -57,13 +62,13 @@ export class WebSocketTransport implements Transport {
 		this.lastPongTime = Date.now();
 
 		if (this.ws) {
-			(this.ws as any).onpong = () => {
+			this.ws.onpong = () => {
 				this.lastPongTime = Date.now();
 			};
 		}
 
 		this.heartbeatTimer = setInterval(() => {
-			if (!this.ws || (this.ws as any).readyState !== 1) return;
+			if (!this.ws || this.ws.readyState !== 1) return;
 
 			if (Date.now() - this.lastPongTime > this.heartbeatTimeoutMs * 2) {
 				this.stopHeartbeat();
@@ -74,7 +79,7 @@ export class WebSocketTransport implements Transport {
 				}
 
 				if (this.ws) {
-					(this.ws as any).onclose = null;
+					this.ws.onclose = null;
 					this.ws.close();
 				}
 
@@ -84,8 +89,8 @@ export class WebSocketTransport implements Transport {
 				return;
 			}
 
-			if (typeof (this.ws as any).ping === "function") {
-				(this.ws as any).ping();
+			if (typeof this.ws.ping === "function") {
+				this.ws.ping();
 			}
 		}, this.heartbeatIntervalMs || 30000);
 	}
@@ -128,11 +133,11 @@ export class WebSocketTransport implements Transport {
 		this._isConnecting = true;
 
 		if (this.ws) {
-			(this.ws as any).onopen = null;
-			(this.ws as any).onmessage = null;
-			(this.ws as any).onerror = null;
-			(this.ws as any).onclose = null;
-			(this.ws as any).onpong = null;
+			this.ws.onopen = null;
+			this.ws.onmessage = null;
+			this.ws.onerror = null;
+			this.ws.onclose = null;
+			this.ws.onpong = null;
 			this.ws.close();
 			this.ws = null;
 		}
@@ -140,7 +145,9 @@ export class WebSocketTransport implements Transport {
 		return new Promise((resolve, reject) => {
 			this.logger?.info?.("Creating new WebSocket to:", this.url);
 			const protocols = this.authToken ? [this.authToken] : undefined;
-			this.ws = new WebSocket(this.url, protocols);
+			this.ws = Object.assign(new WebSocket(this.url, protocols), {
+				onpong: null,
+			}) as ExtendedWebSocket;
 
 			this.ws.onopen = () => {
 				this._isConnected = true;
@@ -169,7 +176,7 @@ export class WebSocketTransport implements Transport {
 				}
 			};
 
-			this.ws.onerror = (error) => {
+			this.ws!.onerror = (error) => {
 				this._isConnecting = false;
 				this.logger?.error?.("Error:", error);
 				reject(new Error("WebSocket connection failed"));
@@ -178,7 +185,7 @@ export class WebSocketTransport implements Transport {
 				}
 			};
 
-			this.ws.onclose = () => {
+			this.ws!.onclose = () => {
 				this._isConnected = false;
 				this._isConnecting = false;
 				this.stopHeartbeat();
@@ -239,11 +246,11 @@ export class WebSocketTransport implements Transport {
 			this.reconnectTimer = null;
 		}
 		if (this.ws) {
-			(this.ws as any).onopen = null;
-			(this.ws as any).onmessage = null;
-			(this.ws as any).onerror = null;
-			(this.ws as any).onclose = null;
-			(this.ws as any).onpong = null;
+			this.ws.onopen = null;
+			this.ws.onmessage = null;
+			this.ws.onerror = null;
+			this.ws.onclose = null;
+			this.ws.onpong = null;
 			this.ws.close();
 			this.ws = null;
 		}
@@ -254,7 +261,7 @@ export class WebSocketTransport implements Transport {
 		this.disconnectHandlers.clear();
 	}
 
-	private setupMock(ws: WebSocket, isConnected: boolean): void {
+	private setupMock(ws: ExtendedWebSocket, isConnected: boolean): void {
 		this.ws = ws;
 		this._isConnected = isConnected;
 	}
@@ -306,8 +313,8 @@ export class WebSocketTransport implements Transport {
 			send: serverSend,
 		};
 
-		client.setupMock(clientWs as unknown as WebSocket, true);
-		server.setupMock(serverWs as unknown as WebSocket, true);
+		client.setupMock(clientWs as unknown as ExtendedWebSocket, true);
+		server.setupMock(serverWs as unknown as ExtendedWebSocket, true);
 
 		return { client, server };
 	}
