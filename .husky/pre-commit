@@ -1,12 +1,14 @@
-# Use lint-staged for fast incremental linting (only staged files)
 npx lint-staged
 
-# Quick type-check for core packages only
-echo "⏳ Type checking core packages..."
-for pkg in packages/*/; do
-  if [ -f "$pkg/tsconfig.json" ]; then
-    (cd "$pkg" && bunx tsc --noEmit 2>&1) && echo "✅ $pkg" || exit 1
-  fi
-done
+STAGED_TS=$(git diff --cached --name-only --diff-filter=ACMR | grep -c '\.tsx\?$' || true)
+
+if [ "$STAGED_TS" -gt 0 ]; then
+  echo "⏳ Type checking core packages..."
+  for pkg in packages/*/; do
+    if [ -f "$pkg/tsconfig.json" ]; then
+      (cd "$pkg" && bunx tsc --noEmit 2>&1) && echo "✅ $pkg" || exit 1
+    fi
+  done
+fi
 
 echo "✅ Pre-commit checks passed"

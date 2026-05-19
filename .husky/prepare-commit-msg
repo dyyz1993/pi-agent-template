@@ -1,0 +1,35 @@
+COMMIT_MSG_FILE="$1"
+COMMIT_SOURCE="$2"
+
+if [ "$COMMIT_SOURCE" = "merge" ] || [ "$COMMIT_SOURCE" = "squash" ] || [ "$COMMIT_SOURCE" = "commit" ]; then
+  exit 0
+fi
+
+FIRST_LINE=$(head -n1 "$COMMIT_MSG_FILE")
+
+if echo "$FIRST_LINE" | grep -qE '^[a-z]+(\([^)]+\))?:'; then
+  exit 0
+fi
+
+STAGED=$(git diff --cached --name-only)
+
+if echo "$STAGED" | grep -q "^packages/rpc-core/"; then
+  SCOPE="rpc-core"
+elif echo "$STAGED" | grep -q "^packages/pi-cli/"; then
+  SCOPE="cli"
+elif echo "$STAGED" | grep -q "^templates/agent/"; then
+  SCOPE="agent"
+elif echo "$STAGED" | grep -q "^templates/chat/"; then
+  SCOPE="chat"
+elif echo "$STAGED" | grep -q "^templates/general/"; then
+  SCOPE="general"
+elif echo "$STAGED" | grep -q "^templates/shared/"; then
+  SCOPE="shared"
+elif echo "$STAGED" | grep -q "^\.github/"; then
+  SCOPE="ci"
+fi
+
+if [ -n "$SCOPE" ]; then
+  sed -i.bak -E "s/^([a-z]+)(\([^)]+\))?:/\1($SCOPE):/" "$COMMIT_MSG_FILE"
+  rm -f "${COMMIT_MSG_FILE}.bak"
+fi

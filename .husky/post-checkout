@@ -1,0 +1,11 @@
+PREV_HEAD="$1"
+NEW_HEAD="$2"
+IS_BRANCH="$3"
+
+if [ "$IS_BRANCH" = "1" ]; then
+  CHANGED=$(git diff --name-only "$PREV_HEAD" "$NEW_HEAD" 2>/dev/null)
+  if echo "$CHANGED" | grep -q "pnpm-lock.yaml\|package.json"; then
+    echo "📦 Dependencies changed between branches, running pnpm install..."
+    pnpm install
+  fi
+fi

@@ -1,0 +1,12 @@
+echo "⏳ Checking for dependency changes..."
+CHANGED=$(git diff HEAD@{1} --name-only HEAD)
+
+if echo "$CHANGED" | grep -q "pnpm-lock.yaml\|package.json"; then
+  echo "📦 Dependencies changed, running pnpm install..."
+  pnpm install
+fi
+
+if echo "$CHANGED" | grep -q "packages/rpc-core/"; then
+  echo "🔧 rpc-core changed, rebuilding..."
+  cd packages/rpc-core && pnpm build && cd ../..
+fi
