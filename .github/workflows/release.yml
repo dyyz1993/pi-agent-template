@@ -37,6 +37,36 @@ jobs:
           cd packages/rpc-core && bun run build
           cd ../..
 
+      - name: Download Electron artifacts
+        run: |
+          # 获取最新的 build workflow run
+          BUILD_RUN_ID=$(gh run list --workflow=build.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+          
+          # 下载 desktop artifacts
+          gh run download $BUILD_RUN_ID --name desktop-macos-agent --dir dist-artifacts
+          gh run download $BUILD_RUN_ID --name desktop-windows-agent --dir dist-artifacts
+          gh run download $BUILD_RUN_ID --name desktop-linux-agent --dir dist-artifacts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Electron artifacts to Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 获取最新 tag
+          TAG=$(git describe --tags --abbrev=0)
+          echo "Uploading artifacts for tag: $TAG"
+          
+          # 上传 DMG (macOS)
+          gh release upload $TAG dist-artifacts/desktop-macos-*/**/*.dmg || echo "No DMG files"
+          
+          # 上传 NSIS (Windows)
+          gh release upload $TAG dist-artifacts/desktop-windows-*/**/*.exe || echo "No EXE files"
+          
+          # 上传 AppImage 和 deb (Linux)
+          gh release upload $TAG dist-artifacts/desktop-linux-*/**/*.AppImage || echo "No AppImage files"
+          gh release upload $TAG dist-artifacts/desktop-linux-*/**/*.deb || echo "No deb files"
+
       - name: Create Release Pull Request or Publish
         id: changesets
         uses: changesets/action@v1
