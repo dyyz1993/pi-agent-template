@@ -1,4 +1,12 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync, unlinkSync } from "fs";
+import {
+	readFileSync,
+	writeFileSync,
+	mkdirSync,
+	existsSync,
+	readdirSync,
+	unlinkSync,
+	chmodSync,
+} from "fs";
 import { join, resolve } from "path";
 import { execSync } from "child_process";
 
@@ -266,18 +274,114 @@ export async function copyTemplate(options: CopyOptions): Promise<void> {
 
 	const huskyDir = join(targetDir, ".husky");
 	mkdirSync(huskyDir, { recursive: true });
-	writeFileSync(
-		join(huskyDir, "pre-commit"),
-		[
-			"#!/bin/sh",
-			"bun run lint",
-			'ERRORS=$(bunx tsc --noEmit 2>&1 | grep "error TS" | grep -v "node_modules" || true)',
-			'if [ -n "$ERRORS" ]; then',
-			'  echo "$ERRORS"',
-			"  exit 1",
-			"fi",
-		].join("\n") + "\n"
+
+	const hook = (name: string, content: string) => {
+		const p = join(huskyDir, name);
+		writeFileSync(p, content);
+		chmodSync(p, 0o755);
+	};
+
+	hook(
+		"pre-commit",
+		`#!/bin/sh
+npx lint-staged
+
+STAGED_TS=$(git diff --cached --name-only --diff-filter=ACMR | grep -c '\\.tsx\\?$' || true)
+
+if [ "$STAGED_TS" -gt 0 ]; then
+  echo "⏳ Type checking..."
+  bunx tsc --noEmit 2>&1 | grep "error TS" | grep -v "node_modules" && exit 1 || true
+fi
+
+echo "✅ Pre-commit checks passed"
+`
 	);
+
+	hook(
+		"commit-msg",
+		`#!/bin/sh
+npx --no -- commitlint --edit "$1"
+`
+	);
+
+	hook(
+		"pre-push",
+		`#!/bin/sh
+echo "⏳ Linting..."
+bun run lint || { echo "❌ Lint failed."; exit 1; }
+
+echo "⏳ Checking lockfile sync..."
+git diff --name-only HEAD -- pnpm-lock.yaml | grep -q . && { echo "⚠️  pnpm-lock.yaml has uncommitted changes."; exit 1; }
+
+echo "✅ Pre-push checks passed (full tests run in CI). Pushing..."
+`
+	);
+
+	hook(
+		"prepare-commit-msg",
+		`#!/bin/sh
+COMMIT_MSG_FILE="$1"
+COMMIT_SOURCE="$2"
+
+if [ "$COMMIT_SOURCE" = "merge" ] || [ "$COMMIT_SOURCE" = "squash" ] || [ "$COMMIT_SOURCE" = "commit" ]; then
+  exit 0
+fi
+
+FIRST_LINE=$(head -n1 "$COMMIT_MSG_FILE")
+
+if echo "$FIRST_LINE" | grep -qE '^[a-z]+(\\([^)]+\\))?:'; then
+  exit 0
+fi
+
+STAGED=$(git diff --cached --name-only)
+
+if echo "$STAGED" | grep -q "^src/"; then
+  SCOPE="app"
+elif echo "$STAGED" | grep -q "^components/"; then
+  SCOPE="ui"
+elif echo "$STAGED" | grep -q "^server/"; then
+  SCOPE="server"
+fi
+
+if [ -n "$SCOPE" ]; then
+  sed -i.bak -E "s/^([a-z]+)(\\([^)]+\\))?:/\\1($SCOPE):/" "$COMMIT_MSG_FILE"
+  rm -f "\${COMMIT_MSG_FILE}.bak"
+fi
+`
+	);
+
+	hook(
+		"post-merge",
+		`#!/bin/sh
+echo "⏳ Checking for dependency changes..."
+CHANGED=$(git diff HEAD@{1} --name-only HEAD)
+
+if echo "$CHANGED" | grep -q "pnpm-lock.yaml\\|package.json"; then
+  echo "📦 Dependencies changed, running pnpm install..."
+  pnpm install
+fi
+`
+	);
+
+	hook(
+		"post-checkout",
+		`#!/bin/sh
+PREV_HEAD="$1"
+NEW_HEAD="$2"
+IS_BRANCH="$3"
+
+if [ "$IS_BRANCH" = "1" ]; then
+  CHANGED=$(git diff --name-only "$PREV_HEAD" "$NEW_HEAD" 2>/dev/null)
+  if echo "$CHANGED" | grep -q "pnpm-lock.yaml\\|package.json"; then
+    echo "📦 Dependencies changed between branches, running pnpm install..."
+    pnpm install
+  fi
+fi
+`
+	);
+
+	console.log("Initializing husky...");
+	execSync("pnpm run prepare", { cwd: targetDir, stdio: "pipe" });
 
 	execSync("git add -A", { cwd: targetDir, stdio: "pipe" });
 

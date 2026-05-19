@@ -67,6 +67,8 @@
 		"electron:build:linux": "vite build && electron-builder --linux",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
+		"format": "prettier --write .",
+		"format:check": "prettier --check .",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",
@@ -116,7 +118,20 @@
 		"typescript-eslint": "^8.0.0",
 		"vite": "^6.0.3",
 		"vitest": "^4.1.5",
-		"ws": "^8.18.0"
+		"ws": "^8.18.0",
+		"@commitlint/cli": "^19.8.1",
+		"@commitlint/config-conventional": "^19.8.1",
+		"prettier": "^3.5.3",
+		"lint-staged": "^15.5.2"
+	},
+	"lint-staged": {
+		"*.{ts,tsx}": [
+			"eslint --fix",
+			"prettier --write"
+		],
+		"*.{json,md,css,html}": [
+			"prettier --write"
+		]
 	},
 	"overrides": {
 		"minimatch": "^10.0.1"
