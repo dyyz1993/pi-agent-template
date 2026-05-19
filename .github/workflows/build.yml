@@ -120,8 +120,8 @@ jobs:
           for dir in dist-electron dist build release; do
             if [ -d "$dir" ]; then
               echo "=== $dir/ ==="
-              find "$dir" -type f | head -30
-              TOTAL_SIZE=$(du -sm "$dir" 2>/dev/null | cut -f1)
+              find "$dir" -type f 2>/dev/null | head -30 || true
+              TOTAL_SIZE=$(du -sm "$dir" 2>/dev/null | cut -f1 || echo "0")
               echo "Size: ${TOTAL_SIZE}MB"
             fi
           done
