@@ -84,23 +84,29 @@ jobs:
           cd templates/${{ matrix.template }}
           bun install
 
-      - name: Build Electron desktop app (${{ matrix.platform }})
+      - name: Build Electron desktop app (macos)
+        if: matrix.platform == 'macos'
         run: |
           cd templates/${{ matrix.template }}
-          
-          # 构建 web 前端
           bun run build
-          
-          # 构建桌面应用
-          if [ "${{ matrix.platform }}" = "macos" ]; then
-            bun run electron:build:mac
-          elif [ "${{ matrix.platform }}" = "windows" ]; then
-            bun run electron:build:win
-          elif [ "${{ matrix.platform }}" = "linux" ]; then
-            bun run electron:build:linux
-          fi
-          
-          # 验证构建产物
+          bun run electron:build:mac
+          ls -lh dist-electron/ || echo "dist-electron not found"
+
+      - name: Build Electron desktop app (windows)
+        if: matrix.platform == 'windows'
+        shell: bash
+        run: |
+          cd templates/${{ matrix.template }}
+          bun run build
+          bun run electron:build:win
+          ls -lh dist-electron/ || echo "dist-electron not found"
+
+      - name: Build Electron desktop app (linux)
+        if: matrix.platform == 'linux'
+        run: |
+          cd templates/${{ matrix.template }}
+          bun run build
+          bun run electron:build:linux
           ls -lh dist-electron/ || echo "dist-electron not found"
 
       - name: Upload desktop build artifact (${{ matrix.platform }})

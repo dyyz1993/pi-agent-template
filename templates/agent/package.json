@@ -2,6 +2,11 @@
 	"name": "pi-agent-app",
 	"version": "1.0.0",
 	"description": "Coding agent template with Bash, Rules, and Todo management",
+	"author": {
+		"name": "xuyingzhou",
+		"email": "xuyingzhou@tuzhanai.com"
+	},
+	"homepage": "https://github.com/dyyz1993/pi-agent-template",
 	"main": "electron/main.js",
 	"build": {
 		"appId": "com.piagent.app",
@@ -37,6 +42,7 @@
 			]
 		},
 		"linux": {
+			"maintainer": "xuyingzhou <xuyingzhou@tuzhanai.com>",
 			"target": [
 				"AppImage",
 				"deb"
