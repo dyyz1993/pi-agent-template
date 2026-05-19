@@ -2,6 +2,48 @@
 	"name": "pi-agent-app",
 	"version": "1.0.0",
 	"description": "Coding agent template with Bash, Rules, and Todo management",
+	"main": "electron/main.js",
+	"build": {
+		"appId": "com.piagent.app",
+		"productName": "Pi Agent",
+		"directories": {
+			"output": "dist-electron"
+		},
+		"files": [
+			"dist/**/*",
+			"electron/**/*",
+			"package.json"
+		],
+		"mac": {
+			"category": "public.app-category.developer-tools",
+			"target": [
+				{
+					"target": "dmg",
+					"arch": [
+						"x64",
+						"arm64"
+					]
+				}
+			]
+		},
+		"win": {
+			"target": [
+				{
+					"target": "nsis",
+					"arch": [
+						"x64"
+					]
+				}
+			]
+		},
+		"linux": {
+			"target": [
+				"AppImage",
+				"deb"
+			],
+			"category": "Development"
+		}
+	},
 	"scripts": {
 		"start": "vite build && electrobun dev",
 		"dev": "electrobun dev --watch",
@@ -12,6 +54,11 @@
 		"build:mac": "vite build && electrobun build --env=canary",
 		"build:win": "vite build && electrobun build --env=canary",
 		"build:linux": "vite build && electrobun build --env=canary",
+		"electron:dev": "vite build && electron .",
+		"electron:build": "vite build && electron-builder --mac --win --linux",
+		"electron:build:mac": "vite build && electron-builder --mac",
+		"electron:build:win": "vite build && electron-builder --win",
+		"electron:build:linux": "vite build && electron-builder --linux",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
 		"test": "vitest run",

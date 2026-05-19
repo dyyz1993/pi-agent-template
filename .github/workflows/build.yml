@@ -78,10 +78,24 @@ jobs:
           cd templates/${{ matrix.template }}
           bun run build
 
-      - name: Build Electrobun desktop app (${{ matrix.platform }})
+      - name: Build Electron desktop app (${{ matrix.platform }})
         run: |
           cd templates/${{ matrix.template }}
-          bun run build:canary
+
+          # 构建 web 前端
+          bun run build
+
+          # 构建桌面应用
+          if [ "${{ matrix.platform }}" = "macos" ]; then
+            bun run electron:build:mac
+          elif [ "${{ matrix.platform }}" = "windows" ]; then
+            bun run electron:build:win
+          elif [ "${{ matrix.platform }}" = "linux" ]; then
+            bun run electron:build:linux
+          fi
+
+          # 验证构建产物
+          ls -lh dist-electron/ || echo "dist-electron not found"
 
       - name: Upload desktop build artifact (${{ matrix.platform }})
         if: always()
