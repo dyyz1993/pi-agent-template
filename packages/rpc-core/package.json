@@ -1,6 +1,6 @@
 {
 	"name": "@dyyz1993/rpc-core",
-	"version": "2.0.0",
+	"version": "2.1.0",
 	"description": "Type-safe RPC communication framework with request-response and pub-sub patterns",
 	"repository": {
 		"type": "git",
