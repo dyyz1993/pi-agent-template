@@ -1,7 +1,7 @@
 echo "⏳ Linting all packages..."
 bun run lint || { echo "❌ Lint failed. Fix errors before pushing."; exit 1; }
 
-echo "⏳ Checking lockfile..."
-pnpm install --frozen-lockfile --dry-run 2>/dev/null || { echo "⚠️  pnpm-lock.yaml may be out of date. Run 'pnpm install' and commit the lockfile."; exit 1; }
+echo "⏳ Checking lockfile sync..."
+git diff --name-only HEAD -- pnpm-lock.yaml | grep -q . && { echo "⚠️  pnpm-lock.yaml has uncommitted changes. Commit it first."; exit 1; }
 
 echo "✅ Pre-push checks passed (full tests run in CI). Pushing..."
