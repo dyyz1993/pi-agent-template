@@ -13,6 +13,8 @@ export default tseslint.config(
       'node_modules/**',
       'build/**',
       'dist/**',
+      'dist-electron/**',
+      'electron/**',
       'postcss.config.js',
       'tailwind.config.js',
     ],
