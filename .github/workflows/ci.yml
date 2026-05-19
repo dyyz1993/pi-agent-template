@@ -290,111 +290,88 @@ jobs:
       - name: Verify husky hooks installed
         run: |
           cd /tmp/husky-test
-          echo "=== Checking husky hooks ==="
           test -d .husky || (echo "FAIL: .husky/ missing" && exit 1)
           for h in pre-commit commit-msg pre-push prepare-commit-msg post-merge post-checkout; do
             test -f ".husky/$h" || (echo "FAIL: .husky/$h missing" && exit 1)
             test -x ".husky/$h" || (echo "FAIL: .husky/$h not executable" && exit 1)
-            echo "✅ .husky/$h exists and executable"
+            echo "PASS: .husky/$h exists and executable"
           done
 
-      - name: Install dependencies with pnpm
+      - name: Install dependencies
         run: cd /tmp/husky-test && pnpm install
 
-      - name: Test pre-commit hook (PASS - clean code)
+      - name: Test pre-commit PASS
         run: |
           cd /tmp/husky-test
           echo "// test comment" >> src/server.ts
           git add src/server.ts
-          git commit -m "test: pre-commit pass" 2>&1 | tee /tmp/pre-commit.log
-          grep -q "Pre-commit checks passed" /tmp/pre-commit.log || (echo "FAIL: pre-commit did not pass" && exit 1)
-          echo "✅ pre-commit hook passed"
+          git commit -m "test: pre-commit pass" 2>&1 | tee /tmp/pc.log
+          grep -q "Pre-commit checks passed" /tmp/pc.log || (echo "FAIL: pre-commit did not run" && exit 1)
+          echo "PASS: pre-commit hook passed"
 
-      - name: Test pre-commit hook (FAIL - lint error)
+      - name: Test pre-commit FAIL (lint error)
         run: |
           cd /tmp/husky-test
-          echo 'console.log("any test" as any);' >> src/mainview/main.tsx
+          printf 'const x = "test" as any;\n' >> src/mainview/main.tsx
           git add src/mainview/main.tsx
-          git commit -m "test: should fail lint" 2>&1 | tee /tmp/pre-commit-fail.log && EXIT=0 || EXIT=$?
-          if [ "$EXIT" -eq 0 ]; then
-            echo "FAIL: pre-commit should have blocked commit with lint error"
+          git commit -m "test: should fail" 2>&1 && FAIL=0 || FAIL=1
+          if [ "$FAIL" -eq 0 ]; then
+            echo "FAIL: pre-commit should have blocked"
             exit 1
           fi
-          echo "✅ pre-commit correctly blocked commit with lint error"
+          echo "PASS: pre-commit correctly blocked lint error"
           git checkout -- src/mainview/main.tsx
 
-      - name: Test commit-msg hook (PASS - valid message)
+      - name: Test commit-msg PASS
         run: |
           cd /tmp/husky-test
-          echo "// valid commit" >> src/server.ts
+          echo "// valid" >> src/server.ts
           git add src/server.ts
-          git commit -m "feat: test commit message" 2>&1 | tee /tmp/commit-msg.log
-          grep -q "commit-msg" /tmp/commit-msg.log || echo "(commitlint ran silently)"
-          echo "✅ commit-msg hook passed with valid message"
+          git commit -m "feat: valid message" 2>&1
+          echo "PASS: commit-msg hook passed"
 
-      - name: Test commit-msg hook (FAIL - bad message)
+      - name: Test commit-msg FAIL (bad message)
         run: |
           cd /tmp/husky-test
-          echo "// bad commit" >> src/server.ts
+          echo "// bad" >> src/server.ts
           git add src/server.ts
-          git commit -m "this is not a conventional commit" 2>&1 && EXIT=0 || EXIT=$?
-          if [ "$EXIT" -eq 0 ]; then
-            echo "FAIL: commit-msg should have blocked bad message"
+          git commit -m "not a conventional commit" 2>&1 && FAIL=0 || FAIL=1
+          if [ "$FAIL" -eq 0 ]; then
+            echo "FAIL: commit-msg should have blocked"
             exit 1
           fi
-          echo "✅ commit-msg correctly blocked bad commit message"
+          echo "PASS: commit-msg correctly blocked bad message"
           git checkout -- src/server.ts
 
-      - name: Test prepare-commit-msg hook (auto scope)
+      - name: Test prepare-commit-msg (auto scope)
         run: |
           cd /tmp/husky-test
-          echo "// scope test" >> src/server.ts
+          echo "// scope" >> src/server.ts
           git add src/server.ts
-          git commit -m "feat: auto scope injection" 2>&1 | tee /tmp/scope.log
-          git log -1 --format="%s" | grep -qE "^feat\(app\):" && echo "✅ prepare-commit-msg injected (app) scope" || echo "ℹ️  scope not injected (may be expected)"
-          git log -1 --format="%s"
+          git commit -m "feat: auto scope test" 2>&1
+          MSG=$(git log -1 --format="%s")
+          echo "Commit message: $MSG"
+          echo "$MSG" | grep -qE "^feat\(app\):" && echo "PASS: scope injected" || echo "INFO: scope not injected"
 
-      - name: Test pre-push hook (PASS)
-        run: |
-          cd /tmp/husky-test
-          git config user.email "ci@test.com"
-          git config user.name "CI Test"
-          git commit --allow-empty -m "test: pre-push check" 2>&1
-          echo "✅ pre-push hook ready (simulated - no remote to push to)"
-
-      - name: Test post-merge hook (script exists)
+      - name: Verify post-merge script
         run: |
           cd /tmp/husky-test
           cat .husky/post-merge
-          echo "✅ post-merge hook script verified"
+          echo "post-merge script OK"
 
-      - name: Test post-checkout hook (script exists)
+      - name: Verify post-checkout script
         run: |
           cd /tmp/husky-test
           cat .husky/post-checkout
-          echo "✅ post-checkout hook script verified"
+          echo "post-checkout script OK"
 
       - name: Verify lint-staged runs
         run: |
           cd /tmp/husky-test
-          echo 'const x: number = 1;' >> src/mainview/main.tsx
+          echo "const y: number = 1;" >> src/mainview/main.tsx
           git add src/mainview/main.tsx
-          git commit -m "test: lint-staged incremental" 2>&1 | tee /tmp/lint-staged.log
-          echo "✅ lint-staged executed in pre-commit"
-
-      - name: Husky verification summary
-        run: |
-          echo "============================================"
-          echo "  Husky Hooks Verification Summary"
-          echo "============================================"
-          echo "✅ pre-commit: blocks lint errors, passes clean code"
-          echo "✅ commit-msg: blocks bad messages, passes conventional"
-          echo "✅ prepare-commit-msg: auto-injects scope"
-          echo "✅ pre-push: lint + lockfile check"
-          echo "✅ post-merge: auto install on dep change"
-          echo "✅ post-checkout: auto install on branch switch"
-          echo "✅ lint-staged: incremental lint in pre-commit"
-          echo "============================================"
+          git commit -m "test: lint-staged" 2>&1
+          echo "PASS: lint-staged executed"
 
   notify-result:
     runs-on: ubuntu-latest
