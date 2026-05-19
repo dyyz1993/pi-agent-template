@@ -287,6 +287,9 @@ jobs:
       - name: Create agent project
         run: |
           bun run scripts/create.ts husky-test /tmp/husky-test --type agent
+          cd /tmp/husky-test
+          git config user.email "ci@test.com"
+          git config user.name "CI Test"
 
       - name: Verify husky hooks installed
         run: |
