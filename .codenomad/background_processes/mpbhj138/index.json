@@ -1,0 +1,30 @@
+[
+	{
+		"id": "proc_2026-05-19T1258_e558ee",
+		"workspaceId": "mpbhj138",
+		"title": "Monitor Build Workflow #26098642460",
+		"command": "cd /Users/xuyingzhou/Project/study-desktop/pi-agent-template && BUILD_RUN=26098642460 && for i in $(seq 1 60); do STATUS=$(gh run view $BUILD_RUN --json status,conclusion --jq '\"\\(.status)|\\(.conclusion // \"running\")\"') && echo \"[$(date '+%H:%M:%S')] $STATUS\" && RUNNING=$(echo $STATUS | cut -d'|' -f1) && if [ \"$RUNNING\" != \"queued\" ] && [ \"$RUNNING\" != \"in_progress\" ]; then TOTAL=$(gh run view $BUILD_RUN --json jobs --jq '.jobs | length') && OK=$(gh run view $BUILD_RUN --json jobs --jq '[.jobs[] | select(.conclusion == \"success\")] | length') && FAIL=$(gh run view $BUILD_RUN --json jobs --jq '[.jobs[] | select(.conclusion == \"failure\")] | length') && echo \"\" && echo \"✅ $OK/$TOTAL  ❌ $FAIL\" && echo \"\" && gh run view $BUILD_RUN --json jobs --jq '.jobs[] | \"  \\(.name): \\(.conclusion // .status)\"' && CONCLUSION=$(echo $STATUS | cut -d'|' -f2) && if [ \"$CONCLUSION\" = \"success\" ]; then echo \"\" && echo \"🎉 全部通过！\"; else echo \"\" && echo \"❌ 失败：\" && for jid in $(gh run view $BUILD_RUN --json jobs --jq '.jobs[] | select(.conclusion == \"failure\") | .databaseId'); do echo \"---\" && gh run view --job $jid --log 2>&1 | grep -E \"FAIL|verified|DMG|AppImage|exe|size\" | tail -20; done; fi && break; fi && sleep 30; done",
+		"cwd": "/Users/xuyingzhou/Project/study-desktop/pi-agent-template",
+		"status": "stopped",
+		"pid": 51465,
+		"startedAt": "2026-05-19T12:58:03.983Z",
+		"outputSizeBytes": 52,
+		"terminalReason": "finished",
+		"exitCode": 0,
+		"stoppedAt": "2026-05-19T12:58:22.606Z"
+	},
+	{
+		"id": "proc_2026-05-19T1259_516b6f",
+		"workspaceId": "mpbhj138",
+		"title": "Monitor Build v2 #26098642460",
+		"command": "cd /Users/xuyingzhou/Project/study-desktop/pi-agent-template && BUILD_RUN=26098642460 && for i in $(seq 1 80); do STATUS=$(gh run view $BUILD_RUN --json status,conclusion --jq '\"\\(.status)|\\(.conclusion // \"running\")\"') && echo \"[$(date '+%H:%M:%S')] $STATUS\" && RUNNING=$(echo $STATUS | cut -d'|' -f1) && if [ \"$RUNNING\" != \"queued\" ] && [ \"$RUNNING\" != \"in_progress\" ]; then TOTAL=$(gh run view $BUILD_RUN --json jobs --jq '.jobs | length') && OK=$(gh run view $BUILD_RUN --json jobs --jq '[.jobs[] | select(.conclusion == \"success\")] | length') && FAIL=$(gh run view $BUILD_RUN --json jobs --jq '[.jobs[] | select(.conclusion == \"failure\")] | length') && echo \"\" && echo \"=== Final Results ===\" && echo \"✅ $OK/$TOTAL  ❌ $FAIL\" && echo \"\" && gh run view $BUILD_RUN --json jobs --jq '.jobs[] | \"  \\(.name): \\(.conclusion // .status)\"' && CONCLUSION=$(echo $STATUS | cut -d'|' -f2) && if [ \"$CONCLUSION\" = \"success\" ]; then echo \"\" && echo \"🎉 全部通过！\"; else echo \"\" && echo \"❌ 失败 Jobs：\" && for jid in $(gh run view $BUILD_RUN --json jobs --jq '.jobs[] | select(.conclusion == \"failure\") | .databaseId'); do echo \"---\" && gh run view --job $jid --log 2>&1 | grep -E \"FAIL|verified|DMG|AppImage|exe|size|Error|error:\" | tail -30; done; fi && break; fi && sleep 30; done",
+		"cwd": "/Users/xuyingzhou/Project/study-desktop/pi-agent-template",
+		"status": "stopped",
+		"pid": 54507,
+		"startedAt": "2026-05-19T12:59:29.004Z",
+		"outputSizeBytes": 12250,
+		"terminalReason": "finished",
+		"exitCode": 0,
+		"stoppedAt": "2026-05-19T13:08:38.446Z"
+	}
+]
