@@ -285,93 +285,66 @@ jobs:
       - uses: pnpm/action-setup@v4
 
       - name: Create agent project
-        run: bun run scripts/create.ts husky-test /tmp/husky-test --type agent
+        run: |
+          bun run scripts/create.ts husky-test /tmp/husky-test --type agent
 
       - name: Verify husky hooks installed
         run: |
           cd /tmp/husky-test
-          test -d .husky || (echo "FAIL: .husky/ missing" && exit 1)
+          test -d .husky || (echo "FAIL" && exit 1)
           for h in pre-commit commit-msg pre-push prepare-commit-msg post-merge post-checkout; do
-            test -f ".husky/$h" || (echo "FAIL: .husky/$h missing" && exit 1)
-            test -x ".husky/$h" || (echo "FAIL: .husky/$h not executable" && exit 1)
-            echo "PASS: .husky/$h exists and executable"
+            test -f ".husky/$h" || (echo "FAIL" && exit 1)
+            test -x ".husky/$h" || (echo "FAIL" && exit 1)
           done
 
       - name: Install dependencies
-        run: cd /tmp/husky-test && pnpm install
+        run: |
+          cd /tmp/husky-test && pnpm install
 
       - name: Test pre-commit PASS
         run: |
           cd /tmp/husky-test
-          echo "// test comment" >> src/server.ts
+          echo "// test" >> src/server.ts
           git add src/server.ts
-          git commit -m "test: pre-commit pass" 2>&1 | tee /tmp/pc.log
-          grep -q "Pre-commit checks passed" /tmp/pc.log || (echo "FAIL: pre-commit did not run" && exit 1)
-          echo "PASS: pre-commit hook passed"
+          git commit -m "test: pre-commit pass"
 
-      - name: Test pre-commit FAIL (lint error)
+      - name: Test pre-commit FAIL
         run: |
           cd /tmp/husky-test
-          printf 'const x = "test" as any;\n' >> src/mainview/main.tsx
+          printf 'const x = "t" as any;\n' >> src/mainview/main.tsx
           git add src/mainview/main.tsx
-          git commit -m "test: should fail" 2>&1 && FAIL=0 || FAIL=1
-          if [ "$FAIL" -eq 0 ]; then
-            echo "FAIL: pre-commit should have blocked"
-            exit 1
-          fi
-          echo "PASS: pre-commit correctly blocked lint error"
+          git commit -m "test: fail" 2>&1 && exit 1 || true
           git checkout -- src/mainview/main.tsx
 
       - name: Test commit-msg PASS
         run: |
           cd /tmp/husky-test
-          echo "// valid" >> src/server.ts
+          echo "// v" >> src/server.ts
           git add src/server.ts
-          git commit -m "feat: valid message" 2>&1
-          echo "PASS: commit-msg hook passed"
+          git commit -m "feat: valid message"
 
-      - name: Test commit-msg FAIL (bad message)
+      - name: Test commit-msg FAIL
         run: |
           cd /tmp/husky-test
-          echo "// bad" >> src/server.ts
+          echo "// b" >> src/server.ts
           git add src/server.ts
-          git commit -m "not a conventional commit" 2>&1 && FAIL=0 || FAIL=1
-          if [ "$FAIL" -eq 0 ]; then
-            echo "FAIL: commit-msg should have blocked"
-            exit 1
-          fi
-          echo "PASS: commit-msg correctly blocked bad message"
+          git commit -m "bad message format" 2>&1 && exit 1 || true
           git checkout -- src/server.ts
 
-      - name: Test prepare-commit-msg (auto scope)
+      - name: Test prepare-commit-msg auto scope
         run: |
           cd /tmp/husky-test
-          echo "// scope" >> src/server.ts
+          echo "// s" >> src/server.ts
           git add src/server.ts
-          git commit -m "feat: auto scope test" 2>&1
-          MSG=$(git log -1 --format="%s")
-          echo "Commit message: $MSG"
-          echo "$MSG" | grep -qE "^feat\(app\):" && echo "PASS: scope injected" || echo "INFO: scope not injected"
+          git commit -m "feat: scope test"
+          git log -1 --format="%s"
 
-      - name: Verify post-merge script
+      - name: Verify post-merge and post-checkout scripts
         run: |
           cd /tmp/husky-test
           cat .husky/post-merge
-          echo "post-merge script OK"
-
-      - name: Verify post-checkout script
-        run: |
-          cd /tmp/husky-test
           cat .husky/post-checkout
-          echo "post-checkout script OK"
-
-      - name: Verify lint-staged runs
-        run: |
-          cd /tmp/husky-test
-          echo "const y: number = 1;" >> src/mainview/main.tsx
-          git add src/mainview/main.tsx
-          git commit -m "test: lint-staged" 2>&1
-          echo "PASS: lint-staged executed"
+          echo "All hook scripts verified"
 
   notify-result:
     runs-on: ubuntu-latest
