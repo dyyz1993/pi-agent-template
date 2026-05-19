@@ -377,6 +377,7 @@ jobs:
     name: Feishu Notification
     if: always()
     needs: [lint, type-check, test, template-test, smoke-test, build-verify, integration-test, rpc-api-test, e2e-ui, smoke-dev-web, e2e-full-stack, smoke-rpc-full, husky-verify, notify-result]
+    uses: dyyz1993/ci-tools/.github/workflows/feishu-notify.yml@main
     with:
       jobs: '{"lint":"${{ needs.lint.result }}","type-check":"${{ needs.type-check.result }}","test":"${{ needs.test.result }}","template-test":"${{ needs.template-test.result }}","smoke-test":"${{ needs.smoke-test.result }}","build-verify":"${{ needs.build-verify.result }}","integration-test":"${{ needs.integration-test.result }}","rpc-api-test":"${{ needs.rpc-api-test.result }}","e2e-ui":"${{ needs.e2e-ui.result }}","smoke-dev-web":"${{ needs.smoke-dev-web.result }}","e2e-full-stack":"${{ needs.e2e-full-stack.result }}","smoke-rpc-full":"${{ needs.smoke-rpc-full.result }}","husky-verify":"${{ needs.husky-verify.result }}","notify-result":"${{ needs.notify-result.result }}"}'
       sha: ${{ github.sha }}
