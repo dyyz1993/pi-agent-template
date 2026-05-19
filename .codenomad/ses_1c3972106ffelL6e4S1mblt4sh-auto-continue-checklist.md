@@ -1,0 +1,5 @@
+- [x] Push all fixes to main
+- [x] Monitor CI and fix failures
+- [x] CI all green (29/29)
+- [x] Trigger publish-verify
+- [x] Publish-verify all green (6/6)
