@@ -36,6 +36,7 @@ jobs:
           for t in general chat agent; do
             cd $GITHUB_WORKSPACE/templates/$t
             bun install
+            rm -rf $GITHUB_WORKSPACE/node_modules/.bun/minimatch@3* 2>/dev/null || true
             bun run lint
           done
 
