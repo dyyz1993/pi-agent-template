@@ -13,8 +13,8 @@ export function getFileIcon(node: TreeNode) {
 	if (['ts', 'tsx', 'js', 'jsx'].includes(ext))
 		return <FileCode className="w-4 h-4 text-blue-400 shrink-0" />;
 	if (['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext))
-		return <Image className="w-4 h-4 text-green-400 shrink-0" />;
+		return <Image className="w-4 h-4 text-[var(--color-text-success)] shrink-0" />;
 	if (['zip', 'gz', 'tar', 'rar'].includes(ext))
-		return <FileArchive className="w-4 h-4 text-orange-400 shrink-0" />;
+		return <FileArchive className="w-4 h-4 text-[var(--color-text-warning)] shrink-0" />;
 	return <FileText className="w-4 h-4 text-[var(--color-text-tertiary)] shrink-0" />;
 }

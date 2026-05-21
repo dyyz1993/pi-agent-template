@@ -44,9 +44,9 @@ export function TodoPanel() {
 	> = {
 		pending: {
 			icon: Circle,
-			color: "text-gray-400",
+			color: "text-[var(--color-text-tertiary)]",
 			label: t("todo.statusPending"),
-			circleColor: "border-gray-500",
+			circleColor: "border-[var(--color-border-primary)]",
 		},
 		in_progress: {
 			icon: Clock,
@@ -56,9 +56,9 @@ export function TodoPanel() {
 		},
 		completed: {
 			icon: CheckCircle2,
-			color: "text-green-400",
+			color: "text-[var(--color-text-success)]",
 			label: t("todo.statusCompleted"),
-			circleColor: "border-green-400 bg-green-400/20",
+			circleColor: "border-[var(--color-text-success)] bg-[var(--color-text-success)]/20",
 		},
 	};
 
@@ -89,7 +89,7 @@ export function TodoPanel() {
 					<button
 						onClick={handleAdd}
 						disabled={!input.trim()}
-						className="px-3 py-1 text-xs bg-green-600 hover:bg-green-500 disabled:opacity-40 rounded text-white"
+						className="px-3 py-1 text-xs bg-[var(--color-text-success)] hover:opacity-80 disabled:opacity-40 rounded text-white"
 					>
 						{t("todo.save")}
 					</button>
@@ -98,7 +98,7 @@ export function TodoPanel() {
 
 			<div className="flex-1 overflow-auto p-3">
 				{items.length === 0 ? (
-					<div className="flex flex-col items-center justify-center h-full text-gray-600">
+					<div className="flex flex-col items-center justify-center h-full text-[var(--color-text-tertiary)]">
 						<ListTodo className="w-12 h-12 mb-3 opacity-30" />
 						<span className="text-sm">{t("todo.empty")}</span>
 						<span className="text-xs mt-1">{t("todo.emptyHint")}</span>
@@ -143,7 +143,9 @@ export function TodoPanel() {
 															{isActive && <sc.icon className="w-2.5 h-2.5" />}
 															{sc.label}
 															{s !== "completed" && (
-																<span className="text-gray-700 mx-0.5">&rarr;</span>
+																<span className="text-[var(--color-text-placeholder)] mx-0.5">
+																	&rarr;
+																</span>
 															)}
 														</span>
 													);
@@ -152,7 +154,7 @@ export function TodoPanel() {
 										</div>
 										<button
 											onClick={() => removeItem(item.id)}
-											className="text-gray-600 hover:text-[var(--color-text-error)] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 self-start mt-0.5"
+											className="text-[var(--color-text-tertiary)] hover:text-[var(--color-text-error)] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 self-start mt-0.5"
 										>
 											<Trash2 className="w-3.5 h-3.5" />
 										</button>

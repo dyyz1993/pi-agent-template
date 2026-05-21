@@ -83,20 +83,20 @@ export function BashPanel() {
 							className={`group relative flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs whitespace-nowrap transition-colors ${
 								activePid === pid
 									? proc.running
-										? 'bg-green-900/50 text-green-300 border border-green-700'
+										? 'bg-[var(--color-text-success)]/50 text-[var(--color-text-success)] border border-[var(--color-text-success)]'
 										: 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] border border-[var(--color-border-secondary)]'
 									: 'text-[var(--color-text-placeholder)] bg-[var(--color-bg-secondary)]/50 border border-transparent hover:text-[var(--color-text-secondary)]'
 							}`}
 						>
 							{proc.running && (
 								<span className="relative flex h-2 w-2">
-									<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-									<span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+									<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[var(--color-text-success)] opacity-75" />
+									<span className="relative inline-flex rounded-full h-2 w-2 bg-[var(--color-text-success)]" />
 								</span>
 							)}
 							{!proc.running && (
 								<span
-									className={`w-2 h-2 rounded-full ${proc.exitCode === 0 ? 'bg-green-500' : 'bg-red-500'}`}
+									className={`w-2 h-2 rounded-full ${proc.exitCode === 0 ? 'bg-[var(--color-text-success)]' : 'bg-[var(--color-text-error)]'}`}
 								/>
 							)}
 							PID {pid}
@@ -106,14 +106,14 @@ export function BashPanel() {
 										e.stopPropagation();
 										killProcess(pid);
 									}}
-									className="ml-0.5 text-[var(--color-text-error)] hover:text-red-300"
+									className="ml-0.5 text-[var(--color-text-error)] hover:text-[var(--color-text-error)]"
 								>
 									<X className="w-3 h-3" />
 								</button>
 							)}
 							{!proc.running && (
 								<span
-									className={`text-[10px] ${proc.exitCode === 0 ? 'text-green-500/70' : 'text-red-500/70'}`}
+									className={`text-[10px] ${proc.exitCode === 0 ? 'text-[var(--color-text-success)]/70' : 'text-[var(--color-text-error)]/70'}`}
 								>
 									{t('bash.exited', { code: proc.exitCode ?? '?' })}
 								</span>
@@ -198,7 +198,7 @@ export function BashPanel() {
 				<div className="p-2 border-t border-[var(--color-border-primary)] flex justify-end">
 					<button
 						onClick={() => activePid != null && killProcess(activePid)}
-						className="flex items-center gap-1 px-3 py-1 bg-red-600 hover:bg-red-500 rounded text-xs text-[var(--color-text-primary)]"
+						className="flex items-center gap-1 px-3 py-1 bg-[var(--color-text-error)] hover:opacity-80 rounded text-xs text-[var(--color-text-primary)]"
 					>
 						<Square className="w-3 h-3" />
 						{t('bash.kill')}

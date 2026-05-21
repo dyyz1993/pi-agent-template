@@ -56,9 +56,9 @@ export function TodoPanel() {
 		},
 		completed: {
 			icon: CheckCircle2,
-			color: 'text-green-400',
+			color: 'text-[var(--color-text-success)]',
 			label: t('todo.statusCompleted'),
-			circleColor: 'border-green-400 bg-green-400/20',
+			circleColor: 'border-[var(--color-text-success)] bg-[var(--color-text-success)]/20',
 		},
 	};
 
@@ -89,7 +89,7 @@ export function TodoPanel() {
 					<button
 						onClick={handleAdd}
 						disabled={!input.trim()}
-						className="px-3 py-1 text-xs bg-green-600 hover:bg-green-500 disabled:opacity-40 rounded text-white"
+						className="px-3 py-1 text-xs bg-[var(--color-text-success)] hover:opacity-80 disabled:opacity-40 rounded text-white"
 					>
 						{t('todo.save')}
 					</button>

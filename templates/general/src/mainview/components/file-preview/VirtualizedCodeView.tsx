@@ -64,10 +64,12 @@ export function VirtualizedCodeView({
 							}}
 							className="flex text-xs leading-5 font-mono"
 						>
-							<span className="inline-block w-10 text-right pr-4 text-gray-600 select-none shrink-0">
+							<span className="inline-block w-10 text-right pr-4 text-[var(--color-text-tertiary)] select-none shrink-0">
 								{vr.index + 1}
 							</span>
-							<span className="flex-1 text-gray-300 whitespace-pre">{lines[vr.index]}</span>
+							<span className="flex-1 text-[var(--color-text-secondary)] whitespace-pre">
+								{lines[vr.index]}
+							</span>
 						</div>
 					))}
 				</div>
@@ -109,11 +111,13 @@ export function VirtualizedCodeView({
 									}}
 									className="flex text-xs leading-5 font-mono"
 								>
-									<span className="inline-block w-10 text-right pr-4 text-gray-600 select-none shrink-0">
+									<span className="inline-block w-10 text-right pr-4 text-[var(--color-text-tertiary)] select-none shrink-0">
 										{vr.index + 1}
 									</span>
 									{isLongLine ? (
-										<span className="flex-1 text-gray-300 whitespace-pre">{lineText}</span>
+										<span className="flex-1 text-[var(--color-text-secondary)] whitespace-pre">
+											{lineText}
+										</span>
 									) : (
 										<span className="flex-1">
 											{lineTokens!.map((token, key) => (

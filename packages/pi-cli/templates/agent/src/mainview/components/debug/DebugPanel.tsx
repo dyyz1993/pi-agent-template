@@ -84,6 +84,7 @@ export function DebugPanel() {
 				</div>
 				<div className="flex gap-2 mb-2">
 					<select
+						aria-label={t("debug.rpcCalls")}
 						value={method}
 						onChange={(e) => setMethod(e.target.value as DemoMethod)}
 						className="flex-1 px-2 py-1 text-xs bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-primary)] border border-[var(--color-border-secondary)]"
@@ -132,14 +133,14 @@ export function DebugPanel() {
 						{!subscriptionId ? (
 							<button
 								onClick={handleSubscribe}
-								className="px-2 py-0.5 text-xs bg-green-600 hover:bg-green-700 rounded transition-colors"
+								className="px-2 py-0.5 text-xs bg-[var(--color-text-success)] hover:opacity-80 rounded transition-colors"
 							>
 								{t("debug.subscribe")}
 							</button>
 						) : (
 							<button
 								onClick={handleUnsubscribe}
-								className="px-2 py-0.5 text-xs bg-red-600 hover:bg-red-700 rounded transition-colors"
+								className="px-2 py-0.5 text-xs bg-[var(--color-text-error)] hover:opacity-80 rounded transition-colors"
 							>
 								{t("debug.unsubscribe")}
 							</button>

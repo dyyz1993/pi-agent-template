@@ -27,7 +27,7 @@ export function ThemeToggle() {
 				</svg>
 			) : (
 				<svg
-					className="w-4 h-4 text-gray-600"
+					className="w-4 h-4 text-[var(--color-text-tertiary)]"
 					fill="none"
 					viewBox="0 0 24 24"
 					stroke="currentColor"

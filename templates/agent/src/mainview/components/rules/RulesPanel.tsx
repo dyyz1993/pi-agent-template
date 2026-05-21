@@ -61,7 +61,7 @@ export function RulesPanel() {
 					<button
 						onClick={handleAdd}
 						disabled={!name.trim() || !pattern.trim()}
-						className="self-end px-3 py-1 text-xs bg-green-600 hover:bg-green-500 disabled:opacity-40 rounded text-white"
+						className="self-end px-3 py-1 text-xs bg-[var(--color-text-success)] hover:opacity-80 disabled:opacity-40 rounded text-white"
 					>
 						{t('rules.save')}
 					</button>

@@ -18,7 +18,7 @@ const FILTER_PRESETS: Record<SubEventType, string[]> = {
 const CATEGORY_COLORS: Record<FeedCategory, string> = {
 	tech: "bg-blue-600/30 text-blue-300",
 	news: "bg-amber-600/30 text-amber-300",
-	general: "bg-green-600/30 text-green-300",
+	general: "bg-[var(--color-text-success)]/30 text-[var(--color-text-success)]",
 };
 
 export function FeedPanel() {
@@ -166,14 +166,14 @@ export function FeedPanel() {
 						{!subscribed ? (
 							<button
 								onClick={handleSubscribe}
-								className="px-3 py-1.5 text-xs bg-green-600 hover:bg-green-700 rounded transition-colors whitespace-nowrap"
+								className="px-3 py-1.5 text-xs bg-[var(--color-text-success)] hover:opacity-80 rounded transition-colors whitespace-nowrap"
 							>
 								{t("feed.subscribe")}
 							</button>
 						) : (
 							<button
 								onClick={handleUnsubscribe}
-								className="px-3 py-1.5 text-xs bg-red-600 hover:bg-red-700 rounded transition-colors whitespace-nowrap"
+								className="px-3 py-1.5 text-xs bg-[var(--color-text-error)] hover:opacity-80 rounded transition-colors whitespace-nowrap"
 							>
 								{t("feed.unsubscribe")}
 							</button>
@@ -205,7 +205,7 @@ export function FeedPanel() {
 								{t("feed.eventStream")}
 							</div>
 							{subscribed && (
-								<span className="px-1.5 py-0.5 bg-green-600/30 text-green-400 rounded text-[10px] animate-pulse">
+								<span className="px-1.5 py-0.5 bg-[var(--color-text-success)]/30 text-[var(--color-text-success)] rounded text-[10px] animate-pulse">
 									{t("feed.live")}
 								</span>
 							)}
@@ -227,7 +227,7 @@ export function FeedPanel() {
 											{new Date(entry.timestamp).toLocaleTimeString()}
 										</span>
 									</div>
-									<pre className="text-cyan-300 mt-0.5 whitespace-pre-wrap break-all">
+									<pre className="text-[var(--color-text-info)] mt-0.5 whitespace-pre-wrap break-all">
 										{JSON.stringify(entry.payload, null, 0)}
 									</pre>
 								</div>

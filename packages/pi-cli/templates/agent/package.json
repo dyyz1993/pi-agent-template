@@ -71,8 +71,7 @@
 		"format:check": "prettier --check .",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"test:coverage": "vitest run --coverage",
-		"prepare": "husky"
+		"test:coverage": "vitest run --coverage"
 	},
 	"dependencies": {
 		"@dyyz1993/rpc-core": "^1.2.0",
@@ -123,15 +122,6 @@
 		"@commitlint/config-conventional": "^19.8.1",
 		"prettier": "^3.5.3",
 		"lint-staged": "^15.5.2"
-	},
-	"lint-staged": {
-		"*.{ts,tsx}": [
-			"eslint --fix",
-			"prettier --write"
-		],
-		"*.{json,md,css,html}": [
-			"prettier --write"
-		]
 	},
 	"overrides": {
 		"minimatch": "^10.0.1"

@@ -33,7 +33,7 @@ function statusIcon(status: GitFileChange['status']) {
 		case 'deleted':
 			return <Minus className="w-3 h-3 text-[var(--color-text-error)]" />;
 		case 'modified':
-			return <Pencil className="w-3 h-3 text-yellow-400" />;
+			return <Pencil className="w-3 h-3 text-[var(--color-text-warning)]" />;
 		default:
 			return <FileQuestion className="w-3 h-3 text-[var(--color-text-tertiary)]" />;
 	}
@@ -98,8 +98,8 @@ const FileItem = memo(function FileItem({
 			<button
 				className={`opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-[var(--color-bg-active)] ${
 					isStaged
-						? 'text-orange-400 hover:text-orange-300'
-						: 'text-[var(--color-text-success)] hover:text-green-300'
+						? 'text-[var(--color-text-warning)] hover:text-[var(--color-text-warning)]'
+						: 'text-[var(--color-text-success)] hover:text-[var(--color-text-success)]'
 				}`}
 				onClick={(e) => {
 					e.stopPropagation();
@@ -147,7 +147,7 @@ const UntrackedItem = memo(function UntrackedItem({
 			<span className="truncate flex-1">{path.split('/').pop()}</span>
 			<span className="text-[var(--color-text-tertiary)] text-[10px]">U</span>
 			<button
-				className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-[var(--color-text-success)] hover:text-green-300 hover:bg-[var(--color-bg-active)]"
+				className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded text-[var(--color-text-success)] hover:text-[var(--color-text-success)] hover:bg-[var(--color-bg-active)]"
 				onClick={(e) => {
 					e.stopPropagation();
 					onStage(path);
@@ -537,8 +537,8 @@ export function GitPanel({ hideOuterShell }: GitPanelProps) {
 				>
 					<GitBranch className="w-3 h-3" />
 					<span className="font-medium">{branch}</span>
-					{ahead > 0 && <span className="text-green-400">↑{ahead}</span>}
-					{behind > 0 && <span className="text-orange-400">↓{behind}</span>}
+					{ahead > 0 && <span className="text-[var(--color-text-success)]">↑{ahead}</span>}
+					{behind > 0 && <span className="text-[var(--color-text-warning)]">↓{behind}</span>}
 					<BranchChevron className="w-3 h-3 text-[var(--color-text-placeholder)]" />
 				</button>
 
@@ -563,7 +563,7 @@ export function GitPanel({ hideOuterShell }: GitPanelProps) {
 								{t('git.staged')} ({staged.length})
 							</span>
 							<button
-								className="ml-auto text-orange-400 hover:text-orange-300"
+								className="ml-auto text-[var(--color-text-warning)] hover:text-[var(--color-text-warning)]"
 								onClick={handleUnstageAll}
 								title={t('git.unstageAll')}
 							>
@@ -594,7 +594,7 @@ export function GitPanel({ hideOuterShell }: GitPanelProps) {
 								{t('git.changes')} ({changed.length})
 							</span>
 							<button
-								className="ml-auto text-[var(--color-text-success)] hover:text-green-300"
+								className="ml-auto text-[var(--color-text-success)] hover:text-[var(--color-text-success)]"
 								onClick={handleStageAll}
 								title={t('git.stageAll')}
 							>

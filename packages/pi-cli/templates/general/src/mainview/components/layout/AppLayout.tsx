@@ -36,6 +36,8 @@ export function AppLayout({
 	const filePreview = useExplorerStore((s) => s.filePreview);
 	const loadingFile = useExplorerStore((s) => s.loadingFile);
 	const closePreview = useExplorerStore((s) => s.closePreview);
+	const scrollToLine = useExplorerStore((s) => s.scrollToLine);
+	const clearScrollToLine = useExplorerStore((s) => s.clearScrollToLine);
 
 	const activePanel = useSidebarStore((s) => s.activePanel);
 	const isPinned = useSidebarStore((s) => s.isPinned);
@@ -74,7 +76,7 @@ export function AppLayout({
 			{!isMobile && (
 				<div className="h-8 bg-[var(--color-bg-secondary)] flex items-center px-3 text-xs border-b border-[var(--color-border-primary)] flex-shrink-0">
 					<span
-						className={`px-2 py-0.5 rounded flex items-center gap-1 ${mode === "desktop" ? "bg-green-600" : "bg-blue-600"}`}
+						className={`px-2 py-0.5 rounded flex items-center gap-1 ${mode === "desktop" ? "bg-[var(--color-text-success)]" : "bg-blue-600"}`}
 					>
 						{mode === "desktop" ? <Monitor className="w-3 h-3" /> : <Wifi className="w-3 h-3" />}
 						{mode === "desktop" ? t("app.mode.desktop") : t("app.mode.web")}
@@ -97,7 +99,7 @@ export function AppLayout({
 					>
 						{sidebarContent}
 						<div
-							className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-[var(--color-border-primary)] hover:bg-indigo-500/50 active:bg-indigo-500 transition-colors z-10"
+							className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize bg-[var(--color-border-primary)] hover:bg-[var(--color-accent)]/50 active:bg-[var(--color-accent)] transition-colors z-10"
 							onMouseDown={handleResizeStart}
 						/>
 					</div>
@@ -127,6 +129,8 @@ export function AppLayout({
 							preview={filePreview}
 							loading={loadingFile}
 							onClose={closePreview}
+							scrollToLine={scrollToLine ?? undefined}
+							onScrolledToLine={clearScrollToLine}
 						/>
 					)}
 					<DiffViewerPanel />

@@ -1,4 +1,4 @@
-import { useRef, useMemo } from "react";
+import { useRef, useMemo, useEffect } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Highlight, themes } from "prism-react-renderer";
 import { getLanguage } from "../../utils/file-utils";
@@ -6,17 +6,23 @@ import { getLanguage } from "../../utils/file-utils";
 interface VirtualizedCodeViewProps {
 	code: string;
 	filename: string;
+	scrollToLine?: number;
+	onScrolledToLine?: () => void;
 }
 
 /** Lines longer than this skip syntax highlighting (plain text instead) */
 const LONG_LINE_THRESHOLD = 5000;
 
-export function VirtualizedCodeView({ code, filename }: VirtualizedCodeViewProps) {
+export function VirtualizedCodeView({
+	code,
+	filename,
+	scrollToLine,
+	onScrolledToLine,
+}: VirtualizedCodeViewProps) {
 	const parentRef = useRef<HTMLDivElement>(null);
 	const language = getLanguage(filename);
 	const lines = useMemo(() => code.split("\n"), [code]);
 
-	// Detect minified files: avg line length > 500 chars
 	const avgLineLength = code.length / Math.max(lines.length, 1);
 	const usePlainText = !language || avgLineLength > 500;
 
@@ -26,6 +32,13 @@ export function VirtualizedCodeView({ code, filename }: VirtualizedCodeViewProps
 		estimateSize: () => 20,
 		overscan: 20,
 	});
+
+	useEffect(() => {
+		if (scrollToLine != null && scrollToLine > 0 && scrollToLine <= lines.length) {
+			virtualizer.scrollToIndex(scrollToLine - 1, { align: "center" });
+			onScrolledToLine?.();
+		}
+	}, [scrollToLine, lines.length, virtualizer, onScrolledToLine]);
 
 	// --- Plain text path: no Prism tokenization ---
 	if (usePlainText) {
@@ -51,10 +64,12 @@ export function VirtualizedCodeView({ code, filename }: VirtualizedCodeViewProps
 							}}
 							className="flex text-xs leading-5 font-mono"
 						>
-							<span className="inline-block w-10 text-right pr-4 text-gray-600 select-none shrink-0">
+							<span className="inline-block w-10 text-right pr-4 text-[var(--color-text-tertiary)] select-none shrink-0">
 								{vr.index + 1}
 							</span>
-							<span className="flex-1 text-gray-300 whitespace-pre">{lines[vr.index]}</span>
+							<span className="flex-1 text-[var(--color-text-secondary)] whitespace-pre">
+								{lines[vr.index]}
+							</span>
 						</div>
 					))}
 				</div>
@@ -96,11 +111,13 @@ export function VirtualizedCodeView({ code, filename }: VirtualizedCodeViewProps
 									}}
 									className="flex text-xs leading-5 font-mono"
 								>
-									<span className="inline-block w-10 text-right pr-4 text-gray-600 select-none shrink-0">
+									<span className="inline-block w-10 text-right pr-4 text-[var(--color-text-tertiary)] select-none shrink-0">
 										{vr.index + 1}
 									</span>
 									{isLongLine ? (
-										<span className="flex-1 text-gray-300 whitespace-pre">{lineText}</span>
+										<span className="flex-1 text-[var(--color-text-secondary)] whitespace-pre">
+											{lineText}
+										</span>
 									) : (
 										<span className="flex-1">
 											{lineTokens!.map((token, key) => (

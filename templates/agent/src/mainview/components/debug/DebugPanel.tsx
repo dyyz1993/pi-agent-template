@@ -133,14 +133,14 @@ export function DebugPanel() {
 						{!subscriptionId ? (
 							<button
 								onClick={handleSubscribe}
-								className="px-2 py-0.5 text-xs bg-green-600 hover:bg-green-700 rounded transition-colors"
+								className="px-2 py-0.5 text-xs bg-[var(--color-text-success)] hover:opacity-80 rounded transition-colors"
 							>
 								{t('debug.subscribe')}
 							</button>
 						) : (
 							<button
 								onClick={handleUnsubscribe}
-								className="px-2 py-0.5 text-xs bg-red-600 hover:bg-red-700 rounded transition-colors"
+								className="px-2 py-0.5 text-xs bg-[var(--color-text-error)] hover:opacity-80 rounded transition-colors"
 							>
 								{t('debug.unsubscribe')}
 							</button>

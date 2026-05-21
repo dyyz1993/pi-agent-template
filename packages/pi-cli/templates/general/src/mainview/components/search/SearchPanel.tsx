@@ -414,7 +414,7 @@ export function SearchPanel() {
 									<span className="text-[var(--color-text-secondary)] truncate flex-1">
 										{group.relativePath}
 									</span>
-									<span className="text-[10px] text-gray-600 flex-shrink-0 ml-1">
+									<span className="text-[10px] text-[var(--color-text-tertiary)] flex-shrink-0 ml-1">
 										{group.matches.length}
 									</span>
 								</button>
