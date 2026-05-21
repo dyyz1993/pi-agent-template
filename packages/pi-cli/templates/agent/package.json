@@ -2,6 +2,54 @@
 	"name": "pi-agent-app",
 	"version": "1.0.0",
 	"description": "Coding agent template with Bash, Rules, and Todo management",
+	"author": {
+		"name": "xuyingzhou",
+		"email": "xuyingzhou@tuzhanai.com"
+	},
+	"homepage": "https://github.com/dyyz1993/pi-agent-template",
+	"main": "electron/main.js",
+	"build": {
+		"appId": "com.piagent.app",
+		"productName": "Pi Agent",
+		"directories": {
+			"output": "dist-electron"
+		},
+		"files": [
+			"dist/**/*",
+			"electron/**/*",
+			"package.json"
+		],
+		"mac": {
+			"category": "public.app-category.developer-tools",
+			"target": [
+				{
+					"target": "dmg",
+					"arch": [
+						"x64",
+						"arm64"
+					]
+				}
+			]
+		},
+		"win": {
+			"target": [
+				{
+					"target": "nsis",
+					"arch": [
+						"x64"
+					]
+				}
+			]
+		},
+		"linux": {
+			"maintainer": "xuyingzhou <xuyingzhou@tuzhanai.com>",
+			"target": [
+				"AppImage",
+				"deb"
+			],
+			"category": "Development"
+		}
+	},
 	"scripts": {
 		"start": "vite build && electrobun dev",
 		"dev": "electrobun dev --watch",
@@ -12,8 +60,15 @@
 		"build:mac": "vite build && electrobun build --env=canary",
 		"build:win": "vite build && electrobun build --env=canary",
 		"build:linux": "vite build && electrobun build --env=canary",
+		"electron:dev": "vite build && electron .",
+		"electron:build": "vite build && electron-builder --mac --win --linux",
+		"electron:build:mac": "vite build && electron-builder --mac",
+		"electron:build:win": "vite build && electron-builder --win",
+		"electron:build:linux": "vite build && electron-builder --linux",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
+		"format": "prettier --write .",
+		"format:check": "prettier --check .",
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"test:coverage": "vitest run --coverage",
@@ -45,10 +100,11 @@
 		"@types/react": "^18.3.12",
 		"@types/react-dom": "^18.3.1",
 		"@types/ws": "^8.18.1",
-		"ws": "^8.18.0",
 		"@vitejs/plugin-react": "^4.3.4",
 		"autoprefixer": "^10.4.20",
 		"concurrently": "^9.1.0",
+		"electron": "^42.1.0",
+		"electron-builder": "^26.8.1",
 		"eslint": "^9.0.0",
 		"eslint-plugin-jsx-a11y": "^6.10.0",
 		"eslint-plugin-react-hooks": "^5.2.0",
@@ -61,7 +117,21 @@
 		"typescript": "^5.7.2",
 		"typescript-eslint": "^8.0.0",
 		"vite": "^6.0.3",
-		"vitest": "^4.1.5"
+		"vitest": "^4.1.5",
+		"ws": "^8.18.0",
+		"@commitlint/cli": "^19.8.1",
+		"@commitlint/config-conventional": "^19.8.1",
+		"prettier": "^3.5.3",
+		"lint-staged": "^15.5.2"
+	},
+	"lint-staged": {
+		"*.{ts,tsx}": [
+			"eslint --fix",
+			"prettier --write"
+		],
+		"*.{json,md,css,html}": [
+			"prettier --write"
+		]
 	},
 	"overrides": {
 		"minimatch": "^10.0.1"

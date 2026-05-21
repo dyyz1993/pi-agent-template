@@ -1,22 +1,28 @@
-import { useRef, useMemo } from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { Highlight, themes } from "prism-react-renderer";
-import { getLanguage } from "../../utils/file-utils";
+import { useRef, useMemo, useEffect } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { Highlight, themes } from 'prism-react-renderer';
+import { getLanguage } from '../../utils/file-utils';
 
 interface VirtualizedCodeViewProps {
 	code: string;
 	filename: string;
+	scrollToLine?: number;
+	onScrolledToLine?: () => void;
 }
 
 /** Lines longer than this skip syntax highlighting (plain text instead) */
 const LONG_LINE_THRESHOLD = 5000;
 
-export function VirtualizedCodeView({ code, filename }: VirtualizedCodeViewProps) {
+export function VirtualizedCodeView({
+	code,
+	filename,
+	scrollToLine,
+	onScrolledToLine,
+}: VirtualizedCodeViewProps) {
 	const parentRef = useRef<HTMLDivElement>(null);
 	const language = getLanguage(filename);
-	const lines = useMemo(() => code.split("\n"), [code]);
+	const lines = useMemo(() => code.split('\n'), [code]);
 
-	// Detect minified files: avg line length > 500 chars
 	const avgLineLength = code.length / Math.max(lines.length, 1);
 	const usePlainText = !language || avgLineLength > 500;
 
@@ -27,31 +33,38 @@ export function VirtualizedCodeView({ code, filename }: VirtualizedCodeViewProps
 		overscan: 20,
 	});
 
+	useEffect(() => {
+		if (scrollToLine != null && scrollToLine > 0 && scrollToLine <= lines.length) {
+			virtualizer.scrollToIndex(scrollToLine - 1, { align: 'center' });
+			onScrolledToLine?.();
+		}
+	}, [scrollToLine, lines.length, virtualizer, onScrolledToLine]);
+
 	// --- Plain text path: no Prism tokenization ---
 	if (usePlainText) {
 		return (
 			<div
 				ref={parentRef}
 				className="flex-1 min-h-0 overflow-auto"
-				style={{ background: "#011627" }}
+				style={{ background: '#011627' }}
 			>
 				<div
-					style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%", position: "relative" }}
+					style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}
 				>
 					{virtualizer.getVirtualItems().map((vr) => (
 						<div
 							key={vr.key}
 							style={{
-								position: "absolute",
+								position: 'absolute',
 								top: 0,
 								left: 0,
-								width: "100%",
+								width: '100%',
 								height: `${vr.size}px`,
 								transform: `translateY(${vr.start}px)`,
 							}}
 							className="flex text-xs leading-5 font-mono"
 						>
-							<span className="inline-block w-10 text-right pr-4 text-gray-600 select-none shrink-0">
+							<span className="inline-block w-10 text-right pr-4 text-[var(--color-text-tertiary)] select-none shrink-0">
 								{vr.index + 1}
 							</span>
 							<span className="flex-1 text-[var(--color-text-secondary)] whitespace-pre">
@@ -71,13 +84,13 @@ export function VirtualizedCodeView({ code, filename }: VirtualizedCodeViewProps
 				<div
 					ref={parentRef}
 					className="flex-1 min-h-0 overflow-auto"
-					style={{ background: "#011627" }}
+					style={{ background: '#011627' }}
 				>
 					<div
 						style={{
 							height: `${virtualizer.getTotalSize()}px`,
-							width: "100%",
-							position: "relative",
+							width: '100%',
+							position: 'relative',
 						}}
 					>
 						{virtualizer.getVirtualItems().map((vr) => {
@@ -89,16 +102,16 @@ export function VirtualizedCodeView({ code, filename }: VirtualizedCodeViewProps
 								<div
 									key={vr.key}
 									style={{
-										position: "absolute",
+										position: 'absolute',
 										top: 0,
 										left: 0,
-										width: "100%",
+										width: '100%',
 										height: `${vr.size}px`,
 										transform: `translateY(${vr.start}px)`,
 									}}
 									className="flex text-xs leading-5 font-mono"
 								>
-									<span className="inline-block w-10 text-right pr-4 text-gray-600 select-none shrink-0">
+									<span className="inline-block w-10 text-right pr-4 text-[var(--color-text-tertiary)] select-none shrink-0">
 										{vr.index + 1}
 									</span>
 									{isLongLine ? (

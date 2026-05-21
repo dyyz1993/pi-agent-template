@@ -1,157 +1,177 @@
 {
-  "app": {
-    "title": "Pi Chat",
-    "connecting": "Connecting to RPC server...",
-    "mode": {
-      "desktop": "Desktop (IPC)",
-      "web": "Web (WebSocket)"
-    }
-  },
-  "sidebar": {
-    "explorer": "Explorer",
-    "git": "Source Control",
-    "search": "Search",
-    "rules": "Rules"
-  },
-  "tabs": {
-    "chat": "Chat",
-    "feed": "Feed + Subs",
-    "bash": "Terminal",
-    "todo": "Todo",
-    "debug": "Debug"
-  },
-  "chat": {
-    "title": "Messages",
-    "placeholder": "Type a message...",
-    "send": "Send",
-    "empty": "Start a conversation..."
-  },
-  "explorer": {
-    "title": "Explorer",
-    "pathPlaceholder": "Path",
-    "refresh": "Refresh",
-    "listDirectory": "List directory",
-    "newFile": "New File",
-    "newFolder": "New Folder",
-    "rename": "Rename",
-    "delete": "Delete",
-    "copyPath": "Copy Path",
-    "confirmDelete": "Confirm Delete",
-    "confirmDeleteMessage": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
-    "emptyHint": "Enter path and click refresh"
-  },
-  "git": {
-    "title": "Source Control",
-    "staged": "Staged Changes",
-    "changes": "Changes",
-    "untracked": "Untracked",
-    "noChanges": "No changes detected",
-    "commits": "Commits",
-    "noCommits": "No commits",
-    "noFiles": "No files",
-    "loadingFiles": "Loading files...",
-    "commitPlaceholder": "Commit message (Ctrl+Enter to commit)",
-    "committing": "Committing...",
-    "commit": "Commit",
-    "openDiff": "Open Diff",
-    "openFile": "Open File",
-    "copyHash": "Copy Hash",
-    "copyMessage": "Copy Message",
-    "copyPath": "Copy Path",
-    "pull": "Pull",
-    "push": "Push",
-    "refresh": "Refresh",
-    "stage": "Stage",
-    "unstage": "Unstage",
-    "stageAll": "Stage all",
-    "unstageAll": "Unstage all",
-    "worktrees": "Worktrees",
-    "close": "Close",
-    "justNow": "just now",
-    "minutesAgo": "{{count}}m ago",
-    "hoursAgo": "{{count}}h ago",
-    "daysAgo": "{{count}}d ago"
-  },
-  "feed": {
-    "title": "Feed + Subscriptions",
-    "newPost": "New Post",
-    "authorPlaceholder": "Author",
-    "post": "Post",
-    "postPlaceholder": "Write a post...",
-    "subscribeWithFilter": "Subscribe with Filter",
-    "filterPlaceholder": "filter JSON, e.g. {\"category\":\"tech\"}",
-    "subscribe": "Subscribe",
-    "unsubscribe": "Unsubscribe",
-    "noFilter": "no filter",
-    "eventStream": "Event Stream",
-    "live": "LIVE",
-    "noPostsYet": "No posts yet. Create one above!"
-  },
-  "todo": {
-    "title": "Todo",
-    "add": "Add Todo",
-    "placeholder": "What needs to be done?",
-    "save": "Add",
-    "empty": "No tasks yet",
-    "emptyHint": "Click \"Add Todo\" to create one",
-    "status": "Status:",
-    "statusPending": "pending",
-    "statusInProgress": "in progress",
-    "statusCompleted": "completed"
-  },
-  "rules": {
-    "title": "Rules",
-    "add": "Add Rule",
-    "namePlaceholder": "Rule name",
-    "patternPlaceholder": "Glob pattern (e.g. **/*.ts)",
-    "save": "Save",
-    "empty": "No rules defined yet",
-    "emptyHint": "Click \"Add Rule\" to create one",
-    "pattern": "Pattern:"
-  },
-  "bash": {
-    "title": "Terminal",
-    "enterCommand": "Enter command...",
-    "run": "Run",
-    "processRunning": "Process running... (PID: {{pid}})",
-    "waitingOutput": "Waiting for output...",
-    "exit": "Exit: {{code}}",
-    "noActiveProcess": "No active process",
-    "getStarted": "Run a command to get started",
-    "kill": "Kill",
-    "exited": "exited({{code}})"
-  },
-  "diff": {
-    "lineByLine": "Line by line",
-    "sideBySide": "Side by side",
-    "loading": "Loading diff...",
-    "before": "Before",
-    "after": "After"
-  },
-  "debug": {
-    "rpcCalls": "RPC Calls",
-    "call": "Call",
-    "subscriptions": "Subscriptions",
-    "subscribe": "Subscribe",
-    "unsubscribe": "Unsubscribe",
-    "events": "{{count}} events",
-    "noEvents": "No events yet",
-    "logs": "Logs"
-  },
-  "theme": {
-    "light": "Light",
-    "dark": "Dark",
-    "toggle": "Toggle theme"
-  },
-  "locale": {
-    "en": "English",
-    "zh": "中文"
-  },
-  "common": {
-    "loading": "Loading...",
-    "cancel": "Cancel",
-    "confirm": "Confirm",
-    "save": "Save",
-    "delete": "Delete"
-  }
+	"app": {
+		"title": "Pi Chat",
+		"connecting": "Connecting to RPC server...",
+		"mode": {
+			"desktop": "Desktop (IPC)",
+			"web": "Web (WebSocket)"
+		}
+	},
+	"sidebar": {
+		"explorer": "Explorer",
+		"git": "Source Control",
+		"search": "Search",
+		"rules": "Rules"
+	},
+	"tabs": {
+		"chat": "Chat",
+		"feed": "Feed + Subs",
+		"bash": "Terminal",
+		"todo": "Todo",
+		"debug": "Debug"
+	},
+	"chat": {
+		"title": "Messages",
+		"placeholder": "Type a message...",
+		"send": "Send",
+		"empty": "Start a conversation..."
+	},
+	"explorer": {
+		"title": "Explorer",
+		"pathPlaceholder": "Path",
+		"refresh": "Refresh",
+		"listDirectory": "List directory",
+		"newFile": "New File",
+		"newFolder": "New Folder",
+		"rename": "Rename",
+		"delete": "Delete",
+		"copyPath": "Copy Path",
+		"confirmDelete": "Confirm Delete",
+		"confirmDeleteMessage": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+		"emptyHint": "Enter path and click refresh"
+	},
+	"git": {
+		"title": "Source Control",
+		"staged": "Staged Changes",
+		"changes": "Changes",
+		"untracked": "Untracked",
+		"noChanges": "No changes detected",
+		"commits": "Commits",
+		"noCommits": "No commits",
+		"noFiles": "No files",
+		"loadingFiles": "Loading files...",
+		"commitPlaceholder": "Commit message (Ctrl+Enter to commit)",
+		"committing": "Committing...",
+		"commit": "Commit",
+		"openDiff": "Open Diff",
+		"openFile": "Open File",
+		"copyHash": "Copy Hash",
+		"copyMessage": "Copy Message",
+		"copyPath": "Copy Path",
+		"pull": "Pull",
+		"push": "Push",
+		"refresh": "Refresh",
+		"stage": "Stage",
+		"unstage": "Unstage",
+		"stageAll": "Stage all",
+		"unstageAll": "Unstage all",
+		"worktrees": "Worktrees",
+		"close": "Close",
+		"justNow": "just now",
+		"minutesAgo": "{{count}}m ago",
+		"hoursAgo": "{{count}}h ago",
+		"daysAgo": "{{count}}d ago"
+	},
+	"feed": {
+		"title": "Feed + Subscriptions",
+		"newPost": "New Post",
+		"authorPlaceholder": "Author",
+		"post": "Post",
+		"postPlaceholder": "Write a post...",
+		"subscribeWithFilter": "Subscribe with Filter",
+		"filterPlaceholder": "filter JSON, e.g. {\"category\":\"tech\"}",
+		"subscribe": "Subscribe",
+		"unsubscribe": "Unsubscribe",
+		"noFilter": "no filter",
+		"eventStream": "Event Stream",
+		"live": "LIVE",
+		"noPostsYet": "No posts yet. Create one above!"
+	},
+	"todo": {
+		"title": "Todo",
+		"add": "Add Todo",
+		"placeholder": "What needs to be done?",
+		"save": "Add",
+		"empty": "No tasks yet",
+		"emptyHint": "Click \"Add Todo\" to create one",
+		"status": "Status:",
+		"statusPending": "pending",
+		"statusInProgress": "in progress",
+		"statusCompleted": "completed"
+	},
+	"rules": {
+		"title": "Rules",
+		"add": "Add Rule",
+		"namePlaceholder": "Rule name",
+		"patternPlaceholder": "Glob pattern (e.g. **/*.ts)",
+		"save": "Save",
+		"empty": "No rules defined yet",
+		"emptyHint": "Click \"Add Rule\" to create one",
+		"pattern": "Pattern:"
+	},
+	"bash": {
+		"title": "Terminal",
+		"enterCommand": "Enter command...",
+		"run": "Run",
+		"processRunning": "Process running... (PID: {{pid}})",
+		"waitingOutput": "Waiting for output...",
+		"exit": "Exit: {{code}}",
+		"noActiveProcess": "No active process",
+		"getStarted": "Run a command to get started",
+		"kill": "Kill",
+		"exited": "exited({{code}})"
+	},
+	"diff": {
+		"lineByLine": "Line by line",
+		"sideBySide": "Side by side",
+		"loading": "Loading diff...",
+		"before": "Before",
+		"after": "After"
+	},
+	"debug": {
+		"rpcCalls": "RPC Calls",
+		"call": "Call",
+		"subscriptions": "Subscriptions",
+		"subscribe": "Subscribe",
+		"unsubscribe": "Unsubscribe",
+		"events": "{{count}} events",
+		"noEvents": "No events yet",
+		"logs": "Logs",
+		"clear": "Clear",
+		"clearAll": "Clear all debug data",
+		"expandPanel": "Expand Debug Panel",
+		"collapsePanel": "Collapse Debug Panel"
+	},
+	"search": {
+		"noResults": "No results found",
+		"noResultsFor": "No results for \"{{query}}\"",
+		"resultsIn": "{{count}} result in {{fileCount}} file",
+		"resultsIn_plural": "{{count}} results in {{fileCount}} files",
+		"filesSearched": "({{count}} file searched)",
+		"filesSearched_plural": "({{count}} files searched)",
+		"typeToSearch": "Type a search term and press Enter",
+		"focusShortcut": "...{{key}}+F to focus search",
+		"tryDifferent": "Try different search terms"
+	},
+	"error": {
+		"title": "Something went wrong",
+		"unexpected": "An unexpected error occurred",
+		"retry": "Retry"
+	},
+	"theme": {
+		"light": "Light",
+		"dark": "Dark",
+		"toggle": "Toggle theme"
+	},
+	"locale": {
+		"en": "English",
+		"zh": "中文"
+	},
+	"common": {
+		"loading": "Loading...",
+		"cancel": "Cancel",
+		"confirm": "Confirm",
+		"save": "Save",
+		"delete": "Delete"
+	}
 }

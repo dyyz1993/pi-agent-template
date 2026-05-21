@@ -1,0 +1,1 @@
+- [x] Implement SearchPanel "jump to line" feature in both templates

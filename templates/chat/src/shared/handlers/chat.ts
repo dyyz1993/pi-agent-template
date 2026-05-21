@@ -127,24 +127,23 @@ export function generateReply(input: string): string {
 
 	if (/file|files|browse|explorer|directory|folder|open file/i.test(lower)) {
 		return (
-			"I can help you explore files! While I can't directly browse files in this demo, " +
-			"here's what you can do:\n\n" +
-			"- Use the **Explorer** panel to browse your project files\n" +
-			"- Click any file to preview its contents\n" +
-			"- Use the search feature to find specific files\n\n" +
-			"Try asking about **time** or **math** for a live demo!"
+			"Great question about files! I'm a chat-focused assistant in this template, " +
+			"so I don't have a file explorer built in. " +
+			"Try the **General** or **Agent** templates for file browsing features.\n\n" +
+			"In the meantime, try asking me about **time** or **math** for a live demo!"
 		);
 	}
 
 	if (/git|commit|branch|status|diff|push|pull/i.test(lower)) {
 		return (
-			"Git is a powerful version control system! Here's what I know:\n\n" +
-			"- **git status** - Check your current changes\n" +
-			"- **git branch** - See or switch branches\n" +
-			"- **git log** - View commit history\n" +
-			"- **git diff** - See what changed\n\n" +
-			"Check out the **Source Control** panel for a visual Git interface! " +
-			"Or try asking me about **time** or **math**."
+			"Git is a powerful version control system! While this chat template doesn't include " +
+			"a Git panel, I can tell you some basics:\n\n" +
+			"- **git init** - Initialize a new repository\n" +
+			"- **git add .** - Stage all changes\n" +
+			'- **git commit -m "msg"** - Commit staged changes\n' +
+			"- **git push** - Push to remote\n\n" +
+			"For a visual Git interface, try the **General** or **Agent** templates. " +
+			"Or ask me about **time** or **math**!"
 		);
 	}
 
@@ -154,17 +153,16 @@ export function generateReply(input: string): string {
 			"- **Greetings** - Say hi and I'll say hi back!\n" +
 			'- **Time & Date** - Ask "what time is it?" or "what\'s today\'s date?"\n' +
 			'- **Math** - Give me an expression like "12 * 8" or "what is 100 / 4"\n' +
-			"- **Files** - Ask about file browsing and the explorer\n" +
-			"- **Git** - Ask about version control commands\n" +
+			"- **Chat History** - Your messages are saved automatically\n" +
 			"- **Help** - Show this message anytime!\n\n" +
-			"This is a demo assistant - try different things to see what sticks!"
+			"This is a chat-focused demo assistant. Try different things to see what sticks!"
 		);
 	}
 
 	const defaults = [
-		"That's an interesting question! I'm a demo assistant, so my knowledge is limited - but try asking about **time**, **math**, **files**, or **git**.",
-		"I wish I could help with that! For now I can answer questions about time, math, files, and git. Type **help** to see what I can do.",
-		"Hmm, I'm not sure about that one. But I *can* do math, tell you the time, and talk about files and git. Give it a shot!",
+		"That's an interesting question! I'm a demo assistant focused on chat - but try asking about **time** or **math** for a live demo.",
+		"I wish I could help with that! For now I can answer questions about time and math. Type **help** to see what I can do.",
+		"Hmm, I'm not sure about that one. But I *can* do math and tell you the time. Give it a shot!",
 	];
 	return defaults[Math.floor(Math.random() * defaults.length)]!;
 }

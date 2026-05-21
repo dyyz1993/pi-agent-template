@@ -5,3 +5,13 @@ logs/
 .env
 .server-port
 .workspace/
+bun.lock
+bun.lockb
+*.tsbuildinfo
+.env.local
+.env.*.local
+coverage/
+.playwright/
+test-results/
+e2e-ui-results/
+**/.DS_Store

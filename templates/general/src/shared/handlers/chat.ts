@@ -60,7 +60,7 @@ type RegisterFn = <K extends keyof RPCMethods & string>(
 	handler: (params: MethodParams<RPCMethods, K>) => Promise<MethodResult<RPCMethods, K>>
 ) => void;
 
-function generateReply(input: string): string {
+export function generateReply(input: string): string {
 	const lower = input.toLowerCase().trim();
 
 	if (/^(hi|hello|hey|howdy|hola|yo|sup)\b/i.test(lower)) {

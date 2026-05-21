@@ -282,7 +282,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
     strategy:
       matrix:
-        template: [agent, general]
+        template: [agent, general, chat]
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2

@@ -103,6 +103,7 @@ export function FeedPanel() {
 							className="w-24 px-2 py-1.5 text-xs bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-primary)] border border-[var(--color-border-secondary)] focus:border-[var(--color-accent)] focus:outline-none"
 						/>
 						<select
+							aria-label={t("feed.newPost")}
 							value={category}
 							onChange={(e) => setCategory(e.target.value as FeedCategory)}
 							className="px-2 py-1.5 text-xs bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-primary)] border border-[var(--color-border-secondary)]"
@@ -141,6 +142,7 @@ export function FeedPanel() {
 					</div>
 					<div className="flex gap-2 items-center">
 						<select
+							aria-label={t("feed.eventStream")}
 							value={activeEventType}
 							onChange={(e) => {
 								setActiveEventType(e.target.value as SubEventType);

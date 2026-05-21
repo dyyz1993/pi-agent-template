@@ -1,9 +1,10 @@
-import { useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { MessageSquare, Send } from "lucide-react";
-import { useChatStore } from "../../stores/use-chat-store";
-import { MessageBubble } from "./MessageBubble";
+import { useCallback, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { MessageSquare, Send } from 'lucide-react';
+import { useChatStore } from '../../stores/use-chat-store';
+import { useInputHistory } from '../../hooks/use-input-history';
+import { MessageBubble } from './MessageBubble';
 
 export function ChatPanel() {
 	const { t } = useTranslation();
@@ -13,6 +14,14 @@ export function ChatPanel() {
 	const sendMessage = useChatStore((s) => s.sendMessage);
 	const parentRef = useRef<HTMLDivElement>(null);
 	const prevMessageCountRef = useRef(0);
+	const { saveToHistory, navigatePrev, navigateNext } = useInputHistory('default');
+
+	const handleSend = useCallback(() => {
+		const text = inputText.trim();
+		if (!text) return;
+		saveToHistory(text);
+		sendMessage();
+	}, [inputText, saveToHistory, sendMessage]);
 
 	const virtualizer = useVirtualizer({
 		count: messages.length,
@@ -24,7 +33,7 @@ export function ChatPanel() {
 
 	useEffect(() => {
 		if (messages.length > prevMessageCountRef.current) {
-			virtualizer.scrollToIndex(messages.length - 1, { align: "end" });
+			virtualizer.scrollToIndex(messages.length - 1, { align: 'end' });
 		}
 		prevMessageCountRef.current = messages.length;
 	}, [messages.length, virtualizer]);
@@ -34,7 +43,7 @@ export function ChatPanel() {
 			<div className="px-4 py-2 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-primary)] flex items-center justify-between flex-shrink-0">
 				<h2 className="text-sm font-semibold flex items-center gap-1.5">
 					<MessageSquare className="w-4 h-4 text-[var(--color-text-accent)]" />
-					{t("chat.title")}
+					{t('chat.title')}
 					{messages.length > 0 && (
 						<span className="ml-1 px-2 py-0.5 bg-[var(--color-accent)]/30 text-[var(--color-text-accent)] rounded text-[10px]">
 							{messages.length}
@@ -46,14 +55,14 @@ export function ChatPanel() {
 			<div ref={parentRef} className="flex-1 overflow-y-auto">
 				{messages.length === 0 ? (
 					<div className="flex items-center justify-center h-full text-[var(--color-text-placeholder)] text-sm">
-						{t("chat.empty")}
+						{t('chat.empty')}
 					</div>
 				) : (
 					<div
 						style={{
 							height: virtualizer.getTotalSize(),
-							width: "100%",
-							position: "relative",
+							width: '100%',
+							position: 'relative',
 						}}
 					>
 						{virtualizer.getVirtualItems().map((virtualItem) => {
@@ -64,12 +73,12 @@ export function ChatPanel() {
 									data-index={virtualItem.index}
 									ref={virtualizer.measureElement}
 									style={{
-										position: "absolute",
+										position: 'absolute',
 										top: 0,
 										left: 0,
-										width: "100%",
+										width: '100%',
 										transform: `translateY(${virtualItem.start}px)`,
-										padding: "6px 16px",
+										padding: '6px 16px',
 									}}
 								>
 									<MessageBubble message={msg} />
@@ -80,23 +89,39 @@ export function ChatPanel() {
 				)}
 			</div>
 
-			<div className="px-4 py-3 bg-[var(--color-bg-secondary)] border-t border-[var(--color-border-primary)] flex gap-2 flex-shrink-0">
+			<form
+				onSubmit={(e) => e.preventDefault()}
+				className="px-4 py-3 bg-[var(--color-bg-secondary)] border-t border-[var(--color-border-primary)] flex gap-2 flex-shrink-0"
+			>
 				<input
 					type="text"
 					value={inputText}
 					onChange={(e) => setInputText(e.target.value)}
-					onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-					placeholder={t("chat.placeholder")}
+					onKeyDown={(e) => {
+						if (e.key === 'Enter' && !e.shiftKey) {
+							e.preventDefault();
+							handleSend();
+						} else if (e.key === 'ArrowUp' && !inputText) {
+							e.preventDefault();
+							const prev = navigatePrev();
+							if (prev !== null) setInputText(prev);
+						} else if (e.key === 'ArrowDown') {
+							e.preventDefault();
+							const next = navigateNext();
+							if (next !== null) setInputText(next);
+						}
+					}}
+					placeholder={t('chat.placeholder')}
 					className="flex-1 px-3 py-2 text-sm bg-[var(--color-bg-tertiary)] rounded-lg text-[var(--color-text-primary)] border border-[var(--color-border-secondary)] focus:border-[var(--color-accent)] focus:outline-none"
 				/>
 				<button
-					onClick={sendMessage}
+					onClick={handleSend}
 					className="px-4 py-2 text-sm bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] rounded-lg transition-colors flex items-center gap-1.5"
 				>
 					<Send className="w-4 h-4" />
-					{t("chat.send")}
+					{t('chat.send')}
 				</button>
-			</div>
+			</form>
 		</div>
 	);
 }

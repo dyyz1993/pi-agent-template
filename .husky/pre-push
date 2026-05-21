@@ -4,4 +4,14 @@ bun run lint || { echo "❌ Lint failed. Fix errors before pushing."; exit 1; }
 echo "⏳ Checking lockfile sync..."
 git diff --name-only HEAD -- pnpm-lock.yaml | grep -q . && { echo "⚠️  pnpm-lock.yaml has uncommitted changes. Commit it first."; exit 1; }
 
+TEMPLATE_CHANGED=$(git diff --name-only "$1" HEAD 2>/dev/null | grep -c '^templates/' || true)
+if [ "$TEMPLATE_CHANGED" -gt 0 ]; then
+  echo "⏳ Template files changed, running type-check..."
+  for tpl in templates/*/; do
+    if [ -f "$tpl/tsconfig.json" ]; then
+      (cd "$tpl" && bunx tsc --noEmit 2>&1) && echo "✅ $tpl" || { echo "❌ Type error in $tpl"; exit 1; }
+    fi
+  done
+fi
+
 echo "✅ Pre-push checks passed (full tests run in CI). Pushing..."

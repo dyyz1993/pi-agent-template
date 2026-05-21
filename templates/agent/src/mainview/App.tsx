@@ -1,17 +1,19 @@
-import type { ReactNode } from "react";
-import { useState } from "react";
-import { useConnectionStore } from "./stores/use-connection-store";
-import { useBreakpointSync } from "./hooks/use-breakpoint";
-import { useRpcInit } from "./hooks/use-rpc-init";
-import { useSidebarResize } from "./hooks/use-sidebar-resize";
-import { AppLayout, type CenterTab } from "./components/layout/AppLayout";
-import { ErrorBoundary as _EB } from "./components/common/ErrorBoundary";
+import type { ReactNode } from 'react';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useConnectionStore } from './stores/use-connection-store';
+import { useBreakpointSync } from './hooks/use-breakpoint';
+import { useRpcInit } from './hooks/use-rpc-init';
+import { useSidebarResize } from './hooks/use-sidebar-resize';
+import { AppLayout, type CenterTab } from './components/layout/AppLayout';
+import { ErrorBoundary as _EB } from './components/common/ErrorBoundary';
 
 const ErrorBoundary = _EB as unknown as React.FC<{ children: ReactNode }>;
 
 function App() {
+	const { t } = useTranslation();
 	const ready = useConnectionStore((s) => s.ready);
-	const [centerTab, setCenterTab] = useState<CenterTab>("chat");
+	const [centerTab, setCenterTab] = useState<CenterTab>('chat');
 
 	useBreakpointSync();
 	useRpcInit();
@@ -20,10 +22,10 @@ function App() {
 
 	if (!ready) {
 		return (
-			<div className="h-screen bg-gray-900 flex items-center justify-center">
+			<div className="h-screen bg-[var(--color-bg-primary)] flex items-center justify-center">
 				<div className="text-center">
-					<div className="inline-block w-8 h-8 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin mb-4" />
-					<div className="text-gray-400 text-sm">Connecting to RPC server...</div>
+					<div className="inline-block w-8 h-8 border-2 border-[var(--color-text-accent)] border-t-transparent rounded-full animate-spin mb-4" />
+					<div className="text-[var(--color-text-tertiary)] text-sm">{t('app.connecting')}</div>
 				</div>
 			</div>
 		);

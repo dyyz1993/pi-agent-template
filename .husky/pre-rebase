@@ -1,0 +1,11 @@
+echo "⏳ Checking for uncommitted changes before rebase..."
+
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "⚠️  You have uncommitted changes. Consider stashing them first:"
+  echo "   git stash && git rebase ... && git stash pop"
+  echo ""
+  echo "Proceeding anyway in 3 seconds... (Ctrl+C to abort)"
+  sleep 3
+fi
+
+echo "✅ Pre-rebase check passed"

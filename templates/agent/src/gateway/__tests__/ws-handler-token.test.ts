@@ -1,11 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { EventEmitter } from "events";
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { EventEmitter } from 'events';
+import type { Server } from 'http';
+import type { WebSocketServer } from 'ws';
 
-vi.mock("../../shared/register-all-handlers", () => ({
+vi.mock('../../shared/register-all-handlers', () => ({
 	registerAllHandlers: vi.fn(),
 }));
 
-vi.mock("../../shared/lib/logger", () => ({
+vi.mock('../../shared/lib/logger', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		error: vi.fn(),
@@ -14,14 +16,22 @@ vi.mock("../../shared/lib/logger", () => ({
 	}),
 }));
 
-const MOCK_AUTH_TOKEN = "test-secure-token-123456";
+const MOCK_AUTH_TOKEN = 'test-secure-token-123456';
 
-function createMockWs() {
-	const ws = new EventEmitter();
-	(ws as any).readyState = 1;
-	(ws as any).close = vi.fn();
-	(ws as any).send = vi.fn();
-	(ws as any).ping = vi.fn();
+interface MockWs extends EventEmitter {
+	readyState: number;
+	close: ReturnType<typeof vi.fn>;
+	send: ReturnType<typeof vi.fn>;
+	ping: ReturnType<typeof vi.fn>;
+}
+
+function createMockWs(): MockWs {
+	const ws = Object.assign(new EventEmitter(), {
+		readyState: 1,
+		close: vi.fn(),
+		send: vi.fn(),
+		ping: vi.fn(),
+	}) as MockWs;
 	return ws;
 }
 
@@ -29,19 +39,19 @@ function createMockReq(url: string, headers: Record<string, string> = {}) {
 	return { url, headers };
 }
 
-describe("WS Handler Token 安全", () => {
-	let _wssInstance: EventEmitter & { clients: Set<any> };
+describe('WS Handler Token 安全', () => {
+	let _wssInstance: EventEmitter & { clients: Set<unknown> };
 
 	beforeEach(async () => {
 		vi.resetModules();
 
-		const { WebSocketServer } = await import("ws");
+		const { WebSocketServer } = await import('ws');
 		const _originalWSS = WebSocketServer;
 
-		vi.doMock("ws", () => {
+		vi.doMock('ws', () => {
 			class MockWSS extends EventEmitter {
-				clients = new Set();
-				constructor(_opts: any) {
+				clients = new Set<unknown>();
+				constructor(_opts: unknown) {
 					super();
 					// eslint-disable-next-line @typescript-eslint/no-this-alias
 					_wssInstance = this;
@@ -52,67 +62,71 @@ describe("WS Handler Token 安全", () => {
 	});
 
 	async function setupTest() {
-		const { createWsHandler } = await import("../ws-handler");
+		const { createWsHandler } = await import('../ws-handler');
 		const httpServer = new EventEmitter();
-		const wss = createWsHandler(httpServer as any, {
+		const wss = createWsHandler(httpServer as unknown as Server, {
 			config: { port: 3100, authToken: MOCK_AUTH_TOKEN, maxUploadSize: 50 * 1024 * 1024 },
 		});
 		return wss;
 	}
 
-	function emitConnection(wss: any, ws: any, req: any) {
-		wss.emit("connection", ws, req);
+	function emitConnection(
+		wss: WebSocketServer,
+		ws: MockWs,
+		req: { url: string; headers: Record<string, string> },
+	) {
+		wss.emit('connection', ws, req);
 	}
 
-	it("无 token 应被拒绝 (4001)", async () => {
+	it('无 token 应被拒绝 (4001)', async () => {
 		const wss = await setupTest();
 		const ws = createMockWs();
-		const req = createMockReq("/ws");
+		const req = createMockReq('/ws');
 		emitConnection(wss, ws, req);
-		expect((ws as any).close).toHaveBeenCalledWith(4001, "Unauthorized");
+		expect(ws.close).toHaveBeenCalledWith(4001, 'Unauthorized');
 	});
 
-	it("错误 token 应被拒绝 (4001)", async () => {
+	it('错误 token 应被拒绝 (4001)', async () => {
 		const wss = await setupTest();
 		const ws = createMockWs();
-		const req = createMockReq("/ws?token=wrong-token");
+		const req = createMockReq('/ws?token=wrong-token');
 		emitConnection(wss, ws, req);
-		expect((ws as any).close).toHaveBeenCalledWith(4001, "Unauthorized");
+		expect(ws.close).toHaveBeenCalledWith(4001, 'Unauthorized');
 	});
 
-	it("正确 token 通过 URL query 应被接受", async () => {
+	it('正确 token 通过 URL query 应被接受', async () => {
 		const wss = await setupTest();
 		const ws = createMockWs();
 		const req = createMockReq(`/ws?token=${MOCK_AUTH_TOKEN}`);
 		emitConnection(wss, ws, req);
-		expect((ws as any).close).not.toHaveBeenCalled();
+		expect(ws.close).not.toHaveBeenCalled();
 	});
 
-	it("正确 token 通过 Sec-WebSocket-Protocol header 应被接受", async () => {
+	it('正确 token 通过 Sec-WebSocket-Protocol header 应被接受', async () => {
 		const wss = await setupTest();
 		const ws = createMockWs();
-		const req = createMockReq("/ws", {
-			"sec-websocket-protocol": MOCK_AUTH_TOKEN,
+		const req = createMockReq('/ws', {
+			'sec-websocket-protocol': MOCK_AUTH_TOKEN,
 		});
 		emitConnection(wss, ws, req);
-		expect((ws as any).close).not.toHaveBeenCalled();
+		expect(ws.close).not.toHaveBeenCalled();
 	});
 
-	it("header 方式优先于 query 方式 (header 正确, query 错误)", async () => {
+	it('header 方式优先于 query 方式 (header 正确, query 错误)', async () => {
 		const wss = await setupTest();
 		const ws = createMockWs();
-		const req = createMockReq("/ws?token=wrong-token", {
-			"sec-websocket-protocol": MOCK_AUTH_TOKEN,
+		const req = createMockReq('/ws?token=wrong-token', {
+			'sec-websocket-protocol': MOCK_AUTH_TOKEN,
 		});
 		emitConnection(wss, ws, req);
-		expect((ws as any).close).not.toHaveBeenCalled();
+		expect(ws.close).not.toHaveBeenCalled();
 	});
 
-	it("token 验证使用 timingSafeEqual（长度不等返回 false）", async () => {
+	it('token 验证使用 timingSafeEqual（长度不等返回 false）', async () => {
 		const wss = await setupTest();
 		const ws = createMockWs();
 		const req = createMockReq(`/ws?token=short`);
 		emitConnection(wss, ws, req);
-		expect((ws as any).close).toHaveBeenCalledWith(4001, "Unauthorized");
+		expect(ws.close).toHaveBeenCalledWith(4001, 'Unauthorized');
 	});
 });

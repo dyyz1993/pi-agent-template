@@ -265,7 +265,7 @@ jobs:
     timeout-minutes: 10
     strategy:
       matrix:
-        template: [agent, general]
+        template: [agent, general, chat]
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2

@@ -10,7 +10,6 @@ interface State {
 	error: Error | null;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export class ErrorBoundary extends Component<Props, State> {
 	constructor(props: Props) {
 		super(props);

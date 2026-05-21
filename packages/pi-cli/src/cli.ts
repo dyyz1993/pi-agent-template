@@ -1,19 +1,21 @@
 #!/usr/bin/env bun
 
-import { runCreate } from './commands/create.js';
-import { runList } from './commands/list.js';
-import { runStatus } from './commands/status.js';
-import { runWorkspace } from './commands/workspace.js';
+import { runCreate } from "./commands/create.js";
+import { runList } from "./commands/list.js";
+import { runStatus } from "./commands/status.js";
+import { runWorkspace } from "./commands/workspace.js";
+import { runUpdate } from "./commands/update.js";
 
 const COMMANDS = new Map<string, (args: string[]) => Promise<void>>([
-  ['create', runCreate],
-  ['list', runList],
-  ['status', runStatus],
-  ['workspace', runWorkspace],
+	["create", runCreate],
+	["list", runList],
+	["status", runStatus],
+	["workspace", runWorkspace],
+	["update", runUpdate],
 ]);
 
 function printHelp(): void {
-  console.log(`
+	console.log(`
 Create Agent CLI — project scaffolding tool
 
 Usage:
@@ -24,7 +26,7 @@ Commands:
   list           Show available template types
   status         Show active pi-agent instances
   workspace add <name>  Create isolated workspace for parallel development
-  update         Update project to latest template (coming soon)
+  update         Update project to latest template version
 
 Options:
   -h, --help     Show this help message
@@ -34,32 +36,27 @@ Run "create-agent create --help" for create-specific options.
 }
 
 async function main(): Promise<void> {
-  const args = process.argv.slice(2);
+	const args = process.argv.slice(2);
 
-  const command = args[0];
-  const rest = args.slice(1);
+	const command = args[0];
+	const rest = args.slice(1);
 
-  if (!command || command === '-h' || command === '--help') {
-    printHelp();
-    process.exit(0);
-  }
+	if (!command || command === "-h" || command === "--help") {
+		printHelp();
+		process.exit(0);
+	}
 
-  if (command === 'update') {
-    console.log('Update feature coming soon');
-    return;
-  }
+	const handler = COMMANDS.get(command);
+	if (!handler) {
+		console.error(`Unknown command: "${command}"\n`);
+		printHelp();
+		process.exit(1);
+	}
 
-  const handler = COMMANDS.get(command);
-  if (!handler) {
-    console.error(`Unknown command: "${command}"\n`);
-    printHelp();
-    process.exit(1);
-  }
-
-  await handler(rest);
+	await handler(rest);
 }
 
 main().catch((err) => {
-  console.error(`Error: ${err.message}`);
-  process.exit(1);
+	console.error(`Error: ${err.message}`);
+	process.exit(1);
 });

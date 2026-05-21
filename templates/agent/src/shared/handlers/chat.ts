@@ -1,26 +1,26 @@
-import type { RPCServer } from "@dyyz1993/rpc-core";
-import type { MethodParams, MethodResult } from "@dyyz1993/rpc-core";
-import type { RPCMethods, HandlerOptions } from "../rpc-schema";
-import { readFile, writeFile, mkdir } from "fs/promises";
-import { existsSync } from "fs";
-import { join, dirname } from "path";
-import { homedir } from "os";
-import { createLogger } from "../lib/logger";
+import type { RPCServer } from '@dyyz1993/rpc-core';
+import type { MethodParams, MethodResult } from '@dyyz1993/rpc-core';
+import type { RPCMethods, HandlerOptions } from '../rpc-schema';
+import { readFile, writeFile, mkdir } from 'fs/promises';
+import { existsSync } from 'fs';
+import { join, dirname } from 'path';
+import { homedir } from 'os';
+import { createLogger } from '../lib/logger';
 
-const log = createLogger("chat");
+const log = createLogger('chat');
 
-type Platform = "desktop" | "web";
+type Platform = 'desktop' | 'web';
 
 export function getStoragePathFor(platform: Platform): string {
-	const dir = join(homedir(), ".pi-agent");
-	if (platform === "desktop") {
-		return join(dir, "chat-history-desktop.json");
+	const dir = join(homedir(), '.pi-agent');
+	if (platform === 'desktop') {
+		return join(dir, 'chat-history-desktop.json');
 	}
-	const sessionId = Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+	const sessionId = Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
 	return join(dir, `chat-history-web-${sessionId}.json`);
 }
 
-type ChatMessage = { id: string; role: "user" | "assistant"; content: string; timestamp: number };
+type ChatMessage = { id: string; role: 'user' | 'assistant'; content: string; timestamp: number };
 
 function createMessageStore(filePath: string) {
 	async function load(): Promise<ChatMessage[]> {
@@ -29,12 +29,12 @@ function createMessageStore(filePath: string) {
 				log.info(`No history file at ${filePath}`);
 				return [];
 			}
-			const raw = await readFile(filePath, "utf-8");
+			const raw = await readFile(filePath, 'utf-8');
 			const msgs = JSON.parse(raw) as ChatMessage[];
 			log.info(`Loaded ${msgs.length} messages from ${filePath}`);
 			return msgs;
 		} catch (err) {
-			log.error("Failed to load history", { error: err });
+			log.error('Failed to load history', { error: err });
 			return [];
 		}
 	}
@@ -45,10 +45,10 @@ function createMessageStore(filePath: string) {
 			if (!existsSync(dir)) {
 				await mkdir(dir, { recursive: true });
 			}
-			await writeFile(filePath, JSON.stringify(messages, null, 2), "utf-8");
+			await writeFile(filePath, JSON.stringify(messages, null, 2), 'utf-8');
 			log.info(`Saved ${messages.length} messages to ${filePath}`);
 		} catch (err) {
-			log.error("Failed to save history", { error: err });
+			log.error('Failed to save history', { error: err });
 		}
 	}
 
@@ -57,16 +57,16 @@ function createMessageStore(filePath: string) {
 
 type RegisterFn = <K extends keyof RPCMethods & string>(
 	method: K,
-	handler: (params: MethodParams<RPCMethods, K>) => Promise<MethodResult<RPCMethods, K>>
+	handler: (params: MethodParams<RPCMethods, K>) => Promise<MethodResult<RPCMethods, K>>,
 ) => void;
 
-function generateReply(input: string): string {
+export function generateReply(input: string): string {
 	const lower = input.toLowerCase().trim();
 
 	if (/^(hi|hello|hey|howdy|hola|yo|sup)\b/i.test(lower)) {
 		const greetings = [
-			"Hey there! How can I help you today?",
-			"Hello! Great to see you. What would you like to know?",
+			'Hey there! How can I help you today?',
+			'Hello! Great to see you. What would you like to know?',
 			"Hi! I'm your desktop assistant. Ask me anything!",
 		];
 		return greetings[Math.floor(Math.random() * greetings.length)]!;
@@ -76,18 +76,18 @@ function generateReply(input: string): string {
 		/what('?s| is) the (time|date|day)|current (time|date)|what time|today'?s date/i.test(lower)
 	) {
 		const now = new Date();
-		const date = now.toLocaleDateString("en-US", {
-			weekday: "long",
-			year: "numeric",
-			month: "long",
-			day: "numeric",
+		const date = now.toLocaleDateString('en-US', {
+			weekday: 'long',
+			year: 'numeric',
+			month: 'long',
+			day: 'numeric',
 		});
-		const time = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+		const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 		return `It's currently **${time}** on **${date}**.`;
 	}
 
 	const mathMatch = lower.match(
-		/(?:what(?:'s| is)\s+)?(\d+(?:\.\d+)?)\s*([+\-*/x×÷^])\s*(\d+(?:\.\d+)?)/
+		/(?:what(?:'s| is)\s+)?(\d+(?:\.\d+)?)\s*([+\-*/x×÷^])\s*(\d+(?:\.\d+)?)/,
 	);
 	if (mathMatch) {
 		const a = parseFloat(mathMatch[1]!);
@@ -95,22 +95,22 @@ function generateReply(input: string): string {
 		const b = parseFloat(mathMatch[3]!);
 		let result: number;
 		switch (op) {
-			case "+":
+			case '+':
 				result = a + b;
 				break;
-			case "-":
+			case '-':
 				result = a - b;
 				break;
-			case "*":
-			case "x":
-			case "×":
+			case '*':
+			case 'x':
+			case '×':
 				result = a * b;
 				break;
-			case "/":
-			case "÷":
+			case '/':
+			case '÷':
 				result = b !== 0 ? a / b : NaN;
 				break;
-			case "^":
+			case '^':
 				result = Math.pow(a, b);
 				break;
 			default:
@@ -121,23 +121,23 @@ function generateReply(input: string): string {
 		}
 		const niceResult = Number.isInteger(result)
 			? result.toString()
-			: result.toFixed(4).replace(/0+$/, "").replace(/\.$/, "");
+			: result.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
 		return `That would be **${niceResult}**! Need help with anything else?`;
 	}
 
 	if (/file|folder|directory|browse|explorer|open file|read file/i.test(lower)) {
 		return (
-			"To browse and manage files, use the **File Explorer** panel on the left sidebar. " +
-			"You can navigate directories, preview files, and open them for editing. " +
-			"Try typing a file path or asking me about a specific directory!"
+			'To browse and manage files, use the **File Explorer** panel on the left sidebar. ' +
+			'You can navigate directories, preview files, and open them for editing. ' +
+			'Try typing a file path or asking me about a specific directory!'
 		);
 	}
 
 	if (/git|commit|branch|push|pull|merge|status|diff|log/i.test(lower)) {
 		return (
-			"The **Git Panel** gives you full source control right inside the app. " +
-			"You can view changes, stage files, commit, switch branches, push/pull, and see the commit log. " +
-			"Look for the source control icon in the sidebar to get started."
+			'The **Git Panel** gives you full source control right inside the app. ' +
+			'You can view changes, stage files, commit, switch branches, push/pull, and see the commit log. ' +
+			'Look for the source control icon in the sidebar to get started.'
 		);
 	}
 
@@ -149,8 +149,8 @@ function generateReply(input: string): string {
 			'- **Math** - Give me an expression like "12 * 8" or "what is 100 / 4"\n' +
 			"- **Files** - Ask about file browsing and I'll explain the File Explorer\n" +
 			"- **Git** - Ask about version control and I'll walk you through it\n" +
-			"- **Help** - Show this message anytime!\n\n" +
-			"This is a demo assistant - try different things to see what sticks!"
+			'- **Help** - Show this message anytime!\n\n' +
+			'This is a demo assistant - try different things to see what sticks!'
 		);
 	}
 
@@ -170,7 +170,7 @@ export function register(server: RPCServer, options: HandlerOptions): void {
 		server.register(method, handler as (params: unknown) => Promise<unknown>);
 	};
 
-	r("chat.list", async (params) => {
+	r('chat.list', async (params) => {
 		const all = await store.load();
 		const limit = params.limit ?? 50;
 		const messages = all.slice(-limit);
@@ -180,31 +180,31 @@ export function register(server: RPCServer, options: HandlerOptions): void {
 		};
 	});
 
-	r("chat.send", async (params) => {
+	r('chat.send', async (params) => {
 		const all = await store.load();
 
 		const userMsg: ChatMessage = {
 			id: `msg-${Date.now()}-user`,
-			role: "user",
+			role: 'user',
 			content: params.content,
 			timestamp: Date.now(),
 		};
 		all.push(userMsg);
 
-		server.emitEvent("chat.message", userMsg, { role: userMsg.role });
+		server.emitEvent('chat.message', userMsg, { role: userMsg.role });
 
 		const thinkDelay = 200 + Math.floor(Math.random() * 300);
 		await new Promise((r) => setTimeout(r, thinkDelay));
 
 		const reply: ChatMessage = {
 			id: `msg-${Date.now()}-assistant`,
-			role: "assistant",
+			role: 'assistant',
 			content: generateReply(params.content),
 			timestamp: Date.now(),
 		};
 		all.push(reply);
 
-		server.emitEvent("chat.message", reply, { role: reply.role });
+		server.emitEvent('chat.message', reply, { role: reply.role });
 
 		await store.save(all);
 
