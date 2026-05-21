@@ -35,10 +35,12 @@ export default tseslint.config(
     },
   },
   {
-    files: ['packages/pi-cli/scripts/**/*.mjs'],
+    files: ['packages/pi-cli/scripts/**/*.mjs', '.lintstagedrc.js'],
     languageOptions: {
       globals: {
         console: 'readonly',
+        module: 'readonly',
+        require: 'readonly',
       },
     },
   },
