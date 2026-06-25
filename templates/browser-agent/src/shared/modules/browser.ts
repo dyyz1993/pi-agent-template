@@ -35,6 +35,26 @@ export interface BrowserMethods {
     params: { command: string; tabIndex?: number };
     result: { success: boolean; data?: any };
   };
+  /** 开始录制浏览器操作 */
+  "browser.recordStart": {
+    params: { session?: string; url?: string };
+    result: { success: boolean; session: string; startUrl?: string };
+  };
+  /** 停止录制，返回录制数据 */
+  "browser.recordStop": {
+    params: { session?: string };
+    result: { success: boolean; actions: number; network: number; durationMs: number; steps: number; data?: any };
+  };
+  /** 查询录制状态 */
+  "browser.recordStatus": {
+    params: { session?: string };
+    result: { recording: boolean; actions?: number; network?: number; hasRecording?: boolean };
+  };
+  /** Agent 加工录制数据（流式推送 browser.* 事件） */
+  "browser.processRecording": {
+    params: { sessionId: string; recordingData: any; title?: string };
+    result: { messageId: string; text: string };
+  };
   /** 系统信息 */
   "browser.getSystemInfo": {
     params: {};

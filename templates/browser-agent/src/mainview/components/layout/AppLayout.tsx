@@ -19,8 +19,9 @@ import { ChatPanel } from "../chat/ChatPanel";
 import { AssetsPanel } from "../assets/AssetsPanel";
 import { NetworkDrawer } from "../dev/NetworkPanel";
 import { useSidebarStore, useAssetsPanelStore } from "../../stores/use-sidebar-store";
+import { ProcessPanel } from "../process/ProcessPanel";
 
-export type CenterTab = "chat";
+export type CenterTab = "chat" | "process";
 
 interface AppLayoutProps {
 	centerTab: CenterTab;
@@ -30,6 +31,8 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({
+	centerTab,
+	setCenterTab,
 	sidebarWidth,
 	handleResizeStart,
 }: AppLayoutProps) {
@@ -92,9 +95,16 @@ export function AppLayout({
 					</>
 				) : null}
 
-				{/* ── 中：对话区 ── */}
+				{/* ── 中：对话区（Tab 切换） ── */}
 				<div className="flex-1 flex flex-col overflow-hidden min-w-0">
-					<ChatPanel />
+					{/* Tab 切换条 */}
+					<div className="flex items-center gap-1 px-3 py-1 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-primary)] flex-shrink-0">
+						<TabButton active={centerTab === "chat"} onClick={() => setCenterTab("chat")} label="💬 会话" />
+						<TabButton active={centerTab === "process"} onClick={() => setCenterTab("process")} label="⚙️ 加工" />
+					</div>
+
+					{/* Tab 内容 */}
+					{centerTab === "chat" ? <ChatPanel /> : <ProcessPanel />}
 				</div>
 
 				{/* ── 右：资源面板 ── */}
@@ -237,5 +247,22 @@ function AssetsInner({
 			)}
 			<AssetsPanel />
 		</>
+	);
+}
+
+// ===== Tab 按钮 =====
+
+function TabButton({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+	return (
+		<button
+			onClick={onClick}
+			className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+				active
+					? "bg-[var(--color-accent)]/15 text-[var(--color-text-accent)]"
+					: "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]"
+			}`}
+		>
+			{label}
+		</button>
 	);
 }

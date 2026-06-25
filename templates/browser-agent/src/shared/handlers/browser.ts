@@ -5,15 +5,14 @@
  */
 
 import type { RPCServer } from '@dyyz1993/rpc-core';
-import type { MethodParams, MethodResult } from '@dyyz1993/rpc-core';
-import type { RPCMethods, HandlerOptions } from '../rpc-schema';
+import type { HandlerOptions } from '../rpc-schema';
 import { createLogger } from '../lib/logger';
 import { execXbrowser, agentChat } from '../lib/agent';
 import { getOnlineBrowser, scrapeXhs } from '../lib/cdp';
 import { runMockAgentChat } from '../lib/mock-stream';
 import { config } from '../../server-config';
 
-const log = createLogger('browser' as unknown as string);
+const log = createLogger('browser' as any);
 
 // ===== 内部状态 =====
 
@@ -37,14 +36,10 @@ function parseCommandString(cmd: string): string[] {
 
 /**
  * Web 模式下禁止的 xbrowser 子命令。
- * 这些命令在桌面端有用但 Web 环境下无效或危险。
+ * record/replay/convert/extract 已解禁（录制功能需要）。
  */
-const BLOCKED_XBROWSER_COMMANDS = new Set([
+const BLOCKED_XBROWSER_COMMANDS = new Set<string>([
 	'open', // 桌面端打开文件/程序
-	'record', // 录制操作（需要桌面端 UI）
-	'replay', // 重放录制（同上）
-	'convert', // 录制转换（同上）
-	'extract', // 录制提取（同上）
 ]);
 
 /** 检查命令是否被禁止，返回 null 表示允许，否则返回拒绝信息 */
@@ -93,13 +88,9 @@ async function getSystemInfo(force = false): Promise<unknown> {
 
 // ===== Handler 注册 =====
 
-type RegisterFn = <K extends keyof RPCMethods & string>(
-	method: K,
-	handler: (params: MethodParams<RPCMethods, K>) => Promise<MethodResult<RPCMethods, K>>,
-) => void;
-
 export function register(server: RPCServer, _options: HandlerOptions): void {
-	const r: RegisterFn = (method, handler) => {
+	// 放宽类型：handler 统一转为 (params: unknown) => Promise<unknown>
+	const r = (method: string, handler: (params: any) => Promise<any>) => {
 		server.register(method, handler as (params: unknown) => Promise<unknown>);
 	};
 
@@ -169,7 +160,7 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 				try {
 					const data = JSON.parse(raw);
 					const rawList = Array.isArray(data) ? data : data?.plugins || [];
-					plugins = rawList.map((p: Record<string, unknown>) => ({
+					plugins = rawList.map((p: any) => ({
 						name: p.name || p.id || p,
 						description: p.description || p.metadata?.description || '',
 					}));
@@ -210,6 +201,146 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 			return { success: !!result?.success, data: result?.data };
 		} catch (e: unknown) {
 			return { success: false, data: { error: e instanceof Error ? e.message : String(e) } };
+		}
+	});
+
+	// ===== 录制 =====
+
+	r('browser.recordStart', async (params) => {
+		const session = params.session || `rec_${Date.now().toString(36)}`;
+		const args = ['record', 'start', '--session', session];
+		if (params.url) {
+			args.push('--url', params.url);
+		}
+		try {
+			const result = await execXbrowser(args);
+			return {
+				success: !!result?.ok,
+				session,
+				startUrl: result?.startUrl || params.url,
+			};
+		} catch (e: unknown) {
+			return {
+				success: false,
+				session,
+				startUrl: undefined,
+			};
+		}
+	});
+
+	r('browser.recordStop', async (params) => {
+		const session = params.session || 'default';
+		const args = ['record', 'stop', '--session', session];
+		try {
+			const result = await execXbrowser(args);
+			return {
+				success: !!result?.ok,
+				actions: result?.actions || 0,
+				network: result?.network || 0,
+				durationMs: result?.durationMs || 0,
+				steps: result?.steps || 0,
+				data: result,
+			};
+		} catch (e: unknown) {
+			return {
+				success: false,
+				actions: 0,
+				network: 0,
+				durationMs: 0,
+				steps: 0,
+				data: { error: e instanceof Error ? e.message : String(e) },
+			};
+		}
+	});
+
+	r('browser.recordStatus', async (params) => {
+		const session = params.session || 'default';
+		try {
+			const result = await execXbrowser(['record', 'status', '--session', session]);
+			return {
+				recording: !!result?.recording,
+				actions: result?.actions,
+				network: result?.network,
+				hasRecording: result?.hasRecording,
+			};
+		} catch {
+			return { recording: false };
+		}
+	});
+
+	r('browser.processRecording', async (params) => {
+		const { sessionId, recordingData, title } = params;
+		if (!sessionId || !recordingData) {
+			return { messageId: '', text: '缺少录制数据' };
+		}
+
+		const messageId = `proc_${Date.now().toString(36)}`;
+		server.emitEvent('browser.agentStart', { messageId, reply: '🔧 正在分析录制数据...' });
+
+		// 构建 Agent 加工 prompt
+		const actionCount = recordingData.actions?.length || recordingData.totalActions || 0;
+		const durationSec = Math.round((recordingData.durationMs || 0) / 1000);
+		const startUrl = recordingData.startUrl || '未知';
+
+		// 提取操作摘要（最多 30 条，避免 token 爆炸）
+		const actions = recordingData.actions || recordingData.steps || [];
+		const actionSummary = actions.slice(0, 30).map((a: any, i: number) => {
+			const type = a.type || a.action?.type || 'unknown';
+			const selector = a.element?.selector || a.action?.element?.selector || '';
+			const value = a.value || a.action?.value || '';
+			const url = a.url || '';
+			return `${i + 1}. [${type}] ${selector ? `选择器: ${selector}` : ''} ${value ? `值: ${value}` : ''} ${url ? `URL: ${url}` : ''}`.trim();
+		}).join('\n');
+
+		const prompt = `用户录制了一段浏览器操作（共 ${actionCount} 步，耗时 ${durationSec} 秒，起始页面: ${startUrl}）。
+${title ? `用户建议的名称: ${title}\n` : ''}请分析这组操作，输出：
+
+1. **操作总结**：一句话描述这组操作做了什么
+2. **关键步骤**：列出核心步骤（去掉无意义的滚动/悬停）
+3. **技能命名**：建议一个简洁的技能名称
+4. **参数化建议**：哪些步骤可以替换为变量（如搜索关键词、URL 等）
+
+录制操作列表：
+${actionSummary || '(无操作数据)'}`;
+
+		try {
+			const agentResult = await agentChat(
+				prompt,
+				sessionId,
+				(event) => {
+					if (event.type === 'tool_call') {
+						server.emitEvent('browser.toolCall', {
+							messageId,
+							toolCall: { id: event.toolCallId || `tc_${Date.now()}`, tool: event.toolName || '', input: event.toolInput || '', status: 'running' },
+						});
+					}
+					if (event.type === 'tool_result') {
+						server.emitEvent('browser.toolResult', { messageId, toolCallId: event.toolCallId, output: event.toolOutput || '' });
+					}
+					if (event.type === 'thinking' && event.text) {
+						server.emitEvent('browser.thinking', { messageId, delta: event.text });
+					}
+					if (event.type === 'text' && event.text) {
+						server.emitEvent('browser.textDelta', { messageId, delta: event.text });
+					}
+					if (event.type === 'turn') {
+						server.emitEvent('browser.turn', { messageId, turn: event.turn || 1, maxTurns: 10 });
+					}
+				},
+				[],
+			);
+
+			server.emitEvent('browser.done', {
+				messageId,
+				reply: agentResult.text || '加工完成',
+				steps: agentResult.steps || [],
+			});
+
+			return { messageId, text: agentResult.text || '加工完成' };
+		} catch (e: unknown) {
+			const errMsg = e instanceof Error ? e.message : String(e);
+			server.emitEvent('browser.done', { messageId, reply: `❌ 加工失败: ${errMsg}`, steps: [] });
+			return { messageId, text: `加工失败: ${errMsg}` };
 		}
 	});
 
@@ -270,10 +401,10 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 			(event) => {
 				if (event.type === 'tool_call') {
 					const tcId = event.toolCallId || `tc_${liveToolCalls.length}`;
-					liveToolCalls.push({
-						id: tcId,
-						tool: event.toolName,
-						input: event.toolInput || '',
+						liveToolCalls.push({
+							id: tcId,
+							tool: event.toolName || '',
+							input: event.toolInput || '',
 						output: '',
 						status: 'running',
 					});

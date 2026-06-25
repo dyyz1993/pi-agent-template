@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useRef } from "react";
-import { Monitor, Wifi, WifiOff, ChevronDown, RefreshCw, Globe, Puzzle, PanelLeft, PanelRight } from "lucide-react";
+import { Monitor, Wifi, WifiOff, ChevronDown, RefreshCw, Globe, Puzzle, PanelLeft, PanelRight, Circle, Square } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useConnectionStore } from "../../stores/use-connection-store";
 import { useSidebarStore, useAssetsPanelStore } from "../../stores/use-sidebar-store";
@@ -13,6 +13,7 @@ import { ThemeToggle } from "../common/ThemeToggle";
 import { LanguageSwitcher } from "../common/LanguageSwitcher";
 import { NetworkToggleButton } from "../dev/NetworkPanel";
 import { SetupWizard } from "../onboarding/SetupWizard";
+import { useRecordStore } from "../../stores/use-record-store";
 
 export function TopBar() {
 	const { t } = useTranslation();
@@ -47,6 +48,20 @@ export function TopBar() {
 	const sidebarActive = sbIsPinned || sbDrawerOpen;
 	// 资源面板是否当前可见
 	const assetsActive = apVisible || apDrawerOpen;
+
+	// 录制状态
+	const isRecording = useRecordStore((s) => s.isRecording);
+	const actionCount = useRecordStore((s) => s.actionCount);
+	const startRecording = useRecordStore((s) => s.startRecording);
+	const stopRecording = useRecordStore((s) => s.stopRecording);
+
+	const handleToggleRecord = async (): Promise<void> => {
+		if (isRecording) {
+			await stopRecording();
+		} else {
+			await startRecording();
+		}
+	};
 
 	// 点击外部关闭下拉
 	useEffect(() => {
@@ -289,6 +304,20 @@ export function TopBar() {
 					}`}
 				>
 					<PanelRight className="w-4 h-4" />
+				</button>
+				{/* 录制按钮 */}
+				<button
+					onClick={handleToggleRecord}
+					disabled={!isOnline}
+					title={isRecording ? `停止录制 (${actionCount} 操作)` : "开始录制浏览器操作"}
+					className={`flex items-center gap-1 px-2 py-1 text-xs rounded transition-colors disabled:opacity-30 ${
+						isRecording
+							? "bg-red-500/20 text-red-400 animate-pulse"
+							: "text-[var(--color-text-placeholder)] hover:text-red-400 hover:bg-[var(--color-bg-hover)]"
+					}`}
+				>
+					{isRecording ? <Square className="w-3 h-3 fill-current" /> : <Circle className="w-3 h-3 fill-current" />}
+					{isRecording ? `${actionCount}` : ""}
 				</button>
 				<NetworkToggleButton />
 				<LanguageSwitcher />
