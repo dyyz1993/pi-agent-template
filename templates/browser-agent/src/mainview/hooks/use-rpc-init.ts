@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useConnectionStore } from "../stores/use-connection-store";
 import { useLogStore } from "../stores/use-log-store";
 import { useChatStore } from "../stores/use-chat-store";
+import { useSessionStore } from "../stores/use-session-store";
 import { apiClient } from "../lib/api-client";
 
 export function useRpcInit() {
@@ -49,6 +50,14 @@ export function useRpcInit() {
         }
       } catch (err) {
         addLog(`Failed to load history: ${err instanceof Error ? err.message : String(err)}`);
+      }
+
+      // 确保有一个默认空会话，用户可以直接输入
+      try {
+        const sid = await useSessionStore.getState().ensureDefaultSession();
+        addLog(`Active session: ${sid}`);
+      } catch (err) {
+        addLog(`Failed to ensure default session: ${err instanceof Error ? err.message : String(err)}`);
       }
     };
     setup();

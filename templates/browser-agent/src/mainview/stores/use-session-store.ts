@@ -52,6 +52,10 @@ interface SessionState {
 	loadSession: (id: string) => Promise<void>;
 	patchCurrentSession: (patch: Partial<SessionDetail>) => void;
 	patchLastAgentMessage: (patch: Partial<Message>) => void;
+	/** 确保 UI 有一个可用的会话（空会话或已有会话），用户能直接输入 */
+	ensureDefaultSession: () => Promise<string>;
+	/** 智能新建：当前空会话未被使用时复用，否则新建 */
+	newSessionSmart: () => Promise<string>;
 }
 
 export const useSessionStore = create<SessionState>((set, get) => ({
@@ -107,4 +111,41 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 			}
 			set({ currentSession: { ...cur, messages: msgs } });
 		},
+
+	ensureDefaultSession: async () => {
+		const state = get();
+		// 已有选中的会话 → 不动
+		if (state.currentSessionId) return state.currentSessionId;
+
+		// 刷新列表
+		await get().refreshSessions();
+		const sessions = get().sessions;
+
+		if (sessions.length > 0) {
+			// 有历史会话 → 选中第一个
+			const first = sessions[0]!;
+			await get().loadSession(first.id);
+			return first.id;
+		}
+
+		// 没有任何会话 → 创建空会话
+		const sess = await get().createSession("新会话");
+		await get().loadSession(sess.id);
+		return sess.id;
+	},
+
+	newSessionSmart: async () => {
+		const state = get();
+		// 如果当前会话是空的（没有消息），直接复用，不创建新的
+		if (state.currentSession) {
+			const msgCount = state.currentSession.messages?.length || 0;
+			if (msgCount === 0) {
+				return state.currentSessionId!;
+			}
+		}
+		// 否则创建新会话
+		const sess = await get().createSession("新会话");
+		await get().loadSession(sess.id);
+		return sess.id;
+	},
 }));

@@ -35,19 +35,18 @@ const BUILTIN_SKILLS = [
 export function SkillSidebar() {
 	const { t: _t } = useTranslation();
 	const running = useSessionStore((s) => s.running);
-	const createSession = useSessionStore((s) => s.createSession);
-	const loadSession = useSessionStore((s) => s.loadSession);
+	const newSessionSmart = useSessionStore((s) => s.newSessionSmart);
+	const currentSessionId = useSessionStore((s) => s.currentSessionId);
 	const { chat } = useAgentChat();
 
 	const runSkill = async (skill: (typeof BUILTIN_SKILLS)[0]): Promise<void> => {
 		if (running) return;
 
-		// 创建新会话
-		const sess = await createSession(skill.name);
-		await loadSession(sess.id);
+		// 智能创建会话（空会话复用）
+		const sessionId = currentSessionId || await newSessionSmart();
 
 		// 触发 Agent 对话（useAgentChat 内部会订阅流式事件）
-		await chat(skill.prompt, sess.id, ["xiaohongshu"]);
+		await chat(skill.prompt, sessionId, ["xiaohongshu"]);
 	};
 
 	return (

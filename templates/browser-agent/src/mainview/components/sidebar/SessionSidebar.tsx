@@ -14,7 +14,7 @@ export function SessionSidebar() {
 	const sessions = useSessionStore((s) => s.sessions);
 	const currentSessionId = useSessionStore((s) => s.currentSessionId);
 	const refreshSessions = useSessionStore((s) => s.refreshSessions);
-	const createSession = useSessionStore((s) => s.createSession);
+	const newSessionSmart = useSessionStore((s) => s.newSessionSmart);
 	const loadSession = useSessionStore((s) => s.loadSession);
 
 	useEffect(() => {
@@ -22,8 +22,7 @@ export function SessionSidebar() {
 	}, []);
 
 	const handleNewSession = async () => {
-		const sess = await createSession("新会话");
-		await loadSession(sess.id);
+		await newSessionSmart();
 	};
 
 	const handleSwitchSession = async (id: string) => {
