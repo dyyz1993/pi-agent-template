@@ -1,0 +1,94 @@
+{
+	"$schema": "https://raw.githubusercontent.com/dyyz1993/pi-agent-template/main/skills-dist/manifest.schema.json",
+	"name": "pi-agent-skills",
+	"version": "1.0.0",
+	"description": "AI Agent desktop app scaffolding — engineering skills for Electrobun + React + RPC development",
+	"homepage": "https://github.com/dyyz1993/pi-agent-template",
+	"skills": [
+		{
+			"id": "pi-template-create",
+			"name": "Pi Template Create",
+			"version": "1.0.0",
+			"category": "scaffolding",
+			"summary": "从零创建一个新的 pi-agent 模板类型（目录脚手架 → 端口规划 → 双模式配置 → CLI 注册 → 同步脚本 → 测试 → 发布校验）。",
+			"triggers": [
+				"新建模板",
+				"加一种模板类型",
+				"照着 browser-agent 再做一个",
+				"我想加个模板",
+				"create a new template",
+				"add template type"
+			],
+			"path": "pi-template-create",
+			"when_to_use": "需要从零创建全新模板类型时（不是在现有模板里加功能）。是 pi-template-dev 的前置——先造模板，再在里面开发。"
+		},
+		{
+			"id": "pi-rpc-module-dev",
+			"name": "Pi RPC Module Dev",
+			"version": "1.0.0",
+			"category": "backend",
+			"summary": "给模板新增一个 RPC 功能模块的完整 5 步流程：类型定义 → Handler 实现 → 注册编排 → 前端调用 → 测试。",
+			"triggers": [
+				"新增功能",
+				"添加模块",
+				"新 RPC 方法",
+				"新增 handler",
+				"添加 XXX 功能",
+				"add a module",
+				"new rpc method",
+				"add feature"
+			],
+			"path": "pi-rpc-module-dev",
+			"when_to_use": "在已有模板里加新功能（面板、工具、服务）时。即使没明说 RPC 也应使用。"
+		},
+		{
+			"id": "pi-template-dev",
+			"name": "Pi Template Dev",
+			"version": "1.0.0",
+			"category": "frontend",
+			"summary": "模板内部的前端开发规范：30 个 CSS 变量主题系统、i18n 国际化、组件开发、Zustand Store、测试、Commit 规范。",
+			"triggers": [
+				"组件",
+				"样式",
+				"主题",
+				"语言",
+				"Store",
+				"模板",
+				"component",
+				"style",
+				"theme",
+				"i18n",
+				"zustand"
+			],
+			"path": "pi-template-dev",
+			"when_to_use": "修改模板 UI、添加组件、改样式、加语言、建 Store、维护模板功能时。"
+		},
+		{
+			"id": "pi-fullstack-debug",
+			"name": "Pi Fullstack Debug",
+			"version": "1.0.0",
+			"category": "debugging",
+			"summary": "全栈调试指南：React 组件 → Store → RPC → Transport → Handler 全链路排查。含 6 大问题分类、Token 认证、安全拦截调试方法。",
+			"triggers": [
+				"接口调用失败",
+				"WebSocket 断连",
+				"功能不工作",
+				"数据不对",
+				"页面白屏",
+				"组件不渲染",
+				"报错了",
+				"debug",
+				"broken",
+				"not working"
+			],
+			"path": "pi-fullstack-debug",
+			"when_to_use": "遇到任何调试场景——渲染问题、连接问题、Handler 问题、安全拦截、状态/性能问题。"
+		}
+	],
+	"categories": {
+		"scaffolding": "脚手架与项目创建",
+		"backend": "RPC 后端与模块开发",
+		"frontend": "前端 UI 与规范",
+		"debugging": "调试与排查"
+	}
+}

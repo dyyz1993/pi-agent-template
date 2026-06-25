@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Pi Agent Skills — 一行代码让 AI 学会开发桌面应用</title>
+		<meta
+			name="description"
+			content="把工程化经验变成 AI skill。一行命令安装，大模型自动遵循正确开发规范。"
+		/>
+		<style>
+			:root {
+				--bg: #0a0e1a;
+				--bg-card: #121826;
+				--bg-code: #0d1117;
+				--border: #1f2937;
+				--text: #e5e7eb;
+				--text-dim: #9ca3af;
+				--accent: #6366f1;
+				--accent-hover: #818cf8;
+				--green: #4ade80;
+				--yellow: #facc15;
+				--pink: #f472b6;
+			}
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+			body {
+				font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+				background: var(--bg);
+				color: var(--text);
+				line-height: 1.6;
+				overflow-x: hidden;
+			}
+			.container {
+				max-width: 1100px;
+				margin: 0 auto;
+				padding: 0 24px;
+			}
+
+			/* Hero */
+			.hero {
+				padding: 100px 0 60px;
+				text-align: center;
+				background: radial-gradient(ellipse at top, rgba(99, 102, 241, 0.15), transparent 60%);
+			}
+			.badge {
+				display: inline-block;
+				padding: 6px 14px;
+				border: 1px solid var(--border);
+				border-radius: 999px;
+				font-size: 13px;
+				color: var(--accent-hover);
+				background: rgba(99, 102, 241, 0.08);
+				margin-bottom: 28px;
+			}
+			h1 {
+				font-size: clamp(32px, 5vw, 56px);
+				font-weight: 800;
+				letter-spacing: -0.03em;
+				line-height: 1.1;
+				margin-bottom: 20px;
+			}
+			h1 .grad {
+				background: linear-gradient(135deg, var(--accent-hover), var(--pink));
+				-webkit-background-clip: text;
+				background-clip: text;
+				-webkit-text-fill-color: transparent;
+			}
+			.hero p.sub {
+				font-size: 19px;
+				color: var(--text-dim);
+				max-width: 620px;
+				margin: 0 auto 44px;
+			}
+
+			/* The one-liner */
+			.oneliner-wrap {
+				max-width: 720px;
+				margin: 0 auto 28px;
+			}
+			.oneliner {
+				position: relative;
+				background: var(--bg-code);
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				padding: 20px 64px 20px 24px;
+				font-family: "SF Mono", "Fira Code", Consolas, monospace;
+				font-size: 15px;
+				color: var(--green);
+				text-align: left;
+				overflow-x: auto;
+				white-space: nowrap;
+			}
+			.oneliner .prompt {
+				color: var(--accent-hover);
+				margin-right: 8px;
+			}
+			.copy-btn {
+				position: absolute;
+				right: 12px;
+				top: 50%;
+				transform: translateY(-50%);
+				background: var(--accent);
+				color: #fff;
+				border: none;
+				border-radius: 8px;
+				padding: 8px 16px;
+				font-size: 13px;
+				font-weight: 600;
+				cursor: pointer;
+				transition: background 0.15s;
+				white-space: nowrap;
+			}
+			.copy-btn:hover {
+				background: var(--accent-hover);
+			}
+			.copy-btn.copied {
+				background: var(--green);
+			}
+			.hint {
+				text-align: center;
+				font-size: 14px;
+				color: var(--text-dim);
+				margin-bottom: 40px;
+			}
+			.hint code {
+				background: var(--bg-card);
+				padding: 2px 8px;
+				border-radius: 4px;
+				font-size: 13px;
+				color: var(--yellow);
+			}
+
+			/* CTA buttons */
+			.cta-row {
+				display: flex;
+				gap: 16px;
+				justify-content: center;
+				flex-wrap: wrap;
+			}
+			.btn {
+				display: inline-flex;
+				align-items: center;
+				gap: 8px;
+				padding: 13px 26px;
+				border-radius: 10px;
+				font-size: 15px;
+				font-weight: 600;
+				text-decoration: none;
+				transition: all 0.15s;
+				border: 1px solid transparent;
+			}
+			.btn-primary {
+				background: var(--accent);
+				color: #fff;
+			}
+			.btn-primary:hover {
+				background: var(--accent-hover);
+				transform: translateY(-1px);
+			}
+			.btn-ghost {
+				border-color: var(--border);
+				color: var(--text);
+			}
+			.btn-ghost:hover {
+				border-color: var(--accent);
+				background: rgba(99, 102, 241, 0.08);
+			}
+
+			/* How it works */
+			.section {
+				padding: 70px 0;
+			}
+			.section h2 {
+				font-size: 32px;
+				font-weight: 700;
+				text-align: center;
+				margin-bottom: 12px;
+				letter-spacing: -0.02em;
+			}
+			.section .lead {
+				text-align: center;
+				color: var(--text-dim);
+				font-size: 17px;
+				margin-bottom: 52px;
+			}
+
+			.steps {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+				gap: 24px;
+			}
+			.step {
+				background: var(--bg-card);
+				border: 1px solid var(--border);
+				border-radius: 14px;
+				padding: 28px;
+				position: relative;
+			}
+			.step-num {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				width: 36px;
+				height: 36px;
+				border-radius: 50%;
+				background: rgba(99, 102, 241, 0.15);
+				color: var(--accent-hover);
+				font-weight: 700;
+				font-size: 16px;
+				margin-bottom: 16px;
+			}
+			.step h3 {
+				font-size: 18px;
+				margin-bottom: 8px;
+			}
+			.step p {
+				color: var(--text-dim);
+				font-size: 15px;
+			}
+
+			/* Skills grid */
+			.skills-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+				gap: 20px;
+			}
+			.skill-card {
+				background: var(--bg-card);
+				border: 1px solid var(--border);
+				border-radius: 14px;
+				padding: 24px;
+				transition:
+					border-color 0.2s,
+					transform 0.2s;
+			}
+			.skill-card:hover {
+				border-color: var(--accent);
+				transform: translateY(-2px);
+			}
+			.skill-cat {
+				display: inline-block;
+				font-size: 11px;
+				font-weight: 600;
+				text-transform: uppercase;
+				letter-spacing: 0.05em;
+				padding: 3px 10px;
+				border-radius: 999px;
+				margin-bottom: 12px;
+			}
+			.cat-scaffolding {
+				background: rgba(99, 102, 241, 0.15);
+				color: var(--accent-hover);
+			}
+			.cat-backend {
+				background: rgba(74, 222, 128, 0.12);
+				color: var(--green);
+			}
+			.cat-frontend {
+				background: rgba(244, 114, 182, 0.12);
+				color: var(--pink);
+			}
+			.cat-debugging {
+				background: rgba(250, 204, 21, 0.12);
+				color: var(--yellow);
+			}
+			.skill-card h3 {
+				font-size: 17px;
+				margin-bottom: 8px;
+				font-family: monospace;
+			}
+			.skill-card p {
+				color: var(--text-dim);
+				font-size: 14px;
+				margin-bottom: 14px;
+			}
+			.skill-triggers {
+				font-size: 12px;
+				color: var(--text-dim);
+			}
+			.skill-triggers span {
+				display: inline-block;
+				background: var(--bg-code);
+				padding: 2px 8px;
+				border-radius: 4px;
+				margin: 2px;
+				border: 1px solid var(--border);
+			}
+
+			/* Footer */
+			footer {
+				border-top: 1px solid var(--border);
+				padding: 40px 0;
+				text-align: center;
+				color: var(--text-dim);
+				font-size: 14px;
+			}
+			footer a {
+				color: var(--accent-hover);
+				text-decoration: none;
+			}
+			footer a:hover {
+				text-decoration: underline;
+			}
+
+			@media (max-width: 640px) {
+				.oneliner {
+					font-size: 13px;
+					padding: 16px 56px 16px 16px;
+				}
+				.copy-btn {
+					padding: 6px 12px;
+					font-size: 12px;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<!-- HERO -->
+		<section class="hero">
+			<div class="container">
+				<span class="badge">⚡ Electrobun + React + RPC · 工程化经验沉淀</span>
+				<h1>一行代码，让大模型<br /><span class="grad">学会开发 AI 桌面应用</span></h1>
+				<p class="sub">
+					把项目踩过的坑、验证过的最佳实践，固化成 AI skill。安装后，AI
+					自动遵循正确规范——不用再每次口头交代。
+				</p>
+
+				<div class="oneliner-wrap">
+					<div class="oneliner" id="cmd">
+						<span class="prompt">$</span>curl -fsSL
+						https://raw.githubusercontent.com/dyyz1993/pi-agent-template/main/skills-dist/install.sh
+						| bash
+						<button class="copy-btn" onclick="copyCmd(this)">复制</button>
+					</div>
+				</div>
+				<p class="hint">
+					复制这行，粘贴给
+					<code>ChatGPT / Claude / Cursor / ZCode</code>，它会自动下载、安装、开始干活
+				</p>
+
+				<div class="cta-row">
+					<a class="btn btn-primary" href="#how">↓ 看它怎么工作</a>
+					<a
+						class="btn btn-ghost"
+						href="https://github.com/dyyz1993/pi-agent-template"
+						target="_blank"
+						>GitHub →</a
+					>
+				</div>
+			</div>
+		</section>
+
+		<!-- HOW IT WORKS -->
+		<section class="section" id="how">
+			<div class="container">
+				<h2>它是怎么工作的</h2>
+				<p class="lead">三个文件配合，实现"一句话启动整个工程化流程"</p>
+				<div class="steps">
+					<div class="step">
+						<div class="step-num">1</div>
+						<h3>你复制一行命令</h3>
+						<p>
+							粘贴给任意支持工具调用的大模型。它读到 <code>BOOTSTRAP.md</code>，就知道该做什么。
+						</p>
+					</div>
+					<div class="step">
+						<div class="step-num">2</div>
+						<h3>AI 自动安装 skill</h3>
+						<p>
+							<code>install.sh</code> 下载 4 个 skill 到
+							<code>~/.agents/skills/</code>。幂等、带备份、跨平台。
+						</p>
+					</div>
+					<div class="step">
+						<div class="step-num">3</div>
+						<h3>AI 按规范干活</h3>
+						<p>之后你说"加个功能"，AI 自动匹配对应 skill，按沉淀的流程执行——不再凭空发挥。</p>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- SKILLS -->
+		<section class="section" style="border-top: 1px solid var(--border)">
+			<div class="container">
+				<h2>包含 4 个工程化 Skill</h2>
+				<p class="lead">每个 skill 解决一类完整问题，含真实项目踩坑经验</p>
+				<div class="skills-grid">
+					<div class="skill-card">
+						<span class="skill-cat cat-scaffolding">scaffolding</span>
+						<h3>pi-template-create</h3>
+						<p>
+							从零创建一个新模板类型。目录脚手架 → 端口规划 → 双模式配置 → CLI 注册（5 处必改）→
+							同步脚本 → 测试。含 browser-agent 半接入陷阱的真实教训。
+						</p>
+						<div class="skill-triggers">
+							触发词：<span>新建模板</span><span>add template</span><span>照着做一个</span>
+						</div>
+					</div>
+					<div class="skill-card">
+						<span class="skill-cat cat-backend">backend</span>
+						<h3>pi-rpc-module-dev</h3>
+						<p>
+							给模板加新功能的完整 5 步流程：类型定义 → Handler → 注册 → 前端调用 → 测试。含 6 条
+							ESLint 强制规则和常见错误避坑。
+						</p>
+						<div class="skill-triggers">
+							触发词：<span>新增功能</span><span>add module</span><span>新 RPC 方法</span>
+						</div>
+					</div>
+					<div class="skill-card">
+						<span class="skill-cat cat-frontend">frontend</span>
+						<h3>pi-template-dev</h3>
+						<p>
+							模板内部前端开发规范。30 个 CSS 变量主题系统、i18n 国际化、Zustand
+							Store、组件开发、Commit 规范。
+						</p>
+						<div class="skill-triggers">
+							触发词：<span>组件</span><span>样式</span><span>主题</span><span>i18n</span>
+						</div>
+					</div>
+					<div class="skill-card">
+						<span class="skill-cat cat-debugging">debugging</span>
+						<h3>pi-fullstack-debug</h3>
+						<p>
+							全栈调试指南。React → Store → RPC → Transport → Handler 全链路排查。6 大问题分类 +
+							Token/安全拦截调试方法。
+						</p>
+						<div class="skill-triggers">
+							触发词：<span>白屏</span><span>断连</span><span>不工作</span><span>报错</span>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- FOOTER -->
+		<footer>
+			<div class="container">
+				<p>
+					<a href="https://github.com/dyyz1993/pi-agent-template" target="_blank"
+						>pi-agent-template</a
+					>
+					· MIT License · built with Electrobun + React + Bun
+				</p>
+				<p style="margin-top: 8px; font-size: 12px">
+					本地安装：<code style="color: var(--green)">bash skills-dist/install.sh</code> ·
+					开发模式：<code style="color: var(--green)"
+						>SOURCE_DIR=. bash skills-dist/install.sh</code
+					>
+				</p>
+			</div>
+		</footer>
+
+		<script>
+			function copyCmd(btn) {
+				const text =
+					"curl -fsSL https://raw.githubusercontent.com/dyyz1993/pi-agent-template/main/skills-dist/install.sh | bash";
+				navigator.clipboard.writeText(text).then(() => {
+					const orig = btn.textContent;
+					btn.textContent = "✓ 已复制";
+					btn.classList.add("copied");
+					setTimeout(() => {
+						btn.textContent = orig;
+						btn.classList.remove("copied");
+					}, 2000);
+				});
+			}
+		</script>
+	</body>
+</html>
