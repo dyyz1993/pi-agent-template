@@ -50,7 +50,7 @@ class BrowserSseTransport implements Transport {
 	private errorHandlers = new Set<(err: Error) => void>();
 	private disconnectHandlers = new Set<() => void>();
 	private eventSource: EventSource | null = null;
-	private clientId: string | null = null;
+	clientId: string | null = null;
 	private baseUrl = "";
 	private connected = false;
 	private closed = false;
@@ -65,11 +65,13 @@ class BrowserSseTransport implements Transport {
 		const es = new EventSource(url);
 		this.eventSource = es;
 
-		// "ready" event carries the clientId (first frame from the server)
+		// "ready" event carries the clientId — fires on every (re)connect.
+		// Must update clientId each time because reconnect assigns a new one.
 		es.addEventListener("ready", (ev: MessageEvent) => {
 			try {
 				const data = JSON.parse(ev.data);
 				this.clientId = data.clientId;
+				this.connected = true;
 			} catch {
 				/* ignore */
 			}
@@ -93,24 +95,21 @@ class BrowserSseTransport implements Transport {
 
 		es.onerror = () => {
 			if (this.closed) return;
-			const wasConnected = this.connected;
 			this.connected = false;
 			for (const handler of [...this.errorHandlers]) {
 				handler(new Error("SSE connection error"));
 			}
-			if (wasConnected) {
-				for (const handler of [...this.disconnectHandlers]) {
-					handler();
-				}
+			for (const handler of [...this.disconnectHandlers]) {
+				handler();
 			}
-			// EventSource auto-reconnects natively
+			// EventSource auto-reconnects natively; clientId will refresh on "ready"
 		};
 	}
 
 	async send(message: unknown): Promise<void> {
 		if (this.closed) throw new Error("SSE transport closed");
 
-		// Wait for clientId to be available (SSE ready event received)
+		// Wait for clientId (with timeout to avoid hanging forever)
 		if (!this.clientId) {
 			await this.waitForClientId();
 		}
@@ -122,21 +121,49 @@ class BrowserSseTransport implements Transport {
 			body: JSON.stringify(message),
 		});
 
+		// 404 = clientId stale (SSE reconnected with a new ID). Retry once.
+		if (res.status === 404) {
+			// Force wait for fresh clientId
+			this.clientId = null;
+			this.connected = false;
+			await this.waitForClientId();
+			// Retry the POST with the fresh clientId
+			const retryUrl = `${this.baseUrl}/api/rpc?token=${encodeURIComponent(AUTH_TOKEN)}&clientId=${encodeURIComponent(this.clientId!)}`;
+			const retryRes = await fetch(retryUrl, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(message),
+			});
+			if (!retryRes.ok) {
+				throw new Error(`RPC POST failed after retry: ${retryRes.status}`);
+			}
+			return;
+		}
+
 		if (!res.ok) {
 			throw new Error(`RPC POST failed: ${res.status}`);
 		}
 	}
 
-	private waitForClientId(): Promise<void> {
+	private waitForClientId(timeoutMs = 10000): Promise<void> {
 		if (this.clientId) return Promise.resolve();
-		return new Promise((resolve) => {
+		return new Promise((resolve, reject) => {
+			const start = Date.now();
 			const check = setInterval(() => {
 				if (this.clientId) {
 					clearInterval(check);
 					resolve();
+				} else if (Date.now() - start > timeoutMs) {
+					clearInterval(check);
+					reject(new Error("SSE 连接超时：未收到 clientId"));
 				}
 			}, 50);
 		});
+	}
+
+	/** 等待 SSE ready 事件（clientId + connected），供 initialize() 使用 */
+	async waitForReady(timeoutMs = 10000): Promise<void> {
+		await this.waitForClientId(timeoutMs);
 	}
 
 	onMessage(handler: (msg: unknown) => void): () => void {
@@ -223,11 +250,23 @@ class APIClientImpl {
 				// 不应走到这里，桌面端应通过 initSyncForDesktop() 初始化
 				this.initSyncForDesktop();
 			} else {
-				this._transport = "sse";
-				const baseUrl = this.resolveBaseUrl();
-				this.sseTransport = new BrowserSseTransport(baseUrl, AUTH_TOKEN);
-				this.client = createTypedClient<RPCMethods, RPCEvents>(this.sseTransport);
-				this._baseUrl = baseUrl;
+				try {
+					this._transport = "sse";
+					const baseUrl = this.resolveBaseUrl();
+					this.sseTransport = new BrowserSseTransport(baseUrl, AUTH_TOKEN);
+					this.client = createTypedClient<RPCMethods, RPCEvents>(this.sseTransport);
+					this._baseUrl = baseUrl;
+
+					// 等待 SSE ready（clientId 到达）才认为初始化完成
+					await this.sseTransport.waitForReady();
+				} catch (err) {
+					// 初始化失败 → 清理缓存，允许重试
+					this.sseTransport?.close();
+					this.sseTransport = null;
+					this.client = null;
+					this.initPromise = null;
+					throw err;
+				}
 			}
 		})();
 
