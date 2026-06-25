@@ -187,6 +187,7 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 
 	r("browser.agentChat", async (params) => {
 		const { message, sessionId, activePlugins } = params;
+		log.info("agentChat received", { message: message.slice(0, 50), sessionId, hasPlugins: !!activePlugins });
 		if (!message || !sessionId) {
 			return { messageId: "", text: "缺少必要参数", steps: [] };
 		}

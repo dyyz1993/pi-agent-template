@@ -6,7 +6,7 @@
  * 2. 触发 browser.agentChat
  * 3. 完成后自动清理订阅
  *
- * 关键修复：subscribe 必须在 agentChat 之前完成注册，
+ * 关键：subscribe 必须在 agentChat 之前完成注册，
  * 否则后端 emitEvent 找不到订阅者会丢弃事件。
  */
 
@@ -82,17 +82,28 @@ export function useAgentChat() {
 					}),
 				);
 
-				// 等 subscribe 消息发到后端（fire-and-forget，给一点缓冲）
-				await new Promise((r) => setTimeout(r, 200));
+				console.log("[useAgentChat] Subscribed 6 events, waiting 500ms...");
+				// Longer wait to ensure subscribe POSTs reach server
+				await new Promise((r) => setTimeout(r, 500));
+				console.log("[useAgentChat] Calling browser.agentChat...");
 
 				// 触发 Agent
-				await apiClient.call("browser.agentChat", {
+				const agentResult = await apiClient.call("browser.agentChat", {
 					message,
 					sessionId,
 					activePlugins,
 				});
+				console.log("[useAgentChat] agentChat returned:", JSON.stringify(agentResult).slice(0, 200));
+
+				// Fallback: if no browser.done event arrived (streaming failed),
+				// use the RPC response directly
+				if (agentResult?.text) {
+					patchLastAgent({ text: agentResult.text, steps: agentResult.steps });
+					setRunning(false);
+				}
 			} catch (err: any) {
-				patchLastAgent({ error: err.message });
+				console.error("[useAgentChat] Error:", err);
+				patchLastAgent({ error: err.message || "Agent 执行失败" });
 				setRunning(false);
 			} finally {
 				subs.forEach((id) => apiClient.unsubscribe(id));

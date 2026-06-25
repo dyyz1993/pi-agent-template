@@ -176,8 +176,15 @@ export function createSseHandler(_httpServer: Server, deps: SseHandlerDeps): Sse
 		res.end(JSON.stringify({ accepted: true }));
 
 		// Route the message into the client's RPCServer via its transport handlers
+		const msgType = (message as any)?.type;
+		const msgMethod = (message as any)?.method;
+		log.info("RPC routing", { clientId, msgType, msgMethod, handlerCount: client.messageHandlers.size });
 		for (const handler of client.messageHandlers) {
-			handler(message);
+			try {
+				handler(message);
+			} catch (err) {
+				log.error("RPC handler error", { clientId, msgMethod, error: err instanceof Error ? err.message : String(err) });
+			}
 		}
 	}
 
