@@ -59,3 +59,13 @@
   --color-badge-bg: #312e81;
   --color-badge-text: #a5b4fc;
 }
+
+/* 侧边栏宽度过渡动画（三态折叠切换时平滑） */
+.sidebar-container {
+  transition: width 200ms ease;
+}
+
+/* 拖拽 resize 时禁用动画，保证跟手 */
+.sidebar-container.dragging {
+  transition: none;
+}

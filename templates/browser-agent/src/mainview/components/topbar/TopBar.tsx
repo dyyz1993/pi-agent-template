@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useRef } from "react";
-import { Monitor, Wifi, WifiOff, ChevronDown, RefreshCw, Globe, Puzzle, PanelLeft, PanelRight, Circle, Square } from "lucide-react";
+import { Monitor, Wifi, WifiOff, ChevronDown, RefreshCw, Globe, Puzzle, PanelLeft, PanelLeftOpen, PanelRight, Circle, Square } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useConnectionStore } from "../../stores/use-connection-store";
 import { useSidebarStore, useAssetsPanelStore } from "../../stores/use-sidebar-store";
@@ -14,6 +14,7 @@ import { LanguageSwitcher } from "../common/LanguageSwitcher";
 import { NetworkToggleButton } from "../dev/NetworkPanel";
 import { SetupWizard } from "../onboarding/SetupWizard";
 import { useRecordStore } from "../../stores/use-record-store";
+import { useViewStore } from "../../stores/use-view-store";
 
 export function TopBar() {
 	const { t } = useTranslation();
@@ -35,31 +36,48 @@ export function TopBar() {
 	const dropdownRef = useRef<HTMLDivElement>(null);
 
 	// 面板状态
-	const sbIsPinned = useSidebarStore((s) => s.isPinned);
-	const sbSetPinned = useSidebarStore((s) => s.setPinned);
+	const sbSidebarMode = useSidebarStore((s) => s.sidebarMode);
+	const sbCycleMode = useSidebarStore((s) => s.cycleSidebarMode);
 	const sbDrawerOpen = useSidebarStore((s) => s.drawerOpen);
 	const sbSetDrawerOpen = useSidebarStore((s) => s.setDrawerOpen);
+	const sbBreakpoint = useSidebarStore((s) => s.breakpoint);
 	const apVisible = useAssetsPanelStore((s) => s.assetsVisible);
 	const apSetVisible = useAssetsPanelStore((s) => s.setAssetsVisible);
 	const apDrawerOpen = useAssetsPanelStore((s) => s.assetsDrawerOpen);
 	const apSetDrawerOpen = useAssetsPanelStore((s) => s.setAssetsDrawerOpen);
 
-	// 侧栏是否当前可见（pinned 或 drawer 打开）
-	const sidebarActive = sbIsPinned || sbDrawerOpen;
+	// 侧栏是否当前可见（full/icon 档位 或 移动端抽屉）
+	const sidebarActive = sbSidebarMode !== "hidden" || sbDrawerOpen;
 	// 资源面板是否当前可见
 	const assetsActive = apVisible || apDrawerOpen;
+
+	// 侧栏循环切换：桌面端走三态，移动端走抽屉开关
+	const handleSidebarToggle = (): void => {
+		if (sbBreakpoint === "mobile" || sbBreakpoint === "tablet") {
+			sbSetDrawerOpen(!sbDrawerOpen);
+		} else {
+			sbCycleMode();
+		}
+	};
 
 	// 录制状态
 	const isRecording = useRecordStore((s) => s.isRecording);
 	const actionCount = useRecordStore((s) => s.actionCount);
 	const startRecording = useRecordStore((s) => s.startRecording);
 	const stopRecording = useRecordStore((s) => s.stopRecording);
+	const setActiveView = useViewStore((s) => s.setActiveView);
 
 	const handleToggleRecord = async (): Promise<void> => {
 		if (isRecording) {
 			await stopRecording();
+			// 停止后切到加工 Tab，查看录制结果
+			setActiveView("process");
 		} else {
-			await startRecording();
+			const ok = await startRecording();
+			if (ok) {
+				// 开始录制后切到加工 Tab，让用户看到录制状态
+				setActiveView("process");
+			}
 		}
 	};
 
@@ -95,24 +113,25 @@ export function TopBar() {
 			{/* 分割线 */}
 			<div className="w-px h-4 bg-[var(--color-border-primary)]" />
 
-			{/* 侧栏切换 */}
+			{/* 侧栏切换（三态循环：full → icon → hidden） */}
 			<button
-				onClick={() => {
-					if (sidebarActive) {
-						// 收起
-						if (sbIsPinned) sbSetPinned(false);
-						if (sbDrawerOpen) sbSetDrawerOpen(false);
-					} else {
-						// 展开
-						sbSetDrawerOpen(true);
-					}
-				}}
-				title={sidebarActive ? "收起侧栏" : "展开侧栏"}
+				onClick={handleSidebarToggle}
+				title={
+					sbBreakpoint === "mobile" || sbBreakpoint === "tablet"
+						? sbDrawerOpen ? "收起侧栏" : "展开侧栏"
+						: sbSidebarMode === "full" ? "折叠为图标条"
+						: sbSidebarMode === "icon" ? "完全隐藏侧栏"
+						: "展开侧栏"
+				}
 				className={`text-[var(--color-text-placeholder)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded hover:bg-[var(--color-bg-hover)] ${
 					sidebarActive ? "text-[var(--color-text-accent)]" : ""
 				}`}
 			>
-				<PanelLeft className="w-4 h-4" />
+				{sbSidebarMode === "hidden" && !sbDrawerOpen ? (
+					<PanelLeftOpen className="w-4 h-4" />
+				) : (
+					<PanelLeft className="w-4 h-4" />
+				)}
 			</button>
 
 			{/* 模式标签 */}

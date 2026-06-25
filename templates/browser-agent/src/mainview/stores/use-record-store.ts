@@ -2,11 +2,13 @@
  * Record Store — 浏览器录制状态管理
  *
  * 管理录制生命周期：开始 → 录制中 → 停止 → 录制结果
+ * 录制开始时自动切到「加工」Tab，让用户看到录制状态。
  */
 
 import { create } from "zustand";
 import { apiClient } from "../lib/api-client";
 import { networkBus } from "../lib/network-bus";
+import { useConnectionStore } from "./use-connection-store";
 
 export interface RecordingResult {
 	actions: number;
@@ -23,7 +25,7 @@ interface RecordState {
 	lastRecording: RecordingResult | null;
 	error: string | null;
 
-	startRecording: () => Promise<void>;
+	startRecording: () => Promise<boolean>;
 	stopRecording: () => Promise<RecordingResult | null>;
 	pollStatus: () => Promise<void>;
 	clearError: () => void;
@@ -41,8 +43,14 @@ export const useRecordStore = create<RecordState>((set, get) => ({
 	startRecording: async () => {
 		set({ error: null });
 		try {
-			networkBus.emitRequest("browser.recordStart", {});
-			const result = await apiClient.call("browser.recordStart", {});
+			// 获取当前选中标签页的 URL（如果有）
+			const connState = useConnectionStore.getState();
+			const tabIdx = connState.selectedTabIndex ?? connState.activeTabIndex;
+			const currentTab = connState.tabs[tabIdx];
+			const url = currentTab?.url && currentTab.url !== "about:blank" ? currentTab.url : undefined;
+
+			networkBus.emitRequest("browser.recordStart", { url });
+			const result = await apiClient.call("browser.recordStart", { url });
 			networkBus.emitResponse("browser.recordStart", 0);
 
 			if (result.success) {
@@ -58,11 +66,15 @@ export const useRecordStore = create<RecordState>((set, get) => ({
 				pollTimer = setInterval(() => {
 					get().pollStatus();
 				}, 2000);
+
+				return true;
 			} else {
 				set({ error: "录制启动失败" });
+				return false;
 			}
 		} catch (err) {
 			set({ error: err instanceof Error ? err.message : "录制启动失败" });
+			return false;
 		}
 	},
 
