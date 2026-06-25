@@ -73,6 +73,8 @@ export function AppLayout({
 						<SidebarInner
 							handleResizeStart={handleResizeStart}
 							showClose={false}
+							centerTab={centerTab}
+							setCenterTab={setCenterTab}
 						/>
 					</div>
 				) : sidebarShown ? (
@@ -90,20 +92,15 @@ export function AppLayout({
 								handleResizeStart={handleResizeStart}
 								showClose={true}
 								onClose={() => sbSetDrawerOpen(false)}
+								centerTab={centerTab}
+								setCenterTab={setCenterTab}
 							/>
 						</div>
 					</>
 				) : null}
 
-				{/* ── 中：对话区（Tab 切换） ── */}
+				{/* ── 中：对话区 ── */}
 				<div className="flex-1 flex flex-col overflow-hidden min-w-0">
-					{/* Tab 切换条 */}
-					<div className="flex items-center gap-1 px-3 py-1 bg-[var(--color-bg-secondary)] border-b border-[var(--color-border-primary)] flex-shrink-0">
-						<TabButton active={centerTab === "chat"} onClick={() => setCenterTab("chat")} label="💬 会话" />
-						<TabButton active={centerTab === "process"} onClick={() => setCenterTab("process")} label="⚙️ 加工" />
-					</div>
-
-					{/* Tab 内容 */}
 					{centerTab === "chat" ? <ChatPanel /> : <ProcessPanel />}
 				</div>
 
@@ -153,10 +150,14 @@ function SidebarInner({
 	handleResizeStart,
 	showClose,
 	onClose,
+	centerTab,
+	setCenterTab,
 }: {
 	handleResizeStart: (e: React.MouseEvent) => void;
 	showClose: boolean;
 	onClose?: () => void;
+	centerTab: CenterTab;
+	setCenterTab: (tab: CenterTab) => void;
 }) {
 	const sbSetPinned = useSidebarStore((s) => s.setPinned);
 	const breakpoint = useSidebarStore((s) => s.breakpoint);
@@ -187,6 +188,12 @@ function SidebarInner({
 					</button>
 				</div>
 			)}
+
+			{/* Tab 切换（会话/加工） */}
+			<div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-[var(--color-border-secondary)]">
+				<SidebarTab active={centerTab === "chat"} onClick={() => setCenterTab("chat")} label="会话" />
+				<SidebarTab active={centerTab === "process"} onClick={() => setCenterTab("process")} label="加工" />
+			</div>
 
 			<SkillSidebar />
 
@@ -250,13 +257,13 @@ function AssetsInner({
 	);
 }
 
-// ===== Tab 按钮 =====
+// ===== 侧边栏 Tab 按钮 =====
 
-function TabButton({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+function SidebarTab({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
 	return (
 		<button
 			onClick={onClick}
-			className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+			className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
 				active
 					? "bg-[var(--color-accent)]/15 text-[var(--color-text-accent)]"
 					: "text-[var(--color-text-tertiary)] hover:text-[var(--color-text-primary)] hover:bg-[var(--color-bg-hover)]"

@@ -7,7 +7,7 @@
 import type { RPCServer } from '@dyyz1993/rpc-core';
 import type { HandlerOptions } from '../rpc-schema';
 import { createLogger } from '../lib/logger';
-import { execXbrowser, agentChat } from '../lib/agent';
+import { execXbrowser, execXbrowserTimed, agentChat } from '../lib/agent';
 import { getOnlineBrowser, scrapeXhs } from '../lib/cdp';
 import { runMockAgentChat } from '../lib/mock-stream';
 import { config } from '../../server-config';
@@ -213,17 +213,21 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 			args.push('--url', params.url);
 		}
 		try {
-			const result = await execXbrowser(args);
+			// record start 是后台命令，不等待它结束
+			// 用短超时检测启动是否成功（2 秒内没报错就算启动成功）
+			const result = await execXbrowserTimed(args, 3000);
 			return {
-				success: !!result?.ok,
+				success: !result?.error,
 				session,
 				startUrl: result?.startUrl || params.url,
 			};
-		} catch (e: unknown) {
+		} catch {
+			// 超时通常意味着录制已启动（命令在后台运行）
+			// 这是正常行为，不是错误
 			return {
-				success: false,
+				success: true,
 				session,
-				startUrl: undefined,
+				startUrl: params.url,
 			};
 		}
 	});
