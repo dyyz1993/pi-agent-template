@@ -22,6 +22,20 @@ let _pluginsCache: any[] | null = null;
 let _pluginsCacheTime = 0;
 let _systemCache: { data: any; ts: number } = { data: null, ts: 0 };
 
+/**
+ * 将命令字符串拆分为参数数组，支持引号包裹的参数（如 URL）。
+ * 例如："scrape https://example.com --limit 5" → ["scrape", "https://example.com", "--limit", "5"]
+ */
+function parseCommandString(cmd: string): string[] {
+	const args: string[] = [];
+	const regex = /"([^"]*)"|'([^']*)'|(\S+)/g;
+	let match: RegExpExecArray | null;
+	while ((match = regex.exec(cmd)) !== null) {
+		args.push(match[1] ?? match[2] ?? match[3] ?? "");
+	}
+	return args;
+}
+
 // ===== xbrowser 版本检测 =====
 
 async function detectXbrowser(): Promise<{ available: boolean; version: string | null }> {
@@ -144,7 +158,18 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 
 	r("browser.execXbrowser", async (params) => {
 		try {
-			const result = await execXbrowser([params.command]);
+			// 把命令字符串拆分为参数数组（支持引号包裹的 URL 等）
+			const args = parseCommandString(params.command);
+
+			// 如果指定了 tabIndex，自动注入 --tab 参数
+			if (params.tabIndex !== undefined && params.tabIndex >= 0) {
+				// 避免重复添加 --tab
+				if (!args.some((a) => a === "--tab" || a === "-t")) {
+					args.push("--tab", String(params.tabIndex));
+				}
+			}
+
+			const result = await execXbrowser(args);
 			return { success: !!result?.success, data: result?.data };
 		} catch (e: any) {
 			return { success: false, data: { error: e.message } };

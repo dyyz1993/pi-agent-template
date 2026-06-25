@@ -25,9 +25,9 @@ export interface BrowserMethods {
     params: { message: string; sessionId: string; activePlugins?: string[] };
     result: { messageId: string; text: string; steps: { label: string; status: string; detail?: string }[] };
   };
-  /** 执行单个 xbrowser 命令 */
+  /** 执行单个 xbrowser 命令（如 scrape/crawl/map/goto/click 等） */
   "browser.execXbrowser": {
-    params: { command: string };
+    params: { command: string; tabIndex?: number };
     result: { success: boolean; data?: any };
   };
   /** 系统信息 */

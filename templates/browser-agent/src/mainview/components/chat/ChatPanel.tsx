@@ -12,6 +12,7 @@ import { useChatStore } from "../../stores/use-chat-store";
 import { useSessionStore } from "../../stores/use-session-store";
 import { useConnectionStore } from "../../stores/use-connection-store";
 import { MessageBubble } from "./MessageBubble";
+import { CommandBar } from "./CommandBar";
 import { apiClient } from "../../lib/api-client";
 
 export function ChatPanel() {
@@ -157,6 +158,9 @@ export function ChatPanel() {
 					</span>
 				)}
 			</div>
+
+			{/* 直接命令栏（不经 Agent） */}
+			<CommandBar />
 
 			{/* 消息区 */}
 			<div className="flex-1 overflow-y-auto px-4 py-4" ref={messagesEndRef}>
