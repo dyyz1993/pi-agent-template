@@ -1,5 +1,6 @@
 ---
 name: pi-template-create
+version: "1.0.0"
 description: >
   从零创建一个新的 pi-agent 模板类型（像 general/chat/agent/browser-agent 那样）。
   当用户说"新建一个模板"、"加一种模板类型"、"照着 browser-agent 再做一个"、"我想加个 xxx 模板"时使用此 Skill。

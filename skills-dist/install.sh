@@ -113,16 +113,38 @@ LOCAL_SKILLS="$SOURCE_DIR/../.opencode/skills"
 [[ -f "$MANIFEST" ]] || die "manifest.json not found at $MANIFEST"
 
 # ----------------------------------------------------------------------------
-# 3. Parse the manifest and install each skill
+# 3. Parse the manifest and install each skill (with version checking)
 # ----------------------------------------------------------------------------
 # Extract skill paths from manifest.json (portable — no jq dependency)
 SKILL_PATHS=$(grep '"path"' "$MANIFEST" | sed -E 's/.*"path"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
 
 [[ -z "$SKILL_PATHS" ]] && die "No skills found in manifest."
 
+# Read the version field from a SKILL.md frontmatter.
+# The canonical version source is the skill's own SKILL.md `version:` field.
+# Falls back to manifest.json's per-skill version, then "unknown".
+get_skill_version() {
+  local skill_md="$1/SKILL.md"
+  local manifest_version="$2"
+  local v
+  # frontmatter version: e.g.  version: "1.2.3"
+  v=$(sed -n '/^---$/,/^---$/s/^version:[[:space:]]*"\{0,1\}\([^"]*\)"\{0,1\}[[:space:]]*$/\1/p' "$skill_md" 2>/dev/null | head -1)
+  if [[ -n "$v" ]]; then echo "$v"; return; fi
+  if [[ -n "$manifest_version" ]]; then echo "$manifest_version"; return; fi
+  echo "unknown"
+}
+
+# Read the version recorded at install time. Returns empty if not installed.
+get_installed_version() {
+  local version_file="$1/.installed-version"
+  [[ -f "$version_file" ]] || { echo ""; return; }
+  cat "$version_file" 2>/dev/null
+}
+
 INSTALLED=0
+UPGRADED=0
 SKIPPED=0
-BACKED_UP=0
+FAILED=0
 
 while IFS= read -r skill_path; do
   [[ -z "$skill_path" ]] && continue
@@ -145,25 +167,41 @@ while IFS= read -r skill_path; do
   # Verify it has a SKILL.md
   [[ -f "$SRC/SKILL.md" ]] || { warn "$skill_path: missing SKILL.md — skipping"; SKIPPED=$((SKIPPED + 1)); continue; }
 
+  # Resolve versions
+  NEW_VER=$(get_skill_version "$SRC" "")
   DEST="$SKILLS_DIR/$skill_name"
+  CUR_VER=$(get_installed_version "$DEST")
 
-  # Backup existing if present and SKIP_BACKUP not set
-  if [[ -e "$DEST" ]]; then
-    if [[ "${SKIP_BACKUP:-0}" == "1" ]]; then
-      rm -rf "$DEST"
-    else
-      TS="$(date +%Y%m%d-%H%M%S)"
-      BACKUP="$DEST.backup-$TS"
-      mv "$DEST" "$BACKUP"
-      BACKED_UP=$((BACKED_UP + 1))
-      info "Backed up existing → $(basename "$BACKUP")"
-    fi
+  # --- Decision tree ---
+  # Case A: not installed yet (no version file) → fresh install
+  if [[ -z "$CUR_VER" ]]; then
+    cp -R "$SRC" "$DEST"
+    echo "$NEW_VER" > "$DEST/.installed-version"
+    INSTALLED=$((INSTALLED + 1))
+    ok "Installed: ${BOLD}${skill_name}${RESET} ${DIM}v${NEW_VER}${RESET}"
+    continue
   fi
 
-  # Copy
+  # Case B: same version → skip (idempotent)
+  if [[ "$CUR_VER" == "$NEW_VER" ]]; then
+    SKIPPED=$((SKIPPED + 1))
+    info "Up to date: ${skill_name} ${DIM}v${CUR_VER}${RESET}"
+    continue
+  fi
+
+  # Case C: different version → backup old, install new
+  if [[ "${FORCE:-0}" == "1" ]]; then
+    rm -rf "$DEST"
+  else
+    TS="$(date +%Y%m%d-%H%M%S)"
+    BACKUP="${DEST}.v${CUR_VER}-${TS}"
+    mv "$DEST" "$BACKUP"
+    info "Upgrading ${skill_name}: ${DIM}v${CUR_VER} → v${NEW_VER}${RESET} (backup: $(basename "$BACKUP"))"
+  fi
   cp -R "$SRC" "$DEST"
-  INSTALLED=$((INSTALLED + 1))
-  ok "Installed: ${BOLD}${skill_name}${RESET}"
+  echo "$NEW_VER" > "$DEST/.installed-version"
+  UPGRADED=$((UPGRADED + 1))
+  ok "Upgraded: ${BOLD}${skill_name}${RESET} ${DIM}v${CUR_VER} → v${NEW_VER}${RESET}"
 done <<< "$SKILL_PATHS"
 
 # ----------------------------------------------------------------------------
@@ -171,10 +209,11 @@ done <<< "$SKILL_PATHS"
 # ----------------------------------------------------------------------------
 echo ""
 printf "${BOLD}━━━ Installation Summary ━━━${RESET}\n"
-printf "  ${GREEN}Installed:${RESET}  %d skills\n" "$INSTALLED"
-[[ "$BACKED_UP" -gt 0 ]] && printf "  ${YELLOW}Backed up:${RESET}  %d (find *.backup-* in %s)\n" "$BACKED_UP" "$SKILLS_DIR"
-[[ "$SKIPPED" -gt 0 ]]   && printf "  ${RED}Skipped:${RESET}    %d\n" "$SKIPPED"
-printf "  ${BLUE}Location:${RESET}  %s\n" "$SKILLS_DIR"
+[[ "$INSTALLED" -gt 0 ]] && printf "  ${GREEN}Installed:${RESET}  %d (fresh)\n" "$INSTALLED"
+[[ "$UPGRADED" -gt 0 ]]  && printf "  ${YELLOW}Upgraded:${RESET}   %d (old versions backed up)\n" "$UPGRADED"
+[[ "$SKIPPED" -gt 0 ]]   && printf "  ${BLUE}Up to date:${RESET} %d (same version, skipped)\n" "$SKIPPED"
+[[ "$FAILED" -gt 0 ]]    && printf "  ${RED}Failed:${RESET}     %d\n" "$FAILED"
+printf "  ${DIM}Location:${RESET}  %s\n" "$SKILLS_DIR"
 echo ""
 printf "${DIM}Skills are auto-discovered by ZCode / Claude Code / OpenCode / Pi agent.${RESET}\n"
 printf "${DIM}Restart your AI agent (or start a new session) to load them.${RESET}\n"

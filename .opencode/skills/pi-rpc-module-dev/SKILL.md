@@ -1,5 +1,6 @@
 ---
 name: pi-rpc-module-dev
+version: "1.0.0"
 description: >
   新增 RPC 模块的完整开发流程。当用户需要给 AI Agent 模板添加新功能（如新的工具、服务、面板）时，
   使用此 Skill 引导完成类型定义 → Handler 实现 → 注册编排 → 前端调用 → 测试的完整流程。
@@ -39,38 +40,39 @@ description: >
 export type XxxStatus = "active" | "inactive";
 
 export interface XxxItem {
-  id: string;
-  name: string;
-  status: XxxStatus;
+	id: string;
+	name: string;
+	status: XxxStatus;
 }
 
 // 必须：方法类型定义
 export interface XxxMethods {
-  "xxx.list": {
-    params: {};
-    result: { items: XxxItem[] };
-  };
-  "xxx.create": {
-    params: { name: string };
-    result: { item: XxxItem };
-  };
-  "xxx.update": {
-    params: { id: string; status: XxxStatus };
-    result: { item: XxxItem };
-  };
-  "xxx.remove": {
-    params: { id: string };
-    result: { success: boolean };
-  };
+	"xxx.list": {
+		params: {};
+		result: { items: XxxItem[] };
+	};
+	"xxx.create": {
+		params: { name: string };
+		result: { item: XxxItem };
+	};
+	"xxx.update": {
+		params: { id: string; status: XxxStatus };
+		result: { item: XxxItem };
+	};
+	"xxx.remove": {
+		params: { id: string };
+		result: { success: boolean };
+	};
 }
 
 // 可选：事件类型定义
 export interface XxxEvents {
-  "xxx.changed": { id: string; action: string };
+	"xxx.changed": { id: string; action: string };
 }
 ```
 
 **关键规则：**
+
 - 方法名必须以 `xxx.` 前缀开头（文件名即模块名）
 - 必须导出 `<PascalCase>Methods` 接口（ESLint 强制）
 - `params` 至少为 `{}`，不可省略
@@ -84,58 +86,60 @@ import type { RPCMethods, HandlerOptions } from "../rpc-schema";
 import type { XxxItem, XxxStatus } from "../modules/xxx";
 
 type RegisterFn = <K extends keyof RPCMethods & string>(
-  method: K,
-  handler: (params: MethodParams<RPCMethods, K>) => Promise<MethodResult<RPCMethods, K>>,
+	method: K,
+	handler: (params: MethodParams<RPCMethods, K>) => Promise<MethodResult<RPCMethods, K>>
 ) => void;
 
 const items: XxxItem[] = [];
 let idCounter = 1;
 
 export function register(server: RPCServer, _options: HandlerOptions): void {
-  const r: RegisterFn = (method, handler) => {
-    server.register(method, handler as (params: unknown) => Promise<unknown>);
-  };
+	const r: RegisterFn = (method, handler) => {
+		server.register(method, handler as (params: unknown) => Promise<unknown>);
+	};
 
-  r("xxx.list", async () => ({ items }));
+	r("xxx.list", async () => ({ items }));
 
-  r("xxx.create", async (params) => {
-    const item: XxxItem = {
-      id: `xxx-${idCounter++}`,
-      name: params.name,
-      status: "active",
-    };
-    items.push(item);
-    return { item };
-  });
+	r("xxx.create", async (params) => {
+		const item: XxxItem = {
+			id: `xxx-${idCounter++}`,
+			name: params.name,
+			status: "active",
+		};
+		items.push(item);
+		return { item };
+	});
 
-  r("xxx.update", async (params) => {
-    const item = items.find((i) => i.id === params.id);
-    if (!item) throw new Error(`Item ${params.id} not found`);
-    item.status = params.status as XxxStatus;
-    return { item };
-  });
+	r("xxx.update", async (params) => {
+		const item = items.find((i) => i.id === params.id);
+		if (!item) throw new Error(`Item ${params.id} not found`);
+		item.status = params.status as XxxStatus;
+		return { item };
+	});
 
-  r("xxx.remove", async (params) => {
-    const idx = items.findIndex((i) => i.id === params.id);
-    if (idx === -1) return { success: false };
-    items.splice(idx, 1);
-    return { success: true };
-  });
+	r("xxx.remove", async (params) => {
+		const idx = items.findIndex((i) => i.id === params.id);
+		if (idx === -1) return { success: false };
+		items.splice(idx, 1);
+		return { success: true };
+	});
 }
 ```
 
 **Handler 签名约定：**
+
 - 导出函数名必须是 `register`
 - 签名：`(server: RPCServer, options: HandlerOptions) => void`
 - 使用类型安全的 `RegisterFn` 包装器注册方法
 - 通过 `r("module.action", handler)` 注册，自动获得 params/result 类型推导
 
 **如果模块需要事件推送：**
+
 ```typescript
 r("xxx.create", async (params) => {
-  // ...创建逻辑
-  server.emitEvent("xxx.changed", { id: item.id, action: "created" }, {});
-  return { item };
+	// ...创建逻辑
+	server.emitEvent("xxx.changed", { id: item.id, action: "created" }, {});
+	return { item };
 });
 ```
 
@@ -147,7 +151,7 @@ r("xxx.create", async (params) => {
 export { register as system } from "./system";
 export { register as file } from "./file";
 // ... 其他模块
-export { register as xxx } from "./xxx";  // ← 新增这一行
+export { register as xxx } from "./xxx"; // ← 新增这一行
 ```
 
 **3b. `src/shared/rpc-schema.ts`** — 加 import 和 extends：
@@ -177,9 +181,13 @@ const result = await apiClient.call("xxx.list", {});
 const created = await apiClient.call("xxx.create", { name: "hello" });
 
 // 订阅事件（如果模块有事件）
-const subId = await apiClient.subscribe("xxx.changed", (payload) => {
-  console.log(payload.id, payload.action);
-}, {});
+const subId = await apiClient.subscribe(
+	"xxx.changed",
+	(payload) => {
+		console.log(payload.id, payload.action);
+	},
+	{}
+);
 apiClient.unsubscribe(subId);
 ```
 
@@ -192,32 +200,32 @@ import { apiClient } from "../lib/api-client";
 import type { XxxItem } from "../../../shared/modules/xxx";
 
 interface XxxState {
-  items: XxxItem[];
-  loading: boolean;
-  fetchItems: () => Promise<void>;
-  createItem: (name: string) => Promise<void>;
-  removeItem: (id: string) => Promise<void>;
+	items: XxxItem[];
+	loading: boolean;
+	fetchItems: () => Promise<void>;
+	createItem: (name: string) => Promise<void>;
+	removeItem: (id: string) => Promise<void>;
 }
 
 export const useXxxStore = create<XxxState>((set) => ({
-  items: [],
-  loading: false,
+	items: [],
+	loading: false,
 
-  fetchItems: async () => {
-    set({ loading: true });
-    const { items } = await apiClient.call("xxx.list", {});
-    set({ items, loading: false });
-  },
+	fetchItems: async () => {
+		set({ loading: true });
+		const { items } = await apiClient.call("xxx.list", {});
+		set({ items, loading: false });
+	},
 
-  createItem: async (name) => {
-    const { item } = await apiClient.call("xxx.create", { name });
-    set((s) => ({ items: [...s.items, item] }));
-  },
+	createItem: async (name) => {
+		const { item } = await apiClient.call("xxx.create", { name });
+		set((s) => ({ items: [...s.items, item] }));
+	},
 
-  removeItem: async (id) => {
-    await apiClient.call("xxx.remove", { id });
-    set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
-  },
+	removeItem: async (id) => {
+		await apiClient.call("xxx.remove", { id });
+		set((s) => ({ items: s.items.filter((i) => i.id !== id) }));
+	},
 }));
 ```
 
@@ -230,66 +238,67 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { RPCServer } from "@dyyz1993/rpc-core";
 
 describe("Xxx Handler", () => {
-  let registeredHandlers: Record<string, Function>;
-  let mockServer: { register: ReturnType<typeof vi.fn>; emitEvent: ReturnType<typeof vi.fn> };
+	let registeredHandlers: Record<string, Function>;
+	let mockServer: { register: ReturnType<typeof vi.fn>; emitEvent: ReturnType<typeof vi.fn> };
 
-  beforeEach(async () => {
-    vi.resetModules();
-    registeredHandlers = {};
-    mockServer = {
-      register: vi.fn((method: string, handler: Function) => {
-        registeredHandlers[method] = handler;
-      }),
-      emitEvent: vi.fn(),
-    };
-    const { register } = await import("../xxx");
-    register(mockServer as unknown as RPCServer, { platform: "web" });
-  });
+	beforeEach(async () => {
+		vi.resetModules();
+		registeredHandlers = {};
+		mockServer = {
+			register: vi.fn((method: string, handler: Function) => {
+				registeredHandlers[method] = handler;
+			}),
+			emitEvent: vi.fn(),
+		};
+		const { register } = await import("../xxx");
+		register(mockServer as unknown as RPCServer, { platform: "web" });
+	});
 
-  it("should register xxx methods", () => {
-    expect(registeredHandlers["xxx.list"]).toBeDefined();
-    expect(registeredHandlers["xxx.create"]).toBeDefined();
-    expect(registeredHandlers["xxx.update"]).toBeDefined();
-    expect(registeredHandlers["xxx.remove"]).toBeDefined();
-  });
+	it("should register xxx methods", () => {
+		expect(registeredHandlers["xxx.list"]).toBeDefined();
+		expect(registeredHandlers["xxx.create"]).toBeDefined();
+		expect(registeredHandlers["xxx.update"]).toBeDefined();
+		expect(registeredHandlers["xxx.remove"]).toBeDefined();
+	});
 
-  it("xxx.list should return empty items initially", async () => {
-    const result = await registeredHandlers["xxx.list"]({});
-    expect(result.items).toEqual([]);
-  });
+	it("xxx.list should return empty items initially", async () => {
+		const result = await registeredHandlers["xxx.list"]({});
+		expect(result.items).toEqual([]);
+	});
 
-  it("xxx.create should add item and return it", async () => {
-    const result = await registeredHandlers["xxx.create"]({ name: "test" });
-    expect(result.item.name).toBe("test");
-    expect(result.item.id).toBeDefined();
+	it("xxx.create should add item and return it", async () => {
+		const result = await registeredHandlers["xxx.create"]({ name: "test" });
+		expect(result.item.name).toBe("test");
+		expect(result.item.id).toBeDefined();
 
-    const list = await registeredHandlers["xxx.list"]({});
-    expect(list.items).toHaveLength(1);
-  });
+		const list = await registeredHandlers["xxx.list"]({});
+		expect(list.items).toHaveLength(1);
+	});
 
-  it("xxx.remove should remove item", async () => {
-    const { item } = await registeredHandlers["xxx.create"]({ name: "to-remove" });
-    const result = await registeredHandlers["xxx.remove"]({ id: item.id });
-    expect(result.success).toBe(true);
+	it("xxx.remove should remove item", async () => {
+		const { item } = await registeredHandlers["xxx.create"]({ name: "to-remove" });
+		const result = await registeredHandlers["xxx.remove"]({ id: item.id });
+		expect(result.success).toBe(true);
 
-    const list = await registeredHandlers["xxx.list"]({});
-    expect(list.items).toHaveLength(0);
-  });
+		const list = await registeredHandlers["xxx.list"]({});
+		expect(list.items).toHaveLength(0);
+	});
 
-  it("xxx.remove should fail for unknown id", async () => {
-    const result = await registeredHandlers["xxx.remove"]({ id: "unknown" });
-    expect(result.success).toBe(false);
-  });
+	it("xxx.remove should fail for unknown id", async () => {
+		const result = await registeredHandlers["xxx.remove"]({ id: "unknown" });
+		expect(result.success).toBe(false);
+	});
 
-  it("xxx.update should throw for unknown id", async () => {
-    await expect(
-      registeredHandlers["xxx.update"]({ id: "unknown", status: "inactive" }),
-    ).rejects.toThrow();
-  });
+	it("xxx.update should throw for unknown id", async () => {
+		await expect(
+			registeredHandlers["xxx.update"]({ id: "unknown", status: "inactive" })
+		).rejects.toThrow();
+	});
 });
 ```
 
 **运行测试：**
+
 ```bash
 npx vitest run src/shared/handlers/__tests__/xxx-handler.test.ts
 ```
@@ -302,35 +311,35 @@ npx vitest run src/shared/handlers/__tests__/xxx-handler.test.ts
 
 格式：`<模块名>.<动作名>`（点分隔，全 camelCase）
 
-| 模块 | 方法示例 | 说明 |
-|------|---------|------|
-| system | `system.ping`, `system.hello` | 基础连通性 |
-| file | `file.listDir`, `file.readFile` | 文件系统 |
-| timer | `timer.start`, `timer.stop` | 定时器 |
-| chat | `chat.send`, `chat.list` | 聊天 |
-| git | `git.status`, `git.commit` | 版本控制 |
-| bash | `bash.execute`, `bash.kill` | Shell 执行 |
-| feed | `feed.post`, `feed.list` | 动态 |
-| todo | `todo.add`, `todo.remove` | 任务管理 |
-| rules | `rules.add`, `rules.toggle` | 规则管理 |
+| 模块   | 方法示例                        | 说明       |
+| ------ | ------------------------------- | ---------- |
+| system | `system.ping`, `system.hello`   | 基础连通性 |
+| file   | `file.listDir`, `file.readFile` | 文件系统   |
+| timer  | `timer.start`, `timer.stop`     | 定时器     |
+| chat   | `chat.send`, `chat.list`        | 聊天       |
+| git    | `git.status`, `git.commit`      | 版本控制   |
+| bash   | `bash.execute`, `bash.kill`     | Shell 执行 |
+| feed   | `feed.post`, `feed.list`        | 动态       |
+| todo   | `todo.add`, `todo.remove`       | 任务管理   |
+| rules  | `rules.add`, `rules.toggle`     | 规则管理   |
 
 **禁止：** `ping`（无前缀）、`filelistDir`（无点分隔）、`file-listDir`（用连字符）
 
 ### 文件命名
 
-| 文件 | 位置 | 说明 |
-|------|------|------|
-| `<module>.ts` | `shared/modules/` | 类型定义 |
-| `<module>.ts` | `shared/handlers/` | Handler 实现 |
-| `<module>-handler.test.ts` | `shared/handlers/__tests__/` | 测试 |
+| 文件                       | 位置                         | 说明         |
+| -------------------------- | ---------------------------- | ------------ |
+| `<module>.ts`              | `shared/modules/`            | 类型定义     |
+| `<module>.ts`              | `shared/handlers/`           | Handler 实现 |
+| `<module>-handler.test.ts` | `shared/handlers/__tests__/` | 测试         |
 
 ### 类型命名
 
-| 类型 | 格式 | 示例 |
-|------|------|------|
-| 方法接口 | `<PascalCase>Methods` | `TodoMethods`, `BashMethods` |
-| 事件接口 | `<PascalCase>Events` | `BashEvents`, `TimerEvents` |
-| 共享类型 | `<PascalCase><Item/Status/...>` | `TodoItem`, `FeedCategory` |
+| 类型     | 格式                            | 示例                         |
+| -------- | ------------------------------- | ---------------------------- |
+| 方法接口 | `<PascalCase>Methods`           | `TodoMethods`, `BashMethods` |
+| 事件接口 | `<PascalCase>Events`            | `BashEvents`, `TimerEvents`  |
+| 共享类型 | `<PascalCase><Item/Status/...>` | `TodoItem`, `FeedCategory`   |
 
 ---
 
@@ -338,14 +347,14 @@ npx vitest run src/shared/handlers/__tests__/xxx-handler.test.ts
 
 违反以下规则的代码将被 pre-commit 检查拒绝：
 
-| 编号 | 规则 | 说明 |
-|------|------|------|
-| R1 | `rpc/no-bare-method` | 方法名必须使用 `module.action` 格式，禁止裸方法名 |
-| R2 | `rpc/no-direct-register` | 入口文件禁止直接调用 `server.register()` |
-| R3 | `rpc/schema-merge-only` | `rpc-schema.ts` 只能做类型合并，禁止直接定义方法 |
-| R4 | `rpc/module-file-naming` | 模块文件必须导出 `<Name>Methods` 接口，方法前缀必须匹配文件名 |
-| R5 | `rpc/require-typed-register` | 入口文件必须导入 `registerAllHandlers` |
-| R6 | `rpc/require-api-client` | 前端禁止绕过 `apiClient` 直接操作 WebSocket |
+| 编号 | 规则                         | 说明                                                          |
+| ---- | ---------------------------- | ------------------------------------------------------------- |
+| R1   | `rpc/no-bare-method`         | 方法名必须使用 `module.action` 格式，禁止裸方法名             |
+| R2   | `rpc/no-direct-register`     | 入口文件禁止直接调用 `server.register()`                      |
+| R3   | `rpc/schema-merge-only`      | `rpc-schema.ts` 只能做类型合并，禁止直接定义方法              |
+| R4   | `rpc/module-file-naming`     | 模块文件必须导出 `<Name>Methods` 接口，方法前缀必须匹配文件名 |
+| R5   | `rpc/require-typed-register` | 入口文件必须导入 `registerAllHandlers`                        |
+| R6   | `rpc/require-api-client`     | 前端禁止绕过 `apiClient` 直接操作 WebSocket                   |
 
 ---
 
@@ -390,8 +399,10 @@ const safeCommand = validateCommand(params.command); // 不安全会 throw
 ```typescript
 // 1. 创建 mock server
 const mockServer = {
-  register: vi.fn((method, handler) => { registeredHandlers[method] = handler; }),
-  emitEvent: vi.fn(),
+	register: vi.fn((method, handler) => {
+		registeredHandlers[method] = handler;
+	}),
+	emitEvent: vi.fn(),
 };
 
 // 2. 导入并注册
@@ -419,7 +430,7 @@ const result = await registeredHandlers["xxx.list"]({});
 
 ```typescript
 // ❌ 忘记了
-export interface RPCMethods extends AnyMethods, SystemMethods, /* 缺少 XxxMethods */ {}
+export interface RPCMethods extends AnyMethods, SystemMethods /* 缺少 XxxMethods */ {}
 
 // ✅ 正确
 export interface RPCMethods extends AnyMethods, SystemMethods, /* ... */ XxxMethods {}

@@ -1,5 +1,6 @@
 ---
 name: pi-fullstack-debug
+version: "1.0.0"
 description: >
   Pi Agent 全栈调试指南。从前端到 RPC 通信到后端的完整调试链路。
   当用户遇到"接口调用失败"、"WebSocket 断连"、"功能不工作"、"数据不对"、
@@ -24,18 +25,18 @@ description: >
 
 关键文件：
 
-| 层级 | 文件 | 职责 |
-|------|------|------|
-| API 客户端 | `templates/agent/src/mainview/lib/api-client.ts` | RPC 调用入口，自动选择 IPC/WS |
-| RPC 缓存 | `templates/agent/src/mainview/lib/rpc-cache.ts` | GET 类方法缓存（TTL 2-5s） |
-| 连接管理 | `templates/agent/src/mainview/stores/use-connection-store.ts` | 连接初始化、重试、状态 |
-| WebSocket 传输 | `packages/rpc-core/src/transports/websocket.ts` | WS 连接、心跳、重连 |
-| 服务端入口 | `templates/agent/src/server.ts` | HTTP + WS 网关，端口自动协商 |
-| WS 处理 | `templates/agent/src/gateway/ws-handler.ts` | 认证、方法路由、事件推送 |
-| HTTP 路由 | `templates/agent/src/gateway/http-routes.ts` | 文件端点 /file/{path}, /info/{path} |
-| 路径安全 | `templates/agent/src/shared/lib/path-security.ts` | 沙箱限制，防止路径穿越 |
-| Bash 安全 | `templates/agent/src/shared/lib/bash-security.ts` | 命令黑名单，危险命令拦截 |
-| RPC Schema | `templates/agent/src/shared/rpc-schema.ts` | 所有方法和事件的类型定义 |
+| 层级           | 文件                                                          | 职责                                |
+| -------------- | ------------------------------------------------------------- | ----------------------------------- |
+| API 客户端     | `templates/agent/src/mainview/lib/api-client.ts`              | RPC 调用入口，自动选择 IPC/WS       |
+| RPC 缓存       | `templates/agent/src/mainview/lib/rpc-cache.ts`               | GET 类方法缓存（TTL 2-5s）          |
+| 连接管理       | `templates/agent/src/mainview/stores/use-connection-store.ts` | 连接初始化、重试、状态              |
+| WebSocket 传输 | `packages/rpc-core/src/transports/websocket.ts`               | WS 连接、心跳、重连                 |
+| 服务端入口     | `templates/agent/src/server.ts`                               | HTTP + WS 网关，端口自动协商        |
+| WS 处理        | `templates/agent/src/gateway/ws-handler.ts`                   | 认证、方法路由、事件推送            |
+| HTTP 路由      | `templates/agent/src/gateway/http-routes.ts`                  | 文件端点 /file/{path}, /info/{path} |
+| 路径安全       | `templates/agent/src/shared/lib/path-security.ts`             | 沙箱限制，防止路径穿越              |
+| Bash 安全      | `templates/agent/src/shared/lib/bash-security.ts`             | 命令黑名单，危险命令拦截            |
+| RPC Schema     | `templates/agent/src/shared/rpc-schema.ts`                    | 所有方法和事件的类型定义            |
 
 ## 常见问题分类与排查
 
@@ -52,6 +53,7 @@ description: >
 5. **检查 i18n** — 文本不显示可能是 key 缺失，查看 Console 中的 i18n fallback 警告
 
 常见原因：
+
 - Store 未初始化（`initializeConnection` 未调用）
 - 条件渲染依赖的 state 为 null/undefined
 - CSS 变量未在两个主题中定义
@@ -74,6 +76,7 @@ description: >
 6. **检查重连逻辑** — `WebSocketTransport` 默认最多重连 10 次，指数退避 3s→30s
 
 常见原因：
+
 - 后端未启动或端口冲突（`findAvailablePort` 从 3100 开始尝试）
 - Token 不匹配（前端 Token ≠ 服务端配置的 Token）
 - Vite 代理路径不匹配（`/ws` → `/` rewrite 缺失）
@@ -96,26 +99,29 @@ description: >
 **症状：** "Access denied: path outside allowed roots"、"Command blocked for safety"
 
 **路径安全** (`path-security.ts`)：
+
 - 只允许访问 `allowedRoots` 下的路径（默认 `process.cwd()`）
 - 拦截 null bytes、路径穿越（`../`）
 - `validatePath()` 会在 resolve 后检查是否在允许范围内
 
 **Bash 安全** (`bash-security.ts`)：
+
 - 黑名单模式：`rm -rf /`、`mkfs`、`dd if=`、`shutdown`、`reboot`、fork bomb 等
 - 可选白名单模式：设置 `allowedCommands` 后只允许指定命令
 - `isCommandAllowed()` 先检查黑名单再检查白名单
 
 排查：
+
 ```typescript
 import { isRpcPathAllowed, setAllowedRoots } from "../shared/lib/path-security";
 import { isCommandAllowed, setCommandPolicy } from "../shared/lib/bash-security";
 
 // 调试路径
-isRpcPathAllowed("/some/path");  // false 说明被拦截
-setAllowedRoots(["/expanded/path"]);  // 扩展允许范围
+isRpcPathAllowed("/some/path"); // false 说明被拦截
+setAllowedRoots(["/expanded/path"]); // 扩展允许范围
 
 // 调试命令
-isCommandAllowed("rm -rf /tmp/test");  // 检查是否被拦截
+isCommandAllowed("rm -rf /tmp/test"); // 检查是否被拦截
 ```
 
 ### 5. 状态管理问题
@@ -123,6 +129,7 @@ isCommandAllowed("rm -rf /tmp/test");  // 检查是否被拦截
 **症状：** 数据不对、重复渲染、状态不更新
 
 排查：
+
 1. **Console 中查看 Store** — `useXxxStore.getState()`
 2. **检查订阅** — 确认组件用 selector 订阅正确的 state slice
 3. **检查缓存** — `rpcCache` 默认 TTL 2s，可缓存的方法见 `CACHEABLE_METHODS`
@@ -134,6 +141,7 @@ isCommandAllowed("rm -rf /tmp/test");  // 检查是否被拦截
 **症状：** UI 卡顿、内存持续增长
 
 排查：
+
 1. **React DevTools Profiler** — 检查慢渲染组件
 2. **检查 Bash 输出** — 长时间运行的命令输出会无限累积，考虑截断
 3. **检查 Chat 消息** — 长对话的消息列表可能很大，确认有虚拟化
@@ -169,6 +177,7 @@ npx playwright test               # 运行 E2E
 ```
 
 **E2E 无后端 Mock 方案：** E2E 测试依赖真实后端。如果只想测试 UI，可：
+
 1. 启动真实后端 `bun run server.ts`
 2. 或用 MSW 拦截 WS 消息（复杂，不推荐）
 3. 或在测试 setup 中 mock `apiClient` 模块
@@ -180,14 +189,14 @@ npx playwright test               # 运行 E2E
 - **Console**：
   ```javascript
   // 检查连接
-  useConnectionStore.getState()
+  useConnectionStore.getState();
   // 检查任意 Store
-  useXxxStore.getState()
+  useXxxStore.getState();
   // 清除 RPC 缓存
-  rpcCache.clear()
+  rpcCache.clear();
   // 检查 API client 状态
-  apiClient.isConnected()
-  apiClient.getTransport()
+  apiClient.isConnected();
+  apiClient.getTransport();
   ```
 
 ## 安全机制
@@ -215,11 +224,11 @@ npx playwright test               # 运行 E2E
 
 详见 [references/known-issues.md](references/known-issues.md)
 
-| 问题 | 症状 | 快速修复 |
-|------|------|----------|
-| WS 重连后订阅丢失 | 重连后事件不推送 | 需在 `onReconnect` 中重新订阅 |
-| Bash 输出无限增长 | BashPanel 卡顿 | 截断输出或限制缓冲区 |
-| 端口冲突 | 启动失败 / 连接失败 | 清理残留进程 `kill $(lsof -t -i:3100-3110)` |
-| Vite 代理路径不匹配 | 永远显示 "Connecting..." | 确认 `vite.config.ts` 的 rewrite 规则 |
-| 长对话卡顿 | ChatPanel 渲染慢 | 消息虚拟化或限制显示条数 |
-| E2E 多 agent 干扰 | 浏览器页面跳转 about:blank | 用隔离 `AGENT_BROWSER_SOCKET_DIR` |
+| 问题                | 症状                       | 快速修复                                    |
+| ------------------- | -------------------------- | ------------------------------------------- |
+| WS 重连后订阅丢失   | 重连后事件不推送           | 需在 `onReconnect` 中重新订阅               |
+| Bash 输出无限增长   | BashPanel 卡顿             | 截断输出或限制缓冲区                        |
+| 端口冲突            | 启动失败 / 连接失败        | 清理残留进程 `kill $(lsof -t -i:3100-3110)` |
+| Vite 代理路径不匹配 | 永远显示 "Connecting..."   | 确认 `vite.config.ts` 的 rewrite 规则       |
+| 长对话卡顿          | ChatPanel 渲染慢           | 消息虚拟化或限制显示条数                    |
+| E2E 多 agent 干扰   | 浏览器页面跳转 about:blank | 用隔离 `AGENT_BROWSER_SOCKET_DIR`           |

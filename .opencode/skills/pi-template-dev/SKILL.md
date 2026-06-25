@@ -1,5 +1,6 @@
 ---
 name: pi-template-dev
+version: "1.0.0"
 description: >
   Pi Agent 模板的开发和维护规范。涵盖主题系统（CSS 变量）、i18n 国际化、组件开发、
   Zustand Store 管理、测试编写等完整规范。
@@ -14,11 +15,11 @@ description: >
 
 项目包含 3 种模板类型，位于 `templates/` 目录：
 
-| 模板 | 定位 | 适用场景 |
-|------|------|----------|
-| `agent` | 编码 Agent 模板（功能最全） | AI Coding Agent、自动化工具 |
-| `chat` | 对话型模板 | AI Chatbot、对话式交互应用 |
-| `general` | 全功能模板 | 通用桌面应用开发 |
+| 模板      | 定位                        | 适用场景                    |
+| --------- | --------------------------- | --------------------------- |
+| `agent`   | 编码 Agent 模板（功能最全） | AI Coding Agent、自动化工具 |
+| `chat`    | 对话型模板                  | AI Chatbot、对话式交互应用  |
+| `general` | 全功能模板                  | 通用桌面应用开发            |
 
 ### 技术栈
 
@@ -89,45 +90,47 @@ templates/agent/src/mainview/
 
 ### 2.2 完整 CSS 变量列表（30 个）
 
-| 类别 | 变量名 | Light 值 | Dark 值 |
-|------|--------|----------|---------|
-| 背景 | `--color-bg-primary` | `#ffffff` | `#111827` |
-| 背景 | `--color-bg-secondary` | `#f3f4f6` | `#1f2937` |
-| 背景 | `--color-bg-tertiary` | `#e5e7eb` | `#374151` |
-| 背景 | `--color-bg-input` | `#f9fafb` | `#374151` |
-| 背景 | `--color-bg-hover` | `#e5e7eb` | `#4b5563` |
-| 背景 | `--color-bg-active` | `#d1d5db` | `#6b7280` |
-| 背景 | `--color-bg-sidebar` | `#f3f4f6` | `#1f2937` |
-| 背景 | `--color-bg-overlay` | `rgba(0,0,0,0.5)` | `rgba(0,0,0,0.7)` |
-| 文字 | `--color-text-primary` | `#111827` | `#ffffff` |
-| 文字 | `--color-text-secondary` | `#4b5563` | `#d1d5db` |
-| 文字 | `--color-text-tertiary` | `#9ca3af` | `#6b7280` |
-| 文字 | `--color-text-placeholder` | `#6b7280` | `#9ca3af` |
-| 文字 | `--color-text-accent` | `#4f46e5` | `#818cf8` |
-| 文字 | `--color-text-success` | `#16a34a` | `#4ade80` |
-| 文字 | `--color-text-error` | `#dc2626` | `#f87171` |
-| 文字 | `--color-text-info` | `#0891b2` | `#22d3ee` |
-| 边框 | `--color-border-primary` | `#d1d5db` | `#374151` |
-| 边框 | `--color-border-secondary` | `#e5e7eb` | `#4b5563` |
-| 强调 | `--color-accent` | `#4f46e5` | `#6366f1` |
-| 强调 | `--color-accent-hover` | `#4338ca` | `#4f46e5` |
-| 徽章 | `--color-badge-bg` | `#e0e7ff` | `#312e81` |
-| 徽章 | `--color-badge-text` | `#3730a3` | `#a5b4fc` |
+| 类别 | 变量名                     | Light 值          | Dark 值           |
+| ---- | -------------------------- | ----------------- | ----------------- |
+| 背景 | `--color-bg-primary`       | `#ffffff`         | `#111827`         |
+| 背景 | `--color-bg-secondary`     | `#f3f4f6`         | `#1f2937`         |
+| 背景 | `--color-bg-tertiary`      | `#e5e7eb`         | `#374151`         |
+| 背景 | `--color-bg-input`         | `#f9fafb`         | `#374151`         |
+| 背景 | `--color-bg-hover`         | `#e5e7eb`         | `#4b5563`         |
+| 背景 | `--color-bg-active`        | `#d1d5db`         | `#6b7280`         |
+| 背景 | `--color-bg-sidebar`       | `#f3f4f6`         | `#1f2937`         |
+| 背景 | `--color-bg-overlay`       | `rgba(0,0,0,0.5)` | `rgba(0,0,0,0.7)` |
+| 文字 | `--color-text-primary`     | `#111827`         | `#ffffff`         |
+| 文字 | `--color-text-secondary`   | `#4b5563`         | `#d1d5db`         |
+| 文字 | `--color-text-tertiary`    | `#9ca3af`         | `#6b7280`         |
+| 文字 | `--color-text-placeholder` | `#6b7280`         | `#9ca3af`         |
+| 文字 | `--color-text-accent`      | `#4f46e5`         | `#818cf8`         |
+| 文字 | `--color-text-success`     | `#16a34a`         | `#4ade80`         |
+| 文字 | `--color-text-error`       | `#dc2626`         | `#f87171`         |
+| 文字 | `--color-text-info`        | `#0891b2`         | `#22d3ee`         |
+| 边框 | `--color-border-primary`   | `#d1d5db`         | `#374151`         |
+| 边框 | `--color-border-secondary` | `#e5e7eb`         | `#4b5563`         |
+| 强调 | `--color-accent`           | `#4f46e5`         | `#6366f1`         |
+| 强调 | `--color-accent-hover`     | `#4338ca`         | `#4f46e5`         |
+| 徽章 | `--color-badge-bg`         | `#e0e7ff`         | `#312e81`         |
+| 徽章 | `--color-badge-text`       | `#3730a3`         | `#a5b4fc`         |
 
 ### 2.3 使用方式
 
 CSS 中：
+
 ```css
 .my-element {
-  background-color: var(--color-bg-primary);
-  color: var(--color-text-primary);
-  border: 1px solid var(--color-border-primary);
+	background-color: var(--color-bg-primary);
+	color: var(--color-text-primary);
+	border: 1px solid var(--color-border-primary);
 }
 ```
 
 Tailwind 中：
+
 ```html
-<div className="bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]">
+<div className="bg-[var(--color-bg-primary)] text-[var(--color-text-primary)]"></div>
 ```
 
 ### 2.4 主题切换
@@ -164,23 +167,23 @@ const setTheme = useThemeStore((s) => s.setTheme);
 
 ### 3.2 Key 命名规范
 
-| 模块 | Key 格式 | 示例 |
-|------|----------|------|
-| 全局 | `common.xxx` | `common.loading`, `common.cancel` |
-| 应用 | `app.xxx` | `app.title`, `app.connecting` |
-| 侧边栏 | `sidebar.xxx` | `sidebar.explorer` |
-| 标签页 | `tabs.xxx` | `tabs.chat` |
-| 聊天 | `chat.xxx` | `chat.placeholder` |
-| 资源管理器 | `explorer.xxx` | `explorer.newFile` |
-| Git | `git.xxx` | `git.staged` |
-| Feed | `feed.xxx` | `feed.newPost` |
-| Todo | `todo.xxx` | `todo.add` |
-| 规则 | `rules.xxx` | `rules.pattern` |
-| 主题 | `theme.xxx` | `theme.light` |
-| 语言 | `locale.xxx` | `locale.en` |
-| Bash | `bash.xxx` | `bash.run` |
-| Diff | `diff.xxx` | `diff.lineByLine` |
-| Debug | `debug.xxx` | `debug.rpcCalls` |
+| 模块       | Key 格式       | 示例                              |
+| ---------- | -------------- | --------------------------------- |
+| 全局       | `common.xxx`   | `common.loading`, `common.cancel` |
+| 应用       | `app.xxx`      | `app.title`, `app.connecting`     |
+| 侧边栏     | `sidebar.xxx`  | `sidebar.explorer`                |
+| 标签页     | `tabs.xxx`     | `tabs.chat`                       |
+| 聊天       | `chat.xxx`     | `chat.placeholder`                |
+| 资源管理器 | `explorer.xxx` | `explorer.newFile`                |
+| Git        | `git.xxx`      | `git.staged`                      |
+| Feed       | `feed.xxx`     | `feed.newPost`                    |
+| Todo       | `todo.xxx`     | `todo.add`                        |
+| 规则       | `rules.xxx`    | `rules.pattern`                   |
+| 主题       | `theme.xxx`    | `theme.light`                     |
+| 语言       | `locale.xxx`   | `locale.en`                       |
+| Bash       | `bash.xxx`     | `bash.run`                        |
+| Diff       | `diff.xxx`     | `diff.lineByLine`                 |
+| Debug      | `debug.xxx`    | `debug.rpcCalls`                  |
 
 ### 3.3 组件中使用
 
@@ -238,12 +241,12 @@ components/chat/
 
 ### 4.2 memo / useMemo / useCallback 使用时机
 
-| 场景 | 用什么 | 条件 |
-|------|--------|------|
-| 纯展示组件，props 不常变 | `React.memo()` | 列表项、气泡等 |
-| 计算量较大的派生值 | `useMemo()` | 过滤/排序大数组 |
-| 传递给子组件的回调 | `useCallback()` | 事件处理器 |
-| 简单状态/频繁变化 | 不优化 | 避免 memo 滥用 |
+| 场景                     | 用什么          | 条件            |
+| ------------------------ | --------------- | --------------- |
+| 纯展示组件，props 不常变 | `React.memo()`  | 列表项、气泡等  |
+| 计算量较大的派生值       | `useMemo()`     | 过滤/排序大数组 |
+| 传递给子组件的回调       | `useCallback()` | 事件处理器      |
+| 简单状态/频繁变化        | 不优化          | 避免 memo 滥用  |
 
 ### 4.3 虚拟化列表
 
@@ -253,9 +256,9 @@ components/chat/
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 const virtualizer = useVirtualizer({
-  count: items.length,
-  getScrollElement: () => parentRef.current,
-  estimateSize: () => 40,
+	count: items.length,
+	getScrollElement: () => parentRef.current,
+	estimateSize: () => 40,
 });
 ```
 
@@ -275,11 +278,11 @@ const DebugPanel = React.lazy(() => import("../debug/DebugPanel"));
 
 `components/common/` 下已有可复用组件：
 
-| 组件 | 用途 |
-|------|------|
+| 组件            | 用途                     |
+| --------------- | ------------------------ |
 | `ConfirmDialog` | 确认对话框（删除等操作） |
-| `ContextMenu` | 右键菜单 |
-| `InlineInput` | 行内编辑输入框 |
+| `ContextMenu`   | 右键菜单                 |
+| `InlineInput`   | 行内编辑输入框           |
 
 新功能优先使用这些通用组件，避免重复实现。
 
@@ -293,32 +296,32 @@ const DebugPanel = React.lazy(() => import("../debug/DebugPanel"));
 import { create } from "zustand";
 
 interface XxxState {
-  // 数据字段
-  items: Item[];
-  loading: boolean;
-  // Action 方法
-  setItems: (items: Item[]) => void;
-  addItem: (item: Item) => void;
-  fetchItems: () => Promise<void>;
+	// 数据字段
+	items: Item[];
+	loading: boolean;
+	// Action 方法
+	setItems: (items: Item[]) => void;
+	addItem: (item: Item) => void;
+	fetchItems: () => Promise<void>;
 }
 
 export const useXxxStore = create<XxxState>((set, get) => ({
-  items: [],
-  loading: false,
+	items: [],
+	loading: false,
 
-  setItems: (items) => set({ items }),
-  addItem: (item) => set((s) => ({ items: [...s.items, item] })),
-  fetchItems: async () => {
-    set({ loading: true });
-    try {
-      const result = await apiClient.call("module.list", {});
-      set({ items: result.items });
-    } catch (err) {
-      useLogStore.getState().addLog(`Error: ${err instanceof Error ? err.message : String(err)}`);
-    } finally {
-      set({ loading: false });
-    }
-  },
+	setItems: (items) => set({ items }),
+	addItem: (item) => set((s) => ({ items: [...s.items, item] })),
+	fetchItems: async () => {
+		set({ loading: true });
+		try {
+			const result = await apiClient.call("module.list", {});
+			set({ items: result.items });
+		} catch (err) {
+			useLogStore.getState().addLog(`Error: ${err instanceof Error ? err.message : String(err)}`);
+		} finally {
+			set({ loading: false });
+		}
+	},
 }));
 ```
 
@@ -337,9 +340,7 @@ export const useXxxStore = create<XxxState>((set, get) => ({
 ```typescript
 import { useShallow } from "zustand/react/shallow";
 
-const { items, loading } = useXxxStore(
-  useShallow((s) => ({ items: s.items, loading: s.loading }))
-);
+const { items, loading } = useXxxStore(useShallow((s) => ({ items: s.items, loading: s.loading })));
 ```
 
 ### 5.4 测试 Store
@@ -348,17 +349,19 @@ const { items, loading } = useXxxStore(
 
 ```typescript
 vi.mock("../../lib/api-client", () => ({
-  apiClient: {
-    call: vi.fn().mockResolvedValue({ /* mock data */ }),
-    subscribe: vi.fn().mockResolvedValue("sub-id"),
-    unsubscribe: vi.fn(),
-  },
+	apiClient: {
+		call: vi.fn().mockResolvedValue({
+			/* mock data */
+		}),
+		subscribe: vi.fn().mockResolvedValue("sub-id"),
+		unsubscribe: vi.fn(),
+	},
 }));
 
 it("should work", async () => {
-  const { useXxxStore } = await import("../use-xxx-store");
-  const state = useXxxStore.getState();
-  expect(state.items).toEqual([]);
+	const { useXxxStore } = await import("../use-xxx-store");
+	const state = useXxxStore.getState();
+	expect(state.items).toEqual([]);
 });
 ```
 
@@ -386,29 +389,29 @@ npx playwright test                               # E2E 测试
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("../../lib/api-client", () => ({
-  apiClient: {
-    call: vi.fn().mockResolvedValue({ pong: true }),
-    subscribe: vi.fn().mockResolvedValue("sub-id"),
-    unsubscribe: vi.fn(),
-  },
+	apiClient: {
+		call: vi.fn().mockResolvedValue({ pong: true }),
+		subscribe: vi.fn().mockResolvedValue("sub-id"),
+		unsubscribe: vi.fn(),
+	},
 }));
 
 vi.mock("./use-log-store", () => ({
-  useLogStore: {
-    getState: () => ({ addLog: vi.fn() }),
-  },
+	useLogStore: {
+		getState: () => ({ addLog: vi.fn() }),
+	},
 }));
 
 describe("useXxxStore", () => {
-  beforeEach(async () => {
-    vi.resetModules();
-  });
+	beforeEach(async () => {
+		vi.resetModules();
+	});
 
-  it("should have initial state", async () => {
-    const { useXxxStore } = await import("../use-xxx-store");
-    const state = useXxxStore.getState();
-    expect(state.items).toEqual([]);
-  });
+	it("should have initial state", async () => {
+		const { useXxxStore } = await import("../use-xxx-store");
+		const state = useXxxStore.getState();
+		expect(state.items).toEqual([]);
+	});
 });
 ```
 
@@ -416,16 +419,16 @@ describe("useXxxStore", () => {
 
 ```typescript
 vi.mock("@tanstack/react-virtual", () => ({
-  useVirtualizer: ({ count }: { count: number }) => ({
-    getTotalSize: () => count * 40,
-    getVirtualItems: () =>
-      Array.from({ length: count }, (_, i) => ({
-        index: i,
-        start: i * 40,
-        size: 40,
-        key: i,
-      })),
-  }),
+	useVirtualizer: ({ count }: { count: number }) => ({
+		getTotalSize: () => count * 40,
+		getVirtualItems: () =>
+			Array.from({ length: count }, (_, i) => ({
+				index: i,
+				start: i * 40,
+				size: 40,
+				key: i,
+			})),
+	}),
 }));
 ```
 
@@ -433,21 +436,21 @@ vi.mock("@tanstack/react-virtual", () => ({
 
 ```typescript
 class MockWebSocket {
-  static CONNECTING = 0;
-  static OPEN = 1;
-  static CLOSING = 2;
-  static CLOSED = 3;
-  readyState = MockWebSocket.OPEN;
-  send = vi.fn();
-  close = vi.fn();
-  onopen: (() => void) | null = null;
-  onmessage: ((ev: { data: string }) => void) | null = null;
-  onerror: ((ev: { error: Error }) => void) | null = null;
-  onclose: (() => void) | null = null;
+	static CONNECTING = 0;
+	static OPEN = 1;
+	static CLOSING = 2;
+	static CLOSED = 3;
+	readyState = MockWebSocket.OPEN;
+	send = vi.fn();
+	close = vi.fn();
+	onopen: (() => void) | null = null;
+	onmessage: ((ev: { data: string }) => void) | null = null;
+	onerror: ((ev: { error: Error }) => void) | null = null;
+	onclose: (() => void) | null = null;
 
-  constructor(public url: string) {
-    setTimeout(() => this.onopen?.(), 0);
-  }
+	constructor(public url: string) {
+		setTimeout(() => this.onopen?.(), 0);
+	}
 }
 ```
 
@@ -509,5 +512,6 @@ chore: update dependencies
 ### Pre-commit 自动检查
 
 Husky 自动运行：
+
 - lint-staged（ESLint on staged files）
 - TypeScript type-check on core packages
