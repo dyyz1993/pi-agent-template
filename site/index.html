@@ -334,7 +334,7 @@
 						<span class="prompt">$</span>curl -fsSL
 						https://raw.githubusercontent.com/dyyz1993/pi-agent-template/main/skills-dist/install.sh
 						| bash
-						<button class="copy-btn" onclick="copyCmd(this)">复制</button>
+						<button class="copy-btn" onclick="copyCmd(this, 'install')">复制</button>
 					</div>
 				</div>
 				<p class="hint">
@@ -438,6 +438,37 @@
 			</div>
 		</section>
 
+		<!-- VERIFY -->
+		<section class="section" style="border-top: 1px solid var(--border)">
+			<div class="container">
+				<h2>🔍 验证模式：让另一个 AI 来审计这些 Skill</h2>
+				<p class="lead">
+					复制下面这行 URL，丢给另一个 AI 助手。它会自动拉项目、装技能、逐条验证每个 skill
+					的内容是否与项目实际一致，然后出报告、清理环境。
+				</p>
+
+				<div class="oneliner-wrap" style="margin-top: 40px">
+					<div class="oneliner" id="verify-url">
+						<span class="prompt" style="color: var(--accent-hover)">URL</span
+						>https://raw.githubusercontent.com/dyyz1993/pi-agent-template/main/skills-dist/VERIFY.md
+						<button class="copy-btn" onclick="copyCmd(this, 'verify')">复制</button>
+					</div>
+				</div>
+				<p class="hint">
+					把这个 URL 粘贴给另一个 AI，它会自动完成：克隆 → 安装技能 → 逐项验证 → 出报告 → 清理
+				</p>
+
+				<div class="cta-row" style="margin-top: 12px">
+					<a
+						class="btn btn-ghost"
+						href="https://raw.githubusercontent.com/dyyz1993/pi-agent-template/main/skills-dist/VERIFY.md"
+						target="_blank"
+						>预览 VERIFY.md →</a
+					>
+				</div>
+			</div>
+		</section>
+
 		<!-- FOOTER -->
 		<footer>
 			<div class="container">
@@ -457,9 +488,14 @@
 		</footer>
 
 		<script>
-			function copyCmd(btn) {
-				const text =
-					"curl -fsSL https://raw.githubusercontent.com/dyyz1993/pi-agent-template/main/skills-dist/install.sh | bash";
+			function copyCmd(btn, type) {
+				const texts = {
+					install:
+						"curl -fsSL https://raw.githubusercontent.com/dyyz1993/pi-agent-template/main/skills-dist/install.sh | bash",
+					verify:
+						"https://raw.githubusercontent.com/dyyz1993/pi-agent-template/main/skills-dist/VERIFY.md",
+				};
+				const text = texts[type] || texts.install;
 				navigator.clipboard.writeText(text).then(() => {
 					const orig = btn.textContent;
 					btn.textContent = "✓ 已复制";
