@@ -73,32 +73,38 @@ export function ChatPanel() {
 		try {
 			// 订阅 Agent 事件
 			const s1 = await apiClient.subscribe("browser.toolCall", (evt: any) => {
+				console.debug("[Chat] browser.toolCall", evt);
 				if (evt.messageId === messageId) pushToolCall(evt.toolCall);
 			});
 			subs.push(s1);
 
 			const s2 = await apiClient.subscribe("browser.toolResult", (evt: any) => {
+				console.debug("[Chat] browser.toolResult", evt);
 				if (evt.messageId === messageId)
 					updateToolCall(evt.toolCallId, evt.output);
 			});
 			subs.push(s2);
 
 			const s3 = await apiClient.subscribe("browser.thinking", (evt: any) => {
+				console.debug("[Chat] browser.thinking", evt);
 				if (evt.messageId === messageId) appendThinking(evt.delta);
 			});
 			subs.push(s3);
 
 			const s4 = await apiClient.subscribe("browser.textDelta", (evt: any) => {
+				console.debug("[Chat] browser.textDelta", evt);
 				if (evt.messageId === messageId) appendText(evt.delta);
 			});
 			subs.push(s4);
 
 			const s5 = await apiClient.subscribe("browser.turn", (evt: any) => {
+				console.debug("[Chat] browser.turn", evt);
 				if (evt.messageId === messageId) markTurnDone(evt.turn);
 			});
 			subs.push(s5);
 
 			const s6 = await apiClient.subscribe("browser.done", async (evt: any) => {
+				console.debug("[Chat] browser.done", evt);
 				if (evt.messageId === messageId) {
 					patchLastAgent({ text: evt.reply, steps: evt.steps });
 					setRunning(false);

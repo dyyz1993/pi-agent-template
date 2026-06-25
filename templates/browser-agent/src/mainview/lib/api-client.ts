@@ -81,6 +81,12 @@ class BrowserSseTransport implements Transport {
 		es.onmessage = (ev: MessageEvent) => {
 			try {
 				const msg = JSON.parse(ev.data);
+				// Debug: log SSE messages to console for troubleshooting
+				if (msg.type === "event") {
+					console.debug(`[SSE] event: ${msg.eventType}`, msg.payload);
+				} else if (msg.type === "response") {
+					console.debug(`[SSE] response: ${msg.id}`, msg.result || msg.error);
+				}
 				for (const handler of [...this.messageHandlers]) {
 					handler(msg);
 				}
