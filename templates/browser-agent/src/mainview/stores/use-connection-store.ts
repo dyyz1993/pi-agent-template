@@ -10,6 +10,9 @@ export interface BrowserTab {
 	active: boolean;
 }
 
+// 轮询定时器（模块级，避免重复创建）
+let _pollTimer: ReturnType<typeof setInterval> | null = null;
+
 interface ConnectionState {
 	mode: "web" | "desktop";
 	ready: boolean;
@@ -36,6 +39,8 @@ interface ConnectionState {
 	initializeConnection: () => void;
 	checkBrowser: () => Promise<void>;
 	loadTabs: () => Promise<void>;
+	startConnectionPolling: () => void;
+	stopConnectionPolling: () => void;
 }
 
 export const useConnectionStore = create<ConnectionState>((set, get) => ({
@@ -94,6 +99,9 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 				await get().checkBrowser();
 				if (get().browserStatus === "online") {
 					await get().loadTabs();
+				} else {
+					// 未连接 → 启动轮询，用户装好扩展后自动发现
+					get().startConnectionPolling();
 				}
 			} catch {
 				retries++;
@@ -112,10 +120,15 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 	checkBrowser: async () => {
 		try {
 			const result = await apiClient.call("browser.checkConnection", {});
+			const wasOffline = get().browserStatus === "offline";
 			set({
 				browserStatus: result.connected ? "online" : "offline",
 				browsers: result.browsers,
 			});
+			// 刚连上时，立即加载标签页
+			if (wasOffline && result.connected) {
+				await get().loadTabs();
+			}
 		} catch {
 			set({ browserStatus: "offline", browsers: [] });
 		}
@@ -127,6 +140,34 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 			set({ tabs: result.tabs, activeTabIndex: result.activeIndex });
 		} catch (err) {
 			networkBus.emitStatus(`加载标签页失败: ${err instanceof Error ? err.message : String(err)}`);
+		}
+	},
+
+	/**
+	 * 启动连接轮询 — 未连接时每 3 秒检测一次，连上后停止。
+	 * 用户安装扩展后会自动发现。
+	 */
+	startConnectionPolling: () => {
+		// 已连接就不轮询
+		if (get().browserStatus === "online") return;
+		if (_pollTimer) return; // 已有轮询在跑
+
+		_pollTimer = setInterval(async () => {
+			await get().checkBrowser();
+			// 连上了就停止轮询
+			if (get().browserStatus === "online") {
+				if (_pollTimer) {
+					clearInterval(_pollTimer);
+					_pollTimer = null;
+				}
+			}
+		}, 3000);
+	},
+
+	stopConnectionPolling: () => {
+		if (_pollTimer) {
+			clearInterval(_pollTimer);
+			_pollTimer = null;
 		}
 	},
 }));

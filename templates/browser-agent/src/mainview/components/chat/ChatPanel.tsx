@@ -13,7 +13,6 @@ import { useSessionStore } from "../../stores/use-session-store";
 import { useConnectionStore } from "../../stores/use-connection-store";
 import { MessageBubble } from "./MessageBubble";
 import { CommandBar } from "./CommandBar";
-import { ConnectBanner } from "../onboarding/ConnectBanner";
 import { apiClient } from "../../lib/api-client";
 
 export function ChatPanel() {
@@ -165,9 +164,6 @@ export function ChatPanel() {
 
 			{/* 消息区 */}
 			<div className="flex-1 overflow-y-auto px-4 py-4" ref={messagesEndRef}>
-				{/* 未连接引导横幅 */}
-				<ConnectBanner />
-
 				{messages.length === 0 ? (
 					<div className="flex items-center justify-center h-full text-center">
 						<div>

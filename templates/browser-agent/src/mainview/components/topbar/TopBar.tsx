@@ -5,12 +5,13 @@
  */
 
 import { useState, useEffect, useRef } from "react";
-import { Monitor, Wifi, WifiOff, ChevronDown, RefreshCw, Globe } from "lucide-react";
+import { Monitor, Wifi, WifiOff, ChevronDown, RefreshCw, Globe, Puzzle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useConnectionStore } from "../../stores/use-connection-store";
 import { ThemeToggle } from "../common/ThemeToggle";
 import { LanguageSwitcher } from "../common/LanguageSwitcher";
 import { NetworkToggleButton } from "../dev/NetworkPanel";
+import { SetupWizard } from "../onboarding/SetupWizard";
 
 export function TopBar() {
 	const { t } = useTranslation();
@@ -28,6 +29,7 @@ export function TopBar() {
 	const isOnline = browserStatus === "online";
 	const [tabDropdownOpen, setTabDropdownOpen] = useState(false);
 	const [refreshing, setRefreshing] = useState(false);
+	const [showSetup, setShowSetup] = useState(false);
 	const dropdownRef = useRef<HTMLDivElement>(null);
 
 	// 点击外部关闭下拉
@@ -106,6 +108,17 @@ export function TopBar() {
 					</>
 				)}
 			</span>
+
+			{/* 未连接时的安装入口 */}
+			{!isOnline && (
+				<button
+					onClick={() => setShowSetup(true)}
+					className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] rounded transition-colors text-white font-medium"
+				>
+					<Puzzle className="w-3 h-3" />
+					安装扩展
+				</button>
+			)}
 
 			{/* 标签页选择器（仅在线时显示） */}
 			{isOnline && tabs.length > 0 && (
@@ -229,6 +242,9 @@ export function TopBar() {
 				<LanguageSwitcher />
 				<ThemeToggle />
 			</div>
+
+			{/* 安装向导 Modal */}
+			{showSetup && <SetupWizard onClose={() => setShowSetup(false)} />}
 		</div>
 	);
 }
