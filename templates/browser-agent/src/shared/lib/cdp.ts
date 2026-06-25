@@ -432,14 +432,17 @@ export async function getOnlineBrowser(
 	_pluginId?: string,
 ): Promise<{ pluginId: string; name: string; tabs: number } | null> {
 	try {
-		const result = await xbrowserCli(["session", "list"]);
-		if (result && Array.isArray(result.sessions)) {
+		// 用 tab list 验证真实连接 — 能列出 tab 才说明 Chrome 真的连上了
+		const result = await xbrowserCli(["tab", "list"]);
+		if (result?.success && Array.isArray(result?.data?.tabs)) {
 			return {
 				pluginId: "xbrowser",
 				name: "xbrowser 引擎",
-				tabs: result.sessions.length || 1,
+				tabs: result.data.tabs.length,
 			};
 		}
-	} catch {}
-	return null;
+		return null;
+	} catch {
+		return null;
+	}
 }
