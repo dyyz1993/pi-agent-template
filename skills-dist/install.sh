@@ -79,9 +79,10 @@ TMP_DIR=""
 if [[ -n "$SOURCE_DIR" ]]; then
   info "Using local source: ${SOURCE_DIR}"
 else
-  # Find the repo root if running from a local checkout (skills-dist/install.sh)
-  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  if [[ -f "$SCRIPT_DIR/manifest.json" ]]; then
+  # Find the repo root if running from a local checkout (skills-dist/install.sh).
+  # When piped via `curl | bash`, BASH_SOURCE is empty — fall through to download.
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" 2>/dev/null && pwd)"
+  if [[ -n "$SCRIPT_DIR" && -f "$SCRIPT_DIR/manifest.json" ]]; then
     SOURCE_DIR="$SCRIPT_DIR"
     info "Running from local checkout: ${SOURCE_DIR}"
   else
