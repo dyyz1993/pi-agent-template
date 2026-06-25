@@ -29,6 +29,9 @@ function detectTemplateMeta(targetDir: string): TemplateMeta | null {
 		if (modules.has("bash") && modules.has("todo") && modules.has("rules")) {
 			return { templateType: "agent", projectName };
 		}
+		if (modules.has("browser")) {
+			return { templateType: "browser-agent", projectName };
+		}
 		if (modules.has("chat") && !modules.has("file") && !modules.has("git")) {
 			return { templateType: "chat", projectName };
 		}

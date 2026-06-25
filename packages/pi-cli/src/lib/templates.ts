@@ -27,6 +27,12 @@ const TEMPLATES: TemplateInfo[] = [
     available: true,
     dir: 'templates/agent',
   },
+  {
+    type: 'browser-agent',
+    description: 'Browser automation agent (AI-powered browser control + xbrowser + Desktop/Web)',
+    available: true,
+    dir: 'templates/browser-agent',
+  },
 ];
 
 export function getTemplateInfo(type: string): TemplateInfo | undefined {

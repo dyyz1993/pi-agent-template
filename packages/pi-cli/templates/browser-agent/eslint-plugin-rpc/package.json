@@ -1,0 +1,6 @@
+{
+  "name": "@dyyz1993/eslint-plugin-rpc",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js"
+}

@@ -64,6 +64,7 @@ describe('CLI argument parsing (list)', () => {
     expect(output).toContain('general');
     expect(output).toContain('chat');
     expect(output).toContain('agent');
+    expect(output).toContain('browser-agent');
     expect(output).toContain('Available templates');
 
     mockLog.mockRestore();
