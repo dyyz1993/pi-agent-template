@@ -1,81 +1,119 @@
 /**
- * OnboardingGuide — 浏览器未连接时的全屏引导
+ * OnboardingGuide — 浏览器未连接时的安装引导
  *
- * 对应 PRD §3.1 首次使用引导流程。
- * 检测 cdp-tunnel / xbrowser / Chrome 扩展状态，引导用户完成连接。
+ * 用户视角的三步引导（不暴露 CDP/tunnel/xbrowser 等技术概念）：
+ * 1. 创建连接 → 自动生成专属连接
+ * 2. 下载扩展 → 下载已配置好的 Chrome 扩展
+ * 3. 加载到 Chrome → 在 Chrome 中安装扩展，自动连接
+ *
+ * 对应 PRD §3.1 首次使用引导流程
  */
 
 import { useState, useEffect, useCallback } from "react";
 import {
 	Globe,
 	CheckCircle2,
-	XCircle,
 	Loader2,
 	RefreshCw,
-	AlertTriangle,
+	Download,
+	Key,
 	Puzzle,
+	ArrowRight,
+	ExternalLink,
 } from "lucide-react";
+import { useConnectionStore } from "../../stores/use-connection-store";
 import { apiClient } from "../../lib/api-client";
 
-interface GuideStep {
-	title: string;
-	detail: string;
-	done: boolean;
-}
-
-interface GuideInfo {
-	cdpEndpoint: string;
-	cdpTunnelRunning: boolean;
-	cdpTunnelVersion: string | null;
-	xbrowserVersion: string | null;
-	steps: GuideStep[];
-}
+type Step = "create" | "download" | "install";
 
 export function OnboardingGuide() {
-	const [guide, setGuide] = useState<GuideInfo | null>(null);
-	const [loading, setLoading] = useState(true);
+	const [step, setStep] = useState<Step>("create");
+	const [browserKey, setBrowserKey] = useState<string | null>(null);
+	const [creating, setCreating] = useState(false);
+	const [downloading, setDownloading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
 	const [checking, setChecking] = useState(false);
 
-	const fetchGuide = useCallback(async () => {
+	const checkBrowser = useConnectionStore((s) => s.checkBrowser);
+	const browserStatus = useConnectionStore((s) => s.browserStatus);
+
+	// 自动检测连接状态（扩展加载后会自动连上）
+	const handleCheck = useCallback(async (): Promise<void> => {
 		setChecking(true);
-		try {
-			const result = await apiClient.call("browser.getConnectionGuide", {});
-			setGuide(result);
-		} catch {
-			// 如果接口失败，展示基础引导
-			setGuide({
-				cdpEndpoint: "http://localhost:9221",
-				cdpTunnelRunning: false,
-				cdpTunnelVersion: null,
-				xbrowserVersion: null,
-				steps: [],
-			});
-		} finally {
-			setLoading(false);
-			setChecking(false);
-		}
-	}, []);
+		await checkBrowser();
+		setChecking(false);
+	}, [checkBrowser]);
 
 	useEffect(() => {
-		fetchGuide();
-		// 每 10 秒自动检测一次（等用户完成安装后自动刷新）
-		const interval = setInterval(fetchGuide, 10000);
+		// 每 5 秒自动检测（用户装好扩展后自动跳转）
+		const interval = setInterval(() => {
+			if (browserStatus !== "online") {
+				checkBrowser();
+			}
+		}, 5000);
 		return () => clearInterval(interval);
-	}, [fetchGuide]);
+	}, [browserStatus, checkBrowser]);
 
-	if (loading) {
-		return (
-			<div className="h-screen bg-[var(--color-bg-primary)] flex items-center justify-center">
-				<Loader2 className="w-6 h-6 animate-spin text-[var(--color-text-accent)]" />
-			</div>
-		);
-	}
+	const handleCreate = async (): Promise<void> => {
+		setCreating(true);
+		setError(null);
+		try {
+			const baseUrl = apiClient.getBaseUrl();
+			const token = apiClient.getAuthToken();
+			const res = await fetch(`${baseUrl}/api/create-browser?token=${token}`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ name: `Browser Agent` }),
+			});
+			if (!res.ok) throw new Error(`创建失败 (${res.status})`);
+			const data = await res.json();
+			if (data.key) {
+				setBrowserKey(data.key);
+				setStep("download");
+			} else {
+				throw new Error(data.error || "未返回 key");
+			}
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "创建连接失败");
+		} finally {
+			setCreating(false);
+		}
+	};
 
-	const allDone = guide?.steps.every((s) => s.done) ?? false;
+	const handleDownload = async (): Promise<void> => {
+		if (!browserKey) return;
+		setDownloading(true);
+		setError(null);
+		try {
+			const baseUrl = apiClient.getBaseUrl();
+			const token = apiClient.getAuthToken();
+			const res = await fetch(`${baseUrl}/api/pack-extension?token=${token}`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ key: browserKey }),
+			});
+			if (!res.ok) {
+				const errData = await res.json().catch(() => ({}));
+				throw new Error(errData.error || `下载失败 (${res.status})`);
+			}
+			const blob = await res.blob();
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = "browser-agent-extension.zip";
+			a.click();
+			URL.revokeObjectURL(url);
+			setStep("install");
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "下载扩展失败");
+		} finally {
+			setDownloading(false);
+		}
+	};
 
 	return (
 		<div className="h-screen bg-[var(--color-bg-primary)] flex items-center justify-center p-6 overflow-auto">
-			<div className="max-w-2xl w-full">
+			<div className="max-w-lg w-full">
 				{/* 标题 */}
 				<div className="text-center mb-8">
 					<div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[var(--color-accent)]/10 mb-4">
@@ -83,151 +121,184 @@ export function OnboardingGuide() {
 					</div>
 					<h1 className="text-2xl font-bold mb-2">连接你的浏览器</h1>
 					<p className="text-[var(--color-text-secondary)] text-sm">
-						Browser Agent 需要连接你的 Chrome 浏览器才能执行操作。按以下步骤完成连接。
+						安装 Chrome 扩展后，Browser Agent 就能自动操作你的浏览器。整个过程不到 1 分钟。
 					</p>
 				</div>
 
-				{/* 状态卡片 */}
-				<div className="bg-[var(--color-bg-sidebar)] border border-[var(--color-border-primary)] rounded-xl p-6 mb-6">
-					{/* cdp-tunnel 状态 */}
-					<div className="flex items-center justify-between py-2 border-b border-[var(--color-border-secondary)]">
-						<div className="flex items-center gap-3">
-							{guide?.cdpTunnelRunning ? (
-								<CheckCircle2 className="w-5 h-5 text-[var(--color-text-success)]" />
-							) : (
-								<XCircle className="w-5 h-5 text-[var(--color-text-error)]" />
-							)}
-							<div>
-								<div className="text-sm font-medium">cdp-tunnel</div>
-								<div className="text-xs text-[var(--color-text-tertiary)]">
-									{guide?.cdpTunnelRunning
-										? `运行中 · ${guide.cdpTunnelVersion || "已安装"}`
-										: "未运行 — 浏览器隧道服务"}
-								</div>
-							</div>
-						</div>
-						{!guide?.cdpTunnelRunning && (
-							<code className="text-xs px-2 py-1 bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-accent)]">
-								cdp-tunnel
-							</code>
-						)}
-					</div>
-
-					{/* xbrowser 状态 */}
-					<div className="flex items-center justify-between py-2 border-b border-[var(--color-border-secondary)]">
-						<div className="flex items-center gap-3">
-							{guide?.xbrowserVersion ? (
-								<CheckCircle2 className="w-5 h-5 text-[var(--color-text-success)]" />
-							) : (
-								<XCircle className="w-5 h-5 text-[var(--color-text-error)]" />
-							)}
-							<div>
-								<div className="text-sm font-medium">xbrowser CLI</div>
-								<div className="text-xs text-[var(--color-text-tertiary)]">
-									{guide?.xbrowserVersion
-										? `v${guide.xbrowserVersion} 已安装`
-										: "未安装 — 浏览器操作引擎"}
-								</div>
-							</div>
-						</div>
-						{!guide?.xbrowserVersion && (
-							<code className="text-xs px-2 py-1 bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-accent)]">
-								brew install xbrowser
-							</code>
-						)}
-					</div>
-
-					{/* Chrome 扩展状态 */}
-					<div className="flex items-center justify-between py-2">
-						<div className="flex items-center gap-3">
-						<div className="w-5 h-5 flex items-center justify-center">
-							<Puzzle className="w-4 h-4 text-[var(--color-text-tertiary)]" />
-						</div>
-							<div>
-								<div className="text-sm font-medium">Chrome 扩展</div>
-								<div className="text-xs text-[var(--color-text-tertiary)]">
-									连接你的 Chrome 到 cdp-tunnel
-								</div>
-							</div>
-						</div>
-						<span className="text-xs text-[var(--color-text-tertiary)]">需手动安装</span>
-					</div>
-				</div>
-
-				{/* 引导步骤 */}
-				{guide?.steps && guide.steps.length > 0 && !allDone && (
-					<div className="space-y-3 mb-6">
-						<div className="text-xs font-medium text-[var(--color-text-tertiary)] uppercase tracking-wide">
-							连接步骤
-						</div>
-						{guide.steps
-							.filter((s) => !s.done)
-							.map((step, i) => (
-								<div
-									key={i}
-									className="flex items-start gap-3 p-3 bg-[var(--color-bg-sidebar)] border border-[var(--color-border-primary)] rounded-lg"
-								>
-									<div className="w-6 h-6 rounded-full bg-[var(--color-accent)]/20 text-[var(--color-text-accent)] flex items-center justify-center text-xs font-bold flex-shrink-0">
-										{i + 1}
-									</div>
-									<div className="flex-1 min-w-0">
-										<div className="text-sm font-medium">{step.title}</div>
-										<div className="text-xs text-[var(--color-text-tertiary)] mt-0.5 font-mono break-all">
-											{step.detail}
-										</div>
-									</div>
-								</div>
-							))}
-					</div>
-				)}
-
-				{/* 注意事项 */}
-				{guide?.cdpTunnelRunning && !allDone && (
-					<div className="flex items-start gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg mb-6">
-						<AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
-						<div className="text-xs text-[var(--color-text-secondary)]">
-							cdp-tunnel 已运行，但未检测到 Chrome 连接。请确认 Chrome 扩展已加载并连接到{" "}
-							<code className="px-1 py-0.5 bg-[var(--color-bg-tertiary)] rounded">
-								{guide.cdpEndpoint}
-							</code>
-						</div>
-					</div>
-				)}
-
-				{/* 操作按钮 */}
-				<div className="flex items-center justify-between gap-3">
-					<div className="flex items-center gap-2 text-xs text-[var(--color-text-tertiary)]">
-						<RefreshCw
-							className={`w-3 h-3 ${checking ? "animate-spin" : ""}`}
-						/>
-						<span>每 10 秒自动检测</span>
-					</div>
-					<button
-						onClick={fetchGuide}
-						disabled={checking}
-						className="px-4 py-2 text-sm bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+				{/* 步骤卡片 */}
+				<div className="space-y-3 mb-6">
+					{/* 步骤 1：创建连接 */}
+					<StepCard
+						icon={<Key className="w-4 h-4" />}
+						title="创建连接"
+						desc="生成你的专属浏览器连接"
+						done={!!browserKey}
+						active={step === "create"}
 					>
-						{checking ? (
-							<Loader2 className="w-4 h-4 animate-spin" />
-						) : (
-							<RefreshCw className="w-4 h-4" />
+						{!browserKey && (
+							<button
+								onClick={handleCreate}
+								disabled={creating}
+								className="mt-3 px-4 py-2 text-sm bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+							>
+								{creating ? (
+									<Loader2 className="w-4 h-4 animate-spin" />
+								) : (
+									<Key className="w-4 h-4" />
+								)}
+								创建连接
+							</button>
 						)}
-						重新检测
-					</button>
+					</StepCard>
+
+					{/* 步骤 2：下载扩展 */}
+					<StepCard
+						icon={<Download className="w-4 h-4" />}
+						title="下载扩展"
+						desc="下载已配置好连接的 Chrome 扩展"
+						done={step === "install"}
+						active={step === "download"}
+						disabled={!browserKey}
+					>
+						{browserKey && step !== "install" && (
+							<button
+								onClick={handleDownload}
+								disabled={downloading}
+								className="mt-3 px-4 py-2 text-sm bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+							>
+								{downloading ? (
+									<Loader2 className="w-4 h-4 animate-spin" />
+								) : (
+									<Download className="w-4 h-4" />
+								)}
+								下载扩展 (ZIP)
+							</button>
+						)}
+					</StepCard>
+
+					{/* 步骤 3：加载到 Chrome */}
+					<StepCard
+						icon={<Puzzle className="w-4 h-4" />}
+						title="加载到 Chrome"
+						desc="解压 ZIP，在 Chrome 中加载扩展，自动连接"
+						done={false}
+						active={step === "install"}
+						disabled={step !== "install"}
+					>
+						{step === "install" && (
+							<div className="mt-3 space-y-2">
+								<ol className="text-xs text-[var(--color-text-secondary)] space-y-1.5 pl-1">
+									<li>
+										<span className="text-[var(--color-text-tertiary)]">①</span> 解压下载的 ZIP 文件
+									</li>
+									<li>
+										<span className="text-[var(--color-text-tertiary)]">②</span> 打开{" "}
+										<code className="px-1 py-0.5 bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-accent)]">
+											chrome://extensions/
+										</code>
+									</li>
+									<li>
+										<span className="text-[var(--color-text-tertiary)]">③</span> 开启右上角「开发者模式」
+									</li>
+									<li>
+										<span className="text-[var(--color-text-tertiary)]">④</span> 点击「加载已解压的扩展程序」，选择解压的文件夹
+									</li>
+								</ol>
+								<div className="flex gap-2 pt-1">
+									<a
+										href="chrome://extensions/"
+										className="px-3 py-1.5 text-xs border border-[var(--color-border-primary)] rounded hover:bg-[var(--color-bg-hover)] flex items-center gap-1"
+									>
+										<ExternalLink className="w-3 h-3" />
+										打开扩展页
+									</a>
+									<button
+										onClick={handleCheck}
+										disabled={checking}
+										className="px-3 py-1.5 text-xs bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] rounded transition-colors disabled:opacity-50 flex items-center gap-1"
+									>
+										{checking ? (
+											<Loader2 className="w-3 h-3 animate-spin" />
+										) : (
+											<RefreshCw className="w-3 h-3" />
+										)}
+										检测连接
+									</button>
+								</div>
+							</div>
+						)}
+					</StepCard>
 				</div>
 
-				{/* 调试信息（可折叠） */}
-				<details className="mt-6 text-xs text-[var(--color-text-tertiary)]">
-					<summary className="cursor-pointer hover:text-[var(--color-text-secondary)]">
-						调试信息
-					</summary>
-					<div className="mt-2 p-3 bg-[var(--color-bg-sidebar)] rounded font-mono space-y-1">
-						<div>CDP Endpoint: {guide?.cdpEndpoint}</div>
-						<div>cdp-tunnel: {guide?.cdpTunnelRunning ? "running" : "stopped"}</div>
-						<div>xbrowser: {guide?.xbrowserVersion ? `v${guide.xbrowserVersion}` : "not found"}</div>
+				{/* 错误提示 */}
+				{error && (
+					<div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-[var(--color-text-error)] mb-4">
+						{error}
 					</div>
-				</details>
+				)}
+
+				{/* 底部提示 */}
+				<div className="text-center text-xs text-[var(--color-text-tertiary)] flex items-center justify-center gap-2">
+					<RefreshCw className={`w-3 h-3 ${checking ? "animate-spin" : ""}`} />
+					<span>扩展加载后每 5 秒自动检测，连上后自动进入工作台</span>
+				</div>
 			</div>
+		</div>
+	);
+}
+
+// ===== 步骤卡片组件 =====
+
+interface StepCardProps {
+	icon: React.ReactNode;
+	title: string;
+	desc: string;
+	done: boolean;
+	active: boolean;
+	disabled?: boolean;
+	children?: React.ReactNode;
+}
+
+function StepCard({ icon, title, desc, done, active, disabled, children }: StepCardProps) {
+	return (
+		<div
+			className={`p-4 rounded-xl border transition-all ${
+				done
+					? "border-[var(--color-text-success)]/30 bg-[var(--color-text-success)]/5"
+					: active
+						? "border-[var(--color-accent)] bg-[var(--color-accent)]/5"
+						: "border-[var(--color-border-primary)] bg-[var(--color-bg-sidebar)]"
+			} ${disabled ? "opacity-40" : ""}`}
+		>
+			<div className="flex items-center gap-3">
+				<div
+					className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+						done
+							? "bg-[var(--color-text-success)]/20 text-[var(--color-text-success)]"
+							: active
+								? "bg-[var(--color-accent)]/20 text-[var(--color-text-accent)]"
+								: "bg-[var(--color-bg-tertiary)] text-[var(--color-text-tertiary)]"
+					}`}
+				>
+					{done ? <CheckCircle2 className="w-4 h-4" /> : icon}
+				</div>
+				<div className="flex-1 min-w-0">
+					<div className="text-sm font-medium flex items-center gap-2">
+						{title}
+						{done && (
+							<span className="text-[10px] text-[var(--color-text-success)]">已完成</span>
+						)}
+					</div>
+					<div className="text-xs text-[var(--color-text-tertiary)] mt-0.5">{desc}</div>
+				</div>
+				{active && !done && children && (
+					<ArrowRight className="w-4 h-4 text-[var(--color-text-accent)] flex-shrink-0" />
+				)}
+			</div>
+			{/* 展开的操作区 */}
+			{active && !done && children && (
+				<div className="mt-3 pl-11">{children}</div>
+			)}
 		</div>
 	);
 }

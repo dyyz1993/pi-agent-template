@@ -96,67 +96,11 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 	});
 
 	r("browser.getConnectionGuide", async () => {
-		const cdpEndpoint = process.env.CDP_ENDPOINT || "http://localhost:9221";
-
-		// 检测 cdp-tunnel 是否在跑
-		let cdpTunnelRunning = false;
-		try {
-			const { execSync } = await import("child_process");
-			execSync(`curl -s -o /dev/null -w "%{http_code}" --max-time 2 ${cdpEndpoint}/json/version`, {
-				timeout: 3000,
-				env: { ...process.env, NODE_OPTIONS: "" },
-			});
-			cdpTunnelRunning = true;
-		} catch {
-			cdpTunnelRunning = false;
-		}
-
-		// 检测 cdp-tunnel 版本
-		let cdpTunnelVersion: string | null = null;
-		try {
-			const { execSync } = await import("child_process");
-			const out = execSync("cdp-tunnel --version", {
-				timeout: 3000,
-				encoding: "utf8",
-				env: { ...process.env, NODE_OPTIONS: "" },
-			}).trim();
-			cdpTunnelVersion = out || null;
-		} catch {
-			cdpTunnelVersion = null;
-		}
-
-		// 检测 xbrowser 版本
-		const xbInfo = await detectXbrowser();
-
-		const steps = [
-			{
-				title: "安装 cdp-tunnel",
-				detail: "brew install cdp-tunnel 或 npm i -g @xbrowser/cdp-tunnel",
-				done: cdpTunnelVersion !== null,
-			},
-			{
-				title: "启动 cdp-tunnel",
-				detail: `运行 cdp-tunnel（当前状态：${cdpTunnelRunning ? "✅ 运行中" : "❌ 未运行"}）`,
-				done: cdpTunnelRunning,
-			},
-			{
-				title: "安装 Chrome 扩展",
-				detail: "在 Chrome 加载 Browser Agent 扩展，连接到 cdp-tunnel",
-				done: false,
-			},
-			{
-				title: "安装 xbrowser CLI",
-				detail: "brew install xbrowser 或 npm i -g @xbrowser/cli",
-				done: xbInfo.available,
-			},
-		];
-
+		const browser = await getOnlineBrowser();
 		return {
-			cdpEndpoint,
-			cdpTunnelRunning,
-			cdpTunnelVersion,
-			xbrowserVersion: xbInfo.version,
-			steps,
+			// 用户视角：只有"浏览器是否已连接"
+			connected: !!browser,
+			tabs: browser?.tabs ?? 0,
 		};
 	});
 

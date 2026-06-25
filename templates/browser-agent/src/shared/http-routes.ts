@@ -100,6 +100,27 @@ export function createHttpHandler(
 			return;
 		}
 
+		// ── 扩展安装引导端点（用户视角，不暴露 CDP/tunnel 概念）──
+		if (url.pathname === "/api/create-browser" && req.method === "POST") {
+			if (!verifyToken(req, cfg.authToken)) {
+				res.writeHead(401, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ error: "Unauthorized" }));
+				return;
+			}
+			await handleCreateBrowser(req, res);
+			return;
+		}
+
+		if (url.pathname === "/api/pack-extension" && req.method === "POST") {
+			if (!verifyToken(req, cfg.authToken)) {
+				res.writeHead(401, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ error: "Unauthorized" }));
+				return;
+			}
+			await handlePackExtension(req, res);
+			return;
+		}
+
 		// Browser Agent: resolve asset path from ID (stored as JSON index)
 		const assetMatch = url.pathname.match(/^\/api\/assets\/([\w]+)\/download$/);
 		if (assetMatch) {
@@ -301,5 +322,116 @@ async function handleAssetDownload(assetId: string, res: ServerResponse): Promis
 		res.writeHead(404).end();
 	} catch {
 		res.writeHead(500).end();
+	}
+}
+
+// ===== 扩展安装引导（用户视角）=====
+
+const CDP_TUNNEL_API = process.env.CLOUD_PROXY_URL || process.env.CDP_ENDPOINT || "http://localhost:9221";
+const CDP_TUNNEL_EXT = process.env.CDP_TUNNEL_EXT || "";
+
+/**
+ * 创建连接 Key — 调用 cdp-tunnel admin API
+ * 用户视角："创建连接"，实际是生成一个 cdp-tunnel 的 plugin key
+ */
+async function handleCreateBrowser(req: IncomingMessage, res: ServerResponse): Promise<void> {
+	try {
+		let body = "";
+		for await (const chunk of req) {
+			body += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
+		}
+		const parsed = body ? JSON.parse(body) : {};
+		const name = parsed.name || `用户-${Date.now().toString(36)}`;
+
+		const apiRes = await fetch(`${CDP_TUNNEL_API}/admin/api/keys`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ name }),
+		});
+
+		if (!apiRes.ok) {
+			const errText = await apiRes.text();
+			log.error("create-browser failed", { status: apiRes.status, body: errText });
+			res.writeHead(502, { "Content-Type": "application/json" });
+			res.end(JSON.stringify({ error: "无法创建连接，请确认 cdp-tunnel 服务正在运行" }));
+			return;
+		}
+
+		const data = await apiRes.json() as { key: string; pluginUrl?: string };
+		const wsUrl = CDP_TUNNEL_API.replace(/^https/, "wss").replace(/^http/, "ws");
+		const pluginUrl = `${wsUrl}/plugin?key=${data.key}`;
+
+		res.writeHead(200, { "Content-Type": "application/json" });
+		res.end(JSON.stringify({ key: data.key, pluginUrl }));
+	} catch (err) {
+		log.error("create-browser error", { error: err instanceof Error ? err.message : String(err) });
+		res.writeHead(500, { "Content-Type": "application/json" });
+		res.end(JSON.stringify({ error: "创建连接失败，cdp-tunnel 服务可能未运行" }));
+	}
+}
+
+/**
+ * 打包 Chrome 扩展 ZIP — 将 Key 注入扩展配置后打包
+ * 用户视角："下载扩展"，实际是生成一个配置好连接地址的 ZIP
+ */
+async function handlePackExtension(req: IncomingMessage, res: ServerResponse): Promise<void> {
+	try {
+		let body = "";
+		for await (const chunk of req) {
+			body += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
+		}
+		const { key } = JSON.parse(body);
+		if (!key) {
+			res.writeHead(400, { "Content-Type": "application/json" });
+			res.end(JSON.stringify({ error: "缺少 key 参数" }));
+			return;
+		}
+
+		if (!CDP_TUNNEL_EXT || !existsSync(CDP_TUNNEL_EXT)) {
+			res.writeHead(500, { "Content-Type": "application/json" });
+			res.end(JSON.stringify({
+				error: "扩展源码未找到，请设置 CDP_TUNNEL_EXT 环境变量指向 cdp-tunnel 扩展目录",
+			}));
+			return;
+		}
+
+		const { execSync } = await import("child_process");
+		const tmpDir = join(tmpdir(), `cdp-ext-${Date.now()}`);
+		const wsUrl = CDP_TUNNEL_API.replace(/^https/, "wss").replace(/^http/, "ws");
+		const pluginUrl = `${wsUrl}/plugin?key=${key}`;
+
+		// 复制扩展源码到临时目录
+		execSync(`cp -r "${CDP_TUNNEL_EXT}" "${tmpDir}"`);
+
+		// 注入连接地址到 config.js
+		const configPath = join(tmpDir, "utils", "config.js");
+		if (existsSync(configPath)) {
+			const { readFile, writeFile } = await import("fs/promises");
+			let config = await readFile(configPath, "utf8");
+			config = config.replace(/WS_URL:\s*'[^']*'/, `WS_URL: '${pluginUrl}'`);
+			await writeFile(configPath, config);
+		}
+
+		// 打包 ZIP
+		const zipPath = `${tmpDir}.zip`;
+		execSync(`cd "${tmpdir()}" && zip -rq "${basename(zipPath)}" "${basename(tmpDir)}/"`);
+
+		// 读取并返回 ZIP
+		const { readFile: readZip } = await import("fs/promises");
+		const zipBuffer = await readZip(zipPath);
+
+		res.writeHead(200, {
+			"Content-Type": "application/zip",
+			"Content-Disposition": `attachment; filename="browser-agent-extension.zip"`,
+			"Content-Length": zipBuffer.length,
+		});
+		res.end(zipBuffer);
+
+		// 清理临时文件
+		execSync(`rm -rf "${tmpDir}" "${zipPath}"`);
+	} catch (err) {
+		log.error("pack-extension error", { error: err instanceof Error ? err.message : String(err) });
+		res.writeHead(500, { "Content-Type": "application/json" });
+		res.end(JSON.stringify({ error: "打包扩展失败: " + (err instanceof Error ? err.message : String(err)) }));
 	}
 }

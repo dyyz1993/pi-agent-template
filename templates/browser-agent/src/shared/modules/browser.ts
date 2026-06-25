@@ -10,16 +10,10 @@ export interface BrowserMethods {
     params: { pluginId?: string };
     result: { connected: boolean; browserCount: number; browsers: { pluginId: string; name: string; tabs: number }[] };
   };
-  /** 获取连接引导信息（未连接时引导用户安装扩展） */
+  /** 获取连接状态（用户视角，不暴露技术细节） */
   "browser.getConnectionGuide": {
     params: {};
-    result: {
-      cdpEndpoint: string;
-      cdpTunnelRunning: boolean;
-      cdpTunnelVersion: string | null;
-      xbrowserVersion: string | null;
-      steps: { title: string; detail: string; done: boolean }[];
-    };
+    result: { connected: boolean; tabs: number };
   };
   /** 获取 Chrome Tab 列表 */
   "browser.listTabs": {
