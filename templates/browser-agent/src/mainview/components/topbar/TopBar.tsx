@@ -5,9 +5,10 @@
  */
 
 import { useState, useEffect, useRef } from "react";
-import { Monitor, Wifi, WifiOff, ChevronDown, RefreshCw, Globe, Puzzle } from "lucide-react";
+import { Monitor, Wifi, WifiOff, ChevronDown, RefreshCw, Globe, Puzzle, PanelLeft, PanelRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useConnectionStore } from "../../stores/use-connection-store";
+import { useSidebarStore, useAssetsPanelStore } from "../../stores/use-sidebar-store";
 import { ThemeToggle } from "../common/ThemeToggle";
 import { LanguageSwitcher } from "../common/LanguageSwitcher";
 import { NetworkToggleButton } from "../dev/NetworkPanel";
@@ -31,6 +32,21 @@ export function TopBar() {
 	const [refreshing, setRefreshing] = useState(false);
 	const [showSetup, setShowSetup] = useState(false);
 	const dropdownRef = useRef<HTMLDivElement>(null);
+
+	// 面板状态
+	const sbIsPinned = useSidebarStore((s) => s.isPinned);
+	const sbSetPinned = useSidebarStore((s) => s.setPinned);
+	const sbDrawerOpen = useSidebarStore((s) => s.drawerOpen);
+	const sbSetDrawerOpen = useSidebarStore((s) => s.setDrawerOpen);
+	const apVisible = useAssetsPanelStore((s) => s.assetsVisible);
+	const apSetVisible = useAssetsPanelStore((s) => s.setAssetsVisible);
+	const apDrawerOpen = useAssetsPanelStore((s) => s.assetsDrawerOpen);
+	const apSetDrawerOpen = useAssetsPanelStore((s) => s.setAssetsDrawerOpen);
+
+	// 侧栏是否当前可见（pinned 或 drawer 打开）
+	const sidebarActive = sbIsPinned || sbDrawerOpen;
+	// 资源面板是否当前可见
+	const assetsActive = apVisible || apDrawerOpen;
 
 	// 点击外部关闭下拉
 	useEffect(() => {
@@ -63,6 +79,26 @@ export function TopBar() {
 
 			{/* 分割线 */}
 			<div className="w-px h-4 bg-[var(--color-border-primary)]" />
+
+			{/* 侧栏切换 */}
+			<button
+				onClick={() => {
+					if (sidebarActive) {
+						// 收起
+						if (sbIsPinned) sbSetPinned(false);
+						if (sbDrawerOpen) sbSetDrawerOpen(false);
+					} else {
+						// 展开
+						sbSetDrawerOpen(true);
+					}
+				}}
+				title={sidebarActive ? "收起侧栏" : "展开侧栏"}
+				className={`text-[var(--color-text-placeholder)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded hover:bg-[var(--color-bg-hover)] ${
+					sidebarActive ? "text-[var(--color-text-accent)]" : ""
+				}`}
+			>
+				<PanelLeft className="w-4 h-4" />
+			</button>
 
 			{/* 模式标签 */}
 			<span
@@ -238,6 +274,22 @@ export function TopBar() {
 
 			{/* 右侧工具 */}
 			<div className="flex items-center gap-1">
+				<button
+					onClick={() => {
+						if (assetsActive) {
+							if (apVisible) apSetVisible(false);
+							if (apDrawerOpen) apSetDrawerOpen(false);
+						} else {
+							apSetDrawerOpen(true);
+						}
+					}}
+					title={assetsActive ? "收起资源面板" : "展开资源面板"}
+					className={`text-[var(--color-text-placeholder)] hover:text-[var(--color-text-primary)] transition-colors p-1 rounded hover:bg-[var(--color-bg-hover)] ${
+						assetsActive ? "text-[var(--color-text-accent)]" : ""
+					}`}
+				>
+					<PanelRight className="w-4 h-4" />
+				</button>
 				<NetworkToggleButton />
 				<LanguageSwitcher />
 				<ThemeToggle />

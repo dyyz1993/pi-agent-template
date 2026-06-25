@@ -13,26 +13,15 @@ import { useSessionStore } from "../../stores/use-session-store";
 import { useConnectionStore } from "../../stores/use-connection-store";
 import { MessageBubble } from "./MessageBubble";
 import { CommandBar } from "./CommandBar";
-import { apiClient } from "../../lib/api-client";
+import { useAgentChat } from "../../hooks/use-agent-chat";
 
 export function ChatPanel() {
 	const { t } = useTranslation();
 	const messages = useChatStore((s) => s.messages);
-	const addUserMessage = useChatStore((s) => s.addUserMessage);
-	const addAgentPlaceholder = useChatStore((s) => s.addAgentPlaceholder);
-	const patchLastAgent = useChatStore((s) => s.patchLastAgent);
-	const pushToolCall = useChatStore((s) => s.pushToolCall);
-	const updateToolCall = useChatStore((s) => s.updateToolCall);
-	const appendThinking = useChatStore((s) => s.appendThinking);
-	const appendText = useChatStore((s) => s.appendText);
-	const markTurnDone = useChatStore((s) => s.markTurnDone);
 	const setMessages = useChatStore((s) => s.setMessages);
 
 	const currentSessionId = useSessionStore((s) => s.currentSessionId);
 	const running = useSessionStore((s) => s.running);
-	const setRunning = useSessionStore((s) => s.setRunning);
-	const loadSession = useSessionStore((s) => s.loadSession);
-	const refreshSessions = useSessionStore((s) => s.refreshSessions);
 
 	const activePlugins = useConnectionStore((s) => s.activePlugins);
 
@@ -53,95 +42,17 @@ export function ChatPanel() {
 		}
 	}, [currentSession?.messages?.length]);
 
+	const { chat } = useAgentChat();
+
 	const sendMessage = useCallback(async () => {
 		const input = inputRef.current;
 		if (!input || !input.value.trim() || running || !currentSessionId) return;
 
 		const text = input.value.trim();
 		input.value = "";
-		setRunning(true);
 
-		// 添加用户消息
-		addUserMessage(text);
-
-		// Agent 占位
-		const messageId = `msg_${Date.now()}`;
-		addAgentPlaceholder(messageId);
-
-		const subs: string[] = [];
-
-		try {
-			// 订阅 Agent 事件
-			const s1 = await apiClient.subscribe("browser.toolCall", (evt: any) => {
-				console.debug("[Chat] browser.toolCall", evt);
-				if (evt.messageId === messageId) pushToolCall(evt.toolCall);
-			});
-			subs.push(s1);
-
-			const s2 = await apiClient.subscribe("browser.toolResult", (evt: any) => {
-				console.debug("[Chat] browser.toolResult", evt);
-				if (evt.messageId === messageId)
-					updateToolCall(evt.toolCallId, evt.output);
-			});
-			subs.push(s2);
-
-			const s3 = await apiClient.subscribe("browser.thinking", (evt: any) => {
-				console.debug("[Chat] browser.thinking", evt);
-				if (evt.messageId === messageId) appendThinking(evt.delta);
-			});
-			subs.push(s3);
-
-			const s4 = await apiClient.subscribe("browser.textDelta", (evt: any) => {
-				console.debug("[Chat] browser.textDelta", evt);
-				if (evt.messageId === messageId) appendText(evt.delta);
-			});
-			subs.push(s4);
-
-			const s5 = await apiClient.subscribe("browser.turn", (evt: any) => {
-				console.debug("[Chat] browser.turn", evt);
-				if (evt.messageId === messageId) markTurnDone(evt.turn);
-			});
-			subs.push(s5);
-
-			const s6 = await apiClient.subscribe("browser.done", async (evt: any) => {
-				console.debug("[Chat] browser.done", evt);
-				if (evt.messageId === messageId) {
-					patchLastAgent({ text: evt.reply, steps: evt.steps });
-					setRunning(false);
-					await refreshSessions();
-					if (currentSessionId) await loadSession(currentSessionId);
-				}
-			});
-			subs.push(s6);
-
-			// 触发 Agent
-			await apiClient.call("browser.agentChat", {
-				message: text,
-				sessionId: currentSessionId,
-				activePlugins,
-			});
-		} catch (err: any) {
-			patchLastAgent({ error: err.message });
-			setRunning(false);
-		} finally {
-			subs.forEach((id) => apiClient.unsubscribe(id));
-		}
-	}, [
-		currentSessionId,
-		running,
-		activePlugins,
-		addUserMessage,
-		addAgentPlaceholder,
-		pushToolCall,
-		updateToolCall,
-		appendThinking,
-		appendText,
-		markTurnDone,
-		patchLastAgent,
-		setRunning,
-		loadSession,
-		refreshSessions,
-	]);
+		await chat(text, currentSessionId, activePlugins);
+	}, [currentSessionId, running, activePlugins, chat]);
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === "Enter" && !e.shiftKey) {

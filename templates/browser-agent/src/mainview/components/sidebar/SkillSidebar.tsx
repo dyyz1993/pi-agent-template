@@ -1,13 +1,12 @@
 /**
  * 技能侧栏 — 内置采集技能列表
  *
- * 对应 PRD §4.5 技能系统
+ * 点击技能 → 创建会话 → 触发 Agent 对话（带流式订阅）
  */
 
 import { useTranslation } from "react-i18next";
 import { useSessionStore } from "../../stores/use-session-store";
-import { useChatStore } from "../../stores/use-chat-store";
-import { apiClient } from "../../lib/api-client";
+import { useAgentChat } from "../../hooks/use-agent-chat";
 
 const BUILTIN_SKILLS = [
 	{
@@ -36,40 +35,19 @@ const BUILTIN_SKILLS = [
 export function SkillSidebar() {
 	const { t: _t } = useTranslation();
 	const running = useSessionStore((s) => s.running);
-	const setRunning = useSessionStore((s) => s.setRunning);
 	const createSession = useSessionStore((s) => s.createSession);
 	const loadSession = useSessionStore((s) => s.loadSession);
-	const addUserMessage = useChatStore((s) => s.addUserMessage);
-	const addAgentPlaceholder = useChatStore((s) => s.addAgentPlaceholder);
+	const { chat } = useAgentChat();
 
-	const runSkill = async (skill: (typeof BUILTIN_SKILLS)[0]) => {
+	const runSkill = async (skill: (typeof BUILTIN_SKILLS)[0]): Promise<void> => {
 		if (running) return;
-		setRunning(true);
 
 		// 创建新会话
 		const sess = await createSession(skill.name);
 		await loadSession(sess.id);
 
-		// 添加用户消息
-		addUserMessage(skill.prompt);
-
-		// 触发 Agent 对话（RPC 事件通过订阅处理）
-		const messageId = `msg_${Date.now()}`;
-		addAgentPlaceholder(messageId);
-
-		try {
-			await apiClient.call("browser.agentChat", {
-				message: skill.prompt,
-				sessionId: sess.id,
-				activePlugins: ["xiaohongshu"],
-			});
-		} catch (err) {
-			console.error("Skill execution failed", err);
-		} finally {
-			setRunning(false);
-			// 刷新会话列表
-			await loadSession(sess.id);
-		}
+		// 触发 Agent 对话（useAgentChat 内部会订阅流式事件）
+		await chat(skill.prompt, sess.id, ["xiaohongshu"]);
 	};
 
 	return (
