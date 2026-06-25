@@ -36,6 +36,28 @@ function parseCommandString(cmd: string): string[] {
 	return args;
 }
 
+/**
+ * Web 模式下禁止的 xbrowser 子命令。
+ * 这些命令在桌面端有用但 Web 环境下无效或危险。
+ */
+const BLOCKED_XBROWSER_COMMANDS = new Set([
+	"open",           // 桌面端打开文件/程序
+	"record",         // 录制操作（需要桌面端 UI）
+	"replay",         // 重放录制（同上）
+	"convert",        // 录制转换（同上）
+	"extract",        // 录制提取（同上）
+]);
+
+/** 检查命令是否被禁止，返回 null 表示允许，否则返回拒绝信息 */
+function checkBlockedCommand(args: string[]): string | null {
+	if (args.length === 0) return null;
+	const cmd = args[0]!.toLowerCase();
+	if (BLOCKED_XBROWSER_COMMANDS.has(cmd)) {
+		return `🚫 命令 "${cmd}" 在 Web 模式下不可用。该命令仅在桌面端支持。`;
+	}
+	return null;
+}
+
 // ===== xbrowser 版本检测 =====
 
 async function detectXbrowser(): Promise<{ available: boolean; version: string | null }> {
@@ -169,6 +191,12 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 		try {
 			// 把命令字符串拆分为参数数组（支持引号包裹的 URL 等）
 			const args = parseCommandString(params.command);
+
+			// Web 模式命令拦截
+			const blocked = checkBlockedCommand(args);
+			if (blocked) {
+				return { success: false, data: { error: blocked, blocked: true } };
+			}
 
 			// 如果指定了 tabIndex，自动注入 --tab 参数
 			if (params.tabIndex !== undefined && params.tabIndex >= 0) {

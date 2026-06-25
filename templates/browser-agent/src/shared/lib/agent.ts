@@ -126,7 +126,6 @@ export async function getClient(sessionId: string): Promise<RpcClient | null> {
 			"xbrowser",
 			"web_search",
 			"fetch_content",
-			"bash",
 			"todo",
 		]);
 
