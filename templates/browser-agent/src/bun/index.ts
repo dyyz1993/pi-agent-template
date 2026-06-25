@@ -81,14 +81,16 @@ if (config.enableWebService) {
 
 		const localIp = getLocalIP();
 		log.info(`[Hybrid] Web service started: http://${localIp}:${webServer.port}`);
-		log.info(`[Hybrid] WebSocket endpoint: ws://${localIp}:${webServer.port}/ws`);
+		log.info(`[Hybrid] RPC: POST http://${localIp}:${webServer.port}/api/rpc`);
+		log.info(`[Hybrid] SSE: GET  http://${localIp}:${webServer.port}/api/events`);
 		log.info(
 			`[Hybrid] Share URL: http://${localIp}:${webServer.port}?token=${webServer.authToken}`
 		);
 
 		server.emitEvent("hybrid.ready", {
 			url: `http://${localIp}:${webServer.port}`,
-			wsUrl: `ws://${localIp}:${webServer.port}/ws`,
+			rpcUrl: `http://${localIp}:${webServer.port}/api/rpc`,
+			sseUrl: `http://${localIp}:${webServer.port}/api/events`,
 			token: webServer.authToken,
 		});
 	} catch (err) {

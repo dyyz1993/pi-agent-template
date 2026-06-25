@@ -10,6 +10,7 @@ import { SkillSidebar } from "../sidebar/SkillSidebar";
 import { SessionSidebar } from "../sidebar/SessionSidebar";
 import { ChatPanel } from "../chat/ChatPanel";
 import { AssetsPanel } from "../assets/AssetsPanel";
+import { NetworkDrawer } from "../dev/NetworkPanel";
 
 export type CenterTab = "chat";
 
@@ -31,7 +32,7 @@ export function AppLayout({
 				{/* 顶栏 */}
 				<TopBar />
 
-				<div className="flex-1 flex overflow-hidden">
+				<div className="flex-1 flex overflow-hidden relative">
 					{/* 侧栏（技能 + 会话历史） */}
 					<div
 						className="bg-[var(--color-bg-sidebar)] border-r border-[var(--color-border-primary)] flex flex-col flex-shrink-0 overflow-hidden"
@@ -63,6 +64,9 @@ export function AppLayout({
 						<AssetsPanel />
 					</div>
 				</div>
+
+				{/* 网络通讯面板（底部抽屉） */}
+				<NetworkDrawer />
 			</div>
 		);
 }

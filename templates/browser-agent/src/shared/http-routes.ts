@@ -8,17 +8,11 @@ import { stat, readFile, writeFile, mkdir } from "fs/promises";
 import { existsSync } from "fs";
 import { extname, basename, dirname, resolve, join } from "path";
 import { tmpdir } from "os";
-import { timingSafeEqual } from "crypto";
 import { createLogger } from "./lib/logger";
+import { verifyToken as verifySseToken } from "../gateway/sse-transport";
+import type { SseHandler } from "../gateway/sse-transport";
 
 const log = createLogger("gateway");
-
-function safeEqual(a: string, b: string): boolean {
-	const bufA = Buffer.from(a);
-	const bufB = Buffer.from(b);
-	if (bufA.length !== bufB.length) return false;
-	return timingSafeEqual(bufA as any, bufB as any);
-}
 
 const MIME_TYPES: Record<string, string> = {
 	".html": "text/html",
@@ -50,19 +44,7 @@ function isPathAllowed(requestedPath: string): boolean {
 }
 
 function verifyToken(req: IncomingMessage, authToken: string): boolean {
-	const auth = req.headers["authorization"];
-	if (auth && safeEqual(auth, `Bearer ${authToken}`)) return true;
-
-	if (req.url) {
-		try {
-			const url = new URL(req.url, "http://localhost");
-			const token = url.searchParams.get("token");
-			if (token && safeEqual(token, authToken)) return true;
-		} catch {
-			/* invalid URL */
-		}
-	}
-	return false;
+	return verifySseToken(req, authToken);
 }
 
 export interface HttpRouteDeps {
@@ -72,13 +54,14 @@ export interface HttpRouteDeps {
 		readonly maxUploadSize: number;
 		readonly corsOrigin: string;
 	};
-	getWebSocketClientCount: () => number;
+	getSseClientCount: () => number;
+	sse: SseHandler;
 }
 
 export function createHttpHandler(
 	deps: HttpRouteDeps
 ): (req: IncomingMessage, res: ServerResponse) => void {
-	const { config: cfg, getWebSocketClientCount } = deps;
+	const { config: cfg, getSseClientCount, sse } = deps;
 
 	return async (req, res) => {
 		res.setHeader("Access-Control-Allow-Origin", cfg.corsOrigin);
@@ -96,26 +79,47 @@ export function createHttpHandler(
 
 		const url = new URL(req.url, "http://localhost");
 
-		// Browser Agent: resolve asset path from ID (stored as JSON index)
-			const assetMatch = url.pathname.match(/^\/api\/assets\/([\w]+)\/download$/);
-			if (assetMatch) {
-				await handleAssetDownload(assetMatch[1] || '', res);
-				return;
-			}
-			const assetMetaMatch = url.pathname.match(/^\/api\/assets\/([\w]+)$/);
-			if (assetMetaMatch) {
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ id: assetMetaMatch[1], note: "Use download endpoint for file" }));
-				return;
-			}
-
-			if (url.pathname === "/health") {
-				res.writeHead(200, { "Content-Type": "application/json" });
-				res.end(JSON.stringify({ status: "ok", clients: getWebSocketClientCount() }));
-				return;
-			}
-
+		// ── SSE + RPC routes (require auth) ──
+		if (url.pathname === "/api/events" && req.method === "GET") {
 			if (!verifyToken(req, cfg.authToken)) {
+				res.writeHead(401, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ error: "Unauthorized" }));
+				return;
+			}
+			sse.handleSseConnect(req, res);
+			return;
+		}
+
+		if (url.pathname === "/api/rpc" && req.method === "POST") {
+			if (!verifyToken(req, cfg.authToken)) {
+				res.writeHead(401, { "Content-Type": "application/json" });
+				res.end(JSON.stringify({ error: "Unauthorized" }));
+				return;
+			}
+			await sse.handleRpcPost(req, res);
+			return;
+		}
+
+		// Browser Agent: resolve asset path from ID (stored as JSON index)
+		const assetMatch = url.pathname.match(/^\/api\/assets\/([\w]+)\/download$/);
+		if (assetMatch) {
+			await handleAssetDownload(assetMatch[1] || '', res);
+			return;
+		}
+		const assetMetaMatch = url.pathname.match(/^\/api\/assets\/([\w]+)$/);
+		if (assetMetaMatch) {
+			res.writeHead(200, { "Content-Type": "application/json" });
+			res.end(JSON.stringify({ id: assetMetaMatch[1], note: "Use download endpoint for file" }));
+			return;
+		}
+
+		if (url.pathname === "/health") {
+			res.writeHead(200, { "Content-Type": "application/json" });
+			res.end(JSON.stringify({ status: "ok", clients: getSseClientCount() }));
+			return;
+		}
+
+		if (!verifyToken(req, cfg.authToken)) {
 			log.warn("Auth failed", { path: url.pathname });
 			res.writeHead(401, { "Content-Type": "application/json" });
 			res.end(JSON.stringify({ error: "Unauthorized" }));

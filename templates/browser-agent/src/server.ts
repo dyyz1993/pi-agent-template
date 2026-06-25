@@ -1,5 +1,5 @@
 /**
- * Web server entry point — HTTP file endpoints + WebSocket RPC gateway.
+ * Web server entry point — HTTP file endpoints + SSE/HTTP RPC gateway.
  * Port auto-negotiation: tries config.port first, increments on EADDRINUSE.
  * Writes actual port to .server-port for dev orchestration.
  */
@@ -63,9 +63,10 @@ async function start() {
 	registerPort(PROJECT_ROOT, port, PROJECT_NAME);
 
 	const localIp = getLocalIP();
-	log.info(`HTTP + WebSocket server running on http://localhost:${port}`);
+	log.info(`HTTP + SSE server running on http://localhost:${port}`);
 	log.info(`Local network access: http://${localIp}:${port}`);
-	log.info(`WebSocket: ws://localhost:${port}/ws (auth required)`);
+	log.info(`RPC: POST http://localhost:${port}/api/rpc (auth required)`);
+	log.info(`SSE: GET  http://localhost:${port}/api/events (auth required)`);
 	log.info(`Available RPC methods: ${discoverMethodNames().join(", ")}`);
 	log.info("File endpoints: GET /file/{path}, GET /info/{path}");
 	log.info(formatRegistryForOutput());

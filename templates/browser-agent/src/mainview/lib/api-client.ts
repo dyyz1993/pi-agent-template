@@ -1,13 +1,15 @@
-import { createTypedClient, WebSocketTransport, IPCTransport } from "@dyyz1993/rpc-core";
+import { createTypedClient, IPCTransport } from "@dyyz1993/rpc-core";
 import type {
 	TypedClient,
 	MethodParams,
 	MethodResult,
 	EventPayload,
 	EventMetadata,
+	Transport,
 } from "@dyyz1993/rpc-core";
 import type { RPCMethods, RPCEvents } from "../../shared/rpc-schema";
 import { rpcCache, CACHEABLE_METHODS } from "./rpc-cache";
+import { networkBus } from "./network-bus";
 
 /**
  * Token 来源优先级：
@@ -33,12 +35,154 @@ function resolveAuthToken(): string {
 
 const AUTH_TOKEN = resolveAuthToken();
 
+/**
+ * Browser SSE Transport — bridges EventSource (server→client) and
+ * fetch POST (client→server) into the rpc-core Transport interface.
+ *
+ * - send():    POST /api/rpc with the message JSON; response arrives via SSE.
+ * - onMessage: EventSource "data:" frames parsed and forwarded to handlers.
+ *
+ * The SSE stream delivers the clientId in a "ready" event; subsequent POSTs
+ * carry ?clientId= so the backend routes into the correct per-client RPCServer.
+ */
+class BrowserSseTransport implements Transport {
+	private messageHandlers = new Set<(msg: unknown) => void>();
+	private errorHandlers = new Set<(err: Error) => void>();
+	private disconnectHandlers = new Set<() => void>();
+	private eventSource: EventSource | null = null;
+	private clientId: string | null = null;
+	private baseUrl = "";
+	private connected = false;
+	private closed = false;
+
+	constructor(baseUrl: string, token: string) {
+		this.baseUrl = baseUrl;
+		this.connect(token);
+	}
+
+	private connect(token: string): void {
+		const url = `${this.baseUrl}/api/events?token=${encodeURIComponent(token)}`;
+		const es = new EventSource(url);
+		this.eventSource = es;
+
+		// "ready" event carries the clientId (first frame from the server)
+		es.addEventListener("ready", (ev: MessageEvent) => {
+			try {
+				const data = JSON.parse(ev.data);
+				this.clientId = data.clientId;
+			} catch {
+				/* ignore */
+			}
+		});
+
+		// Default message channel: "data:" frames carry RPC responses/events
+		es.onmessage = (ev: MessageEvent) => {
+			try {
+				const msg = JSON.parse(ev.data);
+				for (const handler of [...this.messageHandlers]) {
+					handler(msg);
+				}
+			} catch {
+				/* ignore parse errors */
+			}
+		};
+
+		es.onopen = () => {
+			this.connected = true;
+		};
+
+		es.onerror = () => {
+			if (this.closed) return;
+			const wasConnected = this.connected;
+			this.connected = false;
+			for (const handler of [...this.errorHandlers]) {
+				handler(new Error("SSE connection error"));
+			}
+			if (wasConnected) {
+				for (const handler of [...this.disconnectHandlers]) {
+					handler();
+				}
+			}
+			// EventSource auto-reconnects natively
+		};
+	}
+
+	async send(message: unknown): Promise<void> {
+		if (this.closed) throw new Error("SSE transport closed");
+
+		// Wait for clientId to be available (SSE ready event received)
+		if (!this.clientId) {
+			await this.waitForClientId();
+		}
+
+		const url = `${this.baseUrl}/api/rpc?token=${encodeURIComponent(AUTH_TOKEN)}&clientId=${encodeURIComponent(this.clientId!)}`;
+		const res = await fetch(url, {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify(message),
+		});
+
+		if (!res.ok) {
+			throw new Error(`RPC POST failed: ${res.status}`);
+		}
+	}
+
+	private waitForClientId(): Promise<void> {
+		if (this.clientId) return Promise.resolve();
+		return new Promise((resolve) => {
+			const check = setInterval(() => {
+				if (this.clientId) {
+					clearInterval(check);
+					resolve();
+				}
+			}, 50);
+		});
+	}
+
+	onMessage(handler: (msg: unknown) => void): () => void {
+		this.messageHandlers.add(handler);
+		return () => {
+			this.messageHandlers.delete(handler);
+		};
+	}
+
+	onError(handler: (err: Error) => void): () => void {
+		this.errorHandlers.add(handler);
+		return () => {
+			this.errorHandlers.delete(handler);
+		};
+	}
+
+	onDisconnect(handler: () => void): () => void {
+		this.disconnectHandlers.add(handler);
+		return () => {
+			this.disconnectHandlers.delete(handler);
+		};
+	}
+
+	isConnected(): boolean {
+		return this.connected;
+	}
+
+	close(): void {
+		this.closed = true;
+		this.connected = false;
+		if (this.eventSource) {
+			this.eventSource.close();
+			this.eventSource = null;
+		}
+		this.messageHandlers.clear();
+		this.errorHandlers.clear();
+		this.disconnectHandlers.clear();
+	}
+}
+
 class APIClientImpl {
 	private client: TypedClient<RPCMethods, RPCEvents> | null = null;
 	private initPromise: Promise<void> | null = null;
-	private _transport: "ipc" | "websocket" = "websocket";
+	private _transport: "ipc" | "sse" = "sse";
 	private _baseUrl: string | null = null;
-	private wsTransport: WebSocketTransport | null = null;
+	private sseTransport: BrowserSseTransport | null = null;
 
 	/**
 	 * 桌面端同步初始化：通过 executeJavascript 接收 + __electrobunBunBridge 发送
@@ -54,18 +198,18 @@ class APIClientImpl {
 	}
 
 	/**
-	 * 异步初始化：Web 端使用（连接 WebSocket）
+	 * 异步初始化：Web 端使用（连接 SSE + HTTP）
 	 */
 	async initialize(): Promise<void> {
 		// 已连接且 transport 正常 → 直接返回
-		if (this.client && (this._transport === "ipc" || this.wsTransport?.isConnected())) {
+		if (this.client && (this._transport === "ipc" || this.sseTransport?.isConnected())) {
 			return;
 		}
 
-		// client 存在但 WS 断开了 → 清理后重连
-		if (this.client && this.wsTransport && !this.wsTransport.isConnected()) {
-			this.wsTransport.close();
-			this.wsTransport = null;
+		// client 存在但 SSE 断开了 → 清理后重连
+		if (this.client && this.sseTransport && !this.sseTransport.isConnected()) {
+			this.sseTransport.close();
+			this.sseTransport = null;
 			this.client = null;
 			this.initPromise = null;
 		}
@@ -79,18 +223,11 @@ class APIClientImpl {
 				// 不应走到这里，桌面端应通过 initSyncForDesktop() 初始化
 				this.initSyncForDesktop();
 			} else {
-				this._transport = "websocket";
-				const wsUrl = this.getWebSocketUrl();
-				this.wsTransport = new WebSocketTransport({
-					url: wsUrl,
-					authToken: AUTH_TOKEN,
-					reconnect: true,
-				});
-				await this.wsTransport.connect();
-				this.client = createTypedClient<RPCMethods, RPCEvents>(this.wsTransport);
-
-				const wsUrlObj = new URL(wsUrl);
-				this._baseUrl = `http://${wsUrlObj.host}`;
+				this._transport = "sse";
+				const baseUrl = this.resolveBaseUrl();
+				this.sseTransport = new BrowserSseTransport(baseUrl, AUTH_TOKEN);
+				this.client = createTypedClient<RPCMethods, RPCEvents>(this.sseTransport);
+				this._baseUrl = baseUrl;
 			}
 		})();
 
@@ -99,18 +236,15 @@ class APIClientImpl {
 
 	private detectEnvironment(): "electrobun" | "browser" {
 		if (typeof window === "undefined") return "browser";
-		if (window.__electrobunBunBridge) return "electrobun";
+		if ((window as any).__electrobunBunBridge) return "electrobun";
 		return "browser";
 	}
 
-	private getWebSocketUrl(): string {
-		if (typeof window === "undefined") return `ws://localhost:3100?token=${AUTH_TOKEN}`;
-		const customUrl =
-			new URLSearchParams(window.location.search).get("ws") ||
-			localStorage.getItem("rpc-websocket-url");
-		if (customUrl)
-			return customUrl.includes("token=") ? customUrl : `${customUrl}?token=${AUTH_TOKEN}`;
-		return `ws://${window.location.host}/ws?token=${AUTH_TOKEN}`;
+	private resolveBaseUrl(): string {
+		if (typeof window === "undefined") return "http://localhost:5200";
+		// In dev, Vite proxies /api → backend, so relative path works.
+		// For standalone deployment, use window.location.origin.
+		return window.location.origin;
 	}
 
 	/**
@@ -121,7 +255,7 @@ class APIClientImpl {
 	private setupElectrobunBridge(ipcTransport: IPCTransport): void {
 		if (typeof window === "undefined") return;
 
-		const win = window;
+		const win = window as any;
 
 		// 1. 注册接收函数：Bun 通过 executeJavascript 调用此函数发送消息到 Browser
 		win.__piAgentIPC = (msg: unknown) => {
@@ -144,11 +278,11 @@ class APIClientImpl {
 		}
 	}
 
-	getTransport(): "ipc" | "websocket" {
+	getTransport(): "ipc" | "sse" {
 		return this._transport;
 	}
 
-	/** Web 端 HTTP 基础 URL（如 http://localhost:3100），桌面端返回 null */
+	/** Web 端 HTTP 基础 URL（如 http://localhost:5200），桌面端返回 null */
 	getBaseUrl(): string | null {
 		return this._baseUrl;
 	}
@@ -170,7 +304,11 @@ class APIClientImpl {
 		}
 
 		await this.initialize();
+		const t0 = performance.now();
+		networkBus.emitRequest(methodStr, params);
 		const result = await this.client!.call(method, params);
+		const elapsed = Math.round(performance.now() - t0);
+		networkBus.emitResponse(methodStr, elapsed);
 
 		if (ttl !== undefined) {
 			rpcCache.set(methodStr, params, result);
@@ -185,7 +323,15 @@ class APIClientImpl {
 		filter?: Record<string, unknown>
 	): Promise<string> {
 		await this.initialize();
-		return this.client!.subscribe(eventType, handler, filter);
+
+		// Wrap handler to capture SSE events for the network panel
+		const wrapped = (payload: EventPayload<RPCEvents[K]>, metadata: EventMetadata<RPCEvents[K]>) => {
+			networkBus.emitEvent(eventType as string, metadata as unknown as Record<string, unknown> | undefined);
+			handler(payload, metadata);
+		};
+
+		const subId = this.client!.subscribe(eventType, wrapped, filter);
+		return subId;
 	}
 
 	unsubscribe(subscriptionId: string): void {
@@ -203,3 +349,4 @@ class APIClientImpl {
 
 export const apiClient = new APIClientImpl();
 export type { APIClientImpl, RPCMethods, RPCEvents };
+export type { Transport };

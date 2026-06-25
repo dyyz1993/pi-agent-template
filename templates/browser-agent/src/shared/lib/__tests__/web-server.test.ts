@@ -1,6 +1,5 @@
 import { describe, it, expect, afterEach } from "vitest";
 import http from "http";
-import { WebSocket } from "ws";
 import {
 	createWebServer,
 	getLocalIP,
@@ -8,17 +7,16 @@ import {
 	type WebServerResult,
 } from "../web-server";
 
-function httpGet(url: string): Promise<{ status: number; body: string }> {
+function httpGet(url: string, headers?: Record<string, string>): Promise<{ status: number; body: string }> {
 	return new Promise((resolve, reject) => {
-		http
-			.get(url, (res) => {
-				let data = "";
-				res.on("data", (chunk) => {
-					data += chunk;
-				});
-				res.on("end", () => resolve({ status: res.statusCode ?? 0, body: data }));
-			})
-			.on("error", reject);
+		const req = http.get(url, { headers }, (res) => {
+			let data = "";
+			res.on("data", (chunk) => {
+				data += chunk;
+			});
+			res.on("end", () => resolve({ status: res.statusCode ?? 0, body: data }));
+		});
+		req.on("error", reject);
 	});
 }
 
@@ -32,7 +30,7 @@ describe("createWebServer 工厂函数", () => {
 		}
 	});
 
-	it("应返回 httpServer + wss + port + authToken", async () => {
+	it("应返回 httpServer + sse + port + authToken", async () => {
 		webServer = await createWebServer({
 			port: 0,
 			authToken: "test-token-001",
@@ -41,7 +39,7 @@ describe("createWebServer 工厂函数", () => {
 		});
 
 		expect(webServer.httpServer).toBeDefined();
-		expect(webServer.wss).toBeDefined();
+		expect(webServer.sse).toBeDefined();
 		expect(webServer.port).toBeGreaterThan(0);
 		expect(webServer.authToken).toBe("test-token-001");
 		expect(typeof webServer.close).toBe("function");
@@ -94,7 +92,7 @@ describe("createWebServer 工厂函数", () => {
 		await new Promise<void>((resolve) => blocker.close(() => resolve()));
 	});
 
-	it("WS 客户端应能通过 token 连接", async () => {
+	it("SSE 连接需要 token 才能访问 /api/events", async () => {
 		webServer = await createWebServer({
 			port: 0,
 			authToken: "test-token-004",
@@ -102,18 +100,12 @@ describe("createWebServer 工厂函数", () => {
 			corsOrigin: "*",
 		});
 
-		const ws = new WebSocket(`ws://localhost:${webServer.port}/ws?token=${webServer.authToken}`);
-
-		await new Promise<void>((resolve, reject) => {
-			ws.on("open", () => {
-				ws.close();
-				resolve();
-			});
-			ws.on("error", reject);
-		});
+		// 无 token → 401
+		const { status } = await httpGet(`http://localhost:${webServer.port}/api/events`);
+		expect(status).toBe(401);
 	});
 
-	it("无 token 的 WS 连接应被拒绝", async () => {
+	it("带 token 的 SSE 连接应返回 200 + text/event-stream", async () => {
 		webServer = await createWebServer({
 			port: 0,
 			authToken: "test-token-005",
@@ -121,13 +113,34 @@ describe("createWebServer 工厂函数", () => {
 			corsOrigin: "*",
 		});
 
-		const ws = new WebSocket(`ws://localhost:${webServer.port}/ws`);
-
-		const closeCode = await new Promise<number>((resolve) => {
-			ws.on("close", (code) => resolve(code));
-			ws.on("error", () => {});
+		// SSE is a long-lived stream — read just enough to verify headers + ready event
+		const result = await new Promise<{ status: number; headers: Record<string, string>; body: string }>((resolve, reject) => {
+			const req = http.get(
+				`http://localhost:${webServer!.port}/api/events?token=${webServer!.authToken}`,
+				(res) => {
+					let body = "";
+					const timer = setTimeout(() => {
+						req.destroy();
+						resolve({ status: res.statusCode ?? 0, headers: res.headers as Record<string, string>, body });
+					}, 300);
+					res.on("data", (chunk) => {
+						body += chunk;
+						// Once we have the ready event, we can close
+						if (body.includes("event: ready")) {
+							clearTimeout(timer);
+							req.destroy();
+							resolve({ status: res.statusCode ?? 0, headers: res.headers as Record<string, string>, body });
+						}
+					});
+				}
+			);
+			req.on("error", (err) => {
+				if (!err.message.includes("aborted")) reject(err);
+			});
 		});
-		expect(closeCode).toBe(4001);
+
+		expect(result.status).toBe(200);
+		expect(result.body).toContain("event: ready");
 	});
 
 	it("HTTP 请求需要 token 才能访问文件路由", async () => {
@@ -157,7 +170,7 @@ describe("createWebServer 工厂函数", () => {
 		expect(json).toHaveProperty("clients");
 	});
 
-	it("关闭 webServer 应停止 HTTP 和 WS 服务", async () => {
+	it("关闭 webServer 应停止 HTTP 服务", async () => {
 		webServer = await createWebServer({
 			port: 0,
 			authToken: "test-token-008",

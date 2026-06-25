@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { useConnectionStore } from "../../stores/use-connection-store";
 import { ThemeToggle } from "../common/ThemeToggle";
 import { LanguageSwitcher } from "../common/LanguageSwitcher";
+import { NetworkToggleButton } from "../dev/NetworkPanel";
 
 export function TopBar() {
 	const { t } = useTranslation();
@@ -98,6 +99,7 @@ export function TopBar() {
 
 			{/* 右侧工具 */}
 			<div className="flex items-center gap-1">
+				<NetworkToggleButton />
 				<LanguageSwitcher />
 				<ThemeToggle />
 			</div>

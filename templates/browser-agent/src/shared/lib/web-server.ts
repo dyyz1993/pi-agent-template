@@ -1,7 +1,7 @@
 import { createServer, type Server } from "http";
 import { networkInterfaces } from "os";
 import { createHttpHandler } from "../http-routes";
-import { createWsHandler } from "../../gateway/ws-handler";
+import { createSseHandler, type SseHandler } from "../../gateway/sse-transport";
 import { createLogger } from "./logger";
 
 const log = createLogger("web-server");
@@ -15,7 +15,7 @@ export interface WebServerConfig {
 
 export interface WebServerResult {
 	httpServer: Server;
-	wss: ReturnType<typeof createWsHandler>;
+	sse: SseHandler;
 	port: number;
 	authToken: string;
 	close: () => Promise<void>;
@@ -84,7 +84,7 @@ export async function createWebServer(config: WebServerConfig): Promise<WebServe
 
 	const httpServer = createServer();
 
-	const wss = createWsHandler(httpServer, {
+	const sse = createSseHandler(httpServer, {
 		config: {
 			port,
 			authToken: config.authToken,
@@ -101,7 +101,8 @@ export async function createWebServer(config: WebServerConfig): Promise<WebServe
 				maxUploadSize: config.maxUploadSize,
 				corsOrigin: config.corsOrigin,
 			},
-			getWebSocketClientCount: () => wss.clients.size,
+			getSseClientCount: () => sse.clients.size,
+			sse,
 		})
 	);
 
@@ -111,15 +112,13 @@ export async function createWebServer(config: WebServerConfig): Promise<WebServe
 
 			resolve({
 				httpServer,
-				wss,
+				sse,
 				port,
 				authToken: config.authToken,
 				close: () =>
 					new Promise<void>((res) => {
-						wss.clients.forEach((ws) => ws.close());
-						wss.close(() => {
-							httpServer.close(() => res());
-						});
+						sse.close();
+						httpServer.close(() => res());
 					}),
 			});
 		});
