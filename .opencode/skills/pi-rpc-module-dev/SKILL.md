@@ -347,14 +347,16 @@ npx vitest run src/shared/handlers/__tests__/xxx-handler.test.ts
 
 违反以下规则的代码将被 pre-commit 检查拒绝：
 
-| 编号 | 规则                         | 说明                                                          |
-| ---- | ---------------------------- | ------------------------------------------------------------- |
-| R1   | `rpc/no-bare-method`         | 方法名必须使用 `module.action` 格式，禁止裸方法名             |
-| R2   | `rpc/no-direct-register`     | 入口文件禁止直接调用 `server.register()`                      |
-| R3   | `rpc/schema-merge-only`      | `rpc-schema.ts` 只能做类型合并，禁止直接定义方法              |
-| R4   | `rpc/module-file-naming`     | 模块文件必须导出 `<Name>Methods` 接口，方法前缀必须匹配文件名 |
-| R5   | `rpc/require-typed-register` | 入口文件必须导入 `registerAllHandlers`                        |
-| R6   | `rpc/require-api-client`     | 前端禁止绕过 `apiClient` 直接操作 WebSocket                   |
+| 编号 | 规则                           | 说明                                                          |
+| ---- | ------------------------------ | ------------------------------------------------------------- |
+| R1   | `rpc/no-bare-method`           | 方法名必须使用 `module.action` 格式，禁止裸方法名             |
+| R2   | `rpc/no-direct-register`       | 入口文件禁止直接调用 `server.register()`                      |
+| R3   | `rpc/schema-merge-only`        | `rpc-schema.ts` 只能做类型合并，禁止直接定义方法              |
+| R4   | `rpc/module-file-naming`       | 模块文件必须导出 `<Name>Methods` 接口，方法前缀必须匹配文件名 |
+| R5   | `rpc/require-typed-register`   | 入口文件必须导入 `registerAllHandlers`                        |
+| R6   | `rpc/require-api-client`       | 前端禁止绕过 `apiClient` 直接操作 WebSocket                   |
+| R7   | `rpc/no-deep-relative-imports` | 禁止超过两层 `../` 的相对路径导入                             |
+| R8   | `rpc/no-hardcoded-strings`     | 禁止在组件中硬编码 UI 文本，必须通过 `t()` 获取 i18n 翻译     |
 
 ---
 

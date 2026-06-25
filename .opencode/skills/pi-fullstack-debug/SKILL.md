@@ -134,7 +134,7 @@ isCommandAllowed("rm -rf /tmp/test"); // 检查是否被拦截
 2. **检查订阅** — 确认组件用 selector 订阅正确的 state slice
 3. **检查缓存** — `rpcCache` 默认 TTL 2s，可缓存的方法见 `CACHEABLE_METHODS`
    - `file.listDir`: 2s, `file.readFile`: 3s, `git.status`: 2s, `git.branches`: 5s
-4. **手动清除缓存** — `rpcCache.clear()` 或 `rpcCache.invalidate("method.name")`
+4. **手动清除缓存** — `rpcCache.clear()` 或 `rpcCache.invalidate("method.name")`。批量失效用 `rpcCache.invalidateAll(["method.a", "method.b"])`
 
 ### 6. 性能问题
 
