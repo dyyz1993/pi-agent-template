@@ -11,7 +11,8 @@ if [ "$STAGED_TS" -gt 0 ]; then
   done
 fi
 
-FORBIDDEN=$(git diff --cached --name-only | grep -E '\.env$|\.env\.|credentials|\.pem$|\.key$' || true)
+FORBIDDEN=$(git diff --cached --name-only | grep -E '\.env$|credentials|\.pem$|\.key$' || true)
+FORBIDDEN="$FORBIDDEN$(git diff --cached --name-only | grep -E '\.env\.' | grep -vE '\.env\.(example|sample|template|defaults)' || true)"
 if [ -n "$FORBIDDEN" ]; then
   echo "❌ Potential secrets detected in staged files:"
   echo "$FORBIDDEN"
