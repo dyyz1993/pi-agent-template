@@ -6,7 +6,6 @@ import { useBreakpointSync } from "./hooks/use-breakpoint";
 import { useRpcInit } from "./hooks/use-rpc-init";
 import { useSidebarResize } from "./hooks/use-sidebar-resize";
 import { AppLayout, type CenterTab } from "./components/layout/AppLayout";
-import { OnboardingGuide } from "./components/onboarding/OnboardingGuide";
 import { ErrorBoundary as _EB } from "./components/common/ErrorBoundary";
 
 const ErrorBoundary = _EB as unknown as React.FC<{ children: ReactNode }>;
@@ -14,7 +13,6 @@ const ErrorBoundary = _EB as unknown as React.FC<{ children: ReactNode }>;
 function App() {
 	const { t } = useTranslation();
 	const ready = useConnectionStore((s) => s.ready);
-	const browserStatus = useConnectionStore((s) => s.browserStatus);
 	const [centerTab, setCenterTab] = useState<CenterTab>("chat");
 
 	useBreakpointSync();
@@ -22,7 +20,7 @@ function App() {
 
 	const { sidebarWidth, handleResizeStart } = useSidebarResize();
 
-	// 第一层：RPC/SSE 连接尚未建立
+	// RPC 连接尚未建立时显示加载（这是唯一需要挡住的场景）
 	if (!ready) {
 		return (
 			<div className="h-screen bg-[var(--color-bg-primary)] flex items-center justify-center">
@@ -36,16 +34,7 @@ function App() {
 		);
 	}
 
-	// 第二层：RPC 已连接，但浏览器未连接 → 显示引导
-	if (browserStatus === "offline") {
-		return (
-			<ErrorBoundary>
-				<OnboardingGuide />
-			</ErrorBoundary>
-		);
-	}
-
-	// 第三层：浏览器已连接 → 显示工作台
+	// 始终显示工作台（未连接时顶部指示器标红 + 对话区显示引导横幅）
 	return (
 		<ErrorBoundary>
 			<AppLayout

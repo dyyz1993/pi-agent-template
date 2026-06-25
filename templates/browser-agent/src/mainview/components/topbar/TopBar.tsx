@@ -76,17 +76,35 @@ export function TopBar() {
 				{mode === "desktop" ? t("app.mode.desktop") : t("app.mode.web")}
 			</span>
 
-			{/* 连接状态 */}
+			{/* 连接状态指示器 */}
 			<span
-				className={`flex items-center gap-1 ${
+				className={`flex items-center gap-1.5 px-2 py-0.5 rounded ${
 					isOnline
-						? "text-[var(--color-text-success)]"
-						: "text-[var(--color-text-error)]"
+						? "bg-[var(--color-text-success)]/10 text-[var(--color-text-success)]"
+						: "bg-[var(--color-text-error)]/10 text-[var(--color-text-error)]"
 				}`}
 			>
-				{isOnline ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-				{isOnline ? t("app.online") : t("app.offline")}
-				{isOnline && tabs.length > 0 && ` · ${tabs.length} 标签页`}
+				{isOnline ? (
+					<>
+						<span className="relative flex w-2 h-2">
+							<span className="absolute inline-flex w-full h-full rounded-full bg-[var(--color-text-success)] opacity-60 animate-ping" />
+							<span className="relative inline-flex w-2 h-2 rounded-full bg-[var(--color-text-success)]" />
+						</span>
+						<Wifi className="w-3 h-3" />
+						已连接
+						{tabs.length > 0 && (
+							<span className="text-[var(--color-text-tertiary)]">· {tabs.length} 标签</span>
+						)}
+					</>
+				) : (
+					<>
+						<span className="relative flex w-2 h-2">
+							<span className="relative inline-flex w-2 h-2 rounded-full bg-[var(--color-text-error)]" />
+						</span>
+						<WifiOff className="w-3 h-3" />
+						未连接
+					</>
+				)}
 			</span>
 
 			{/* 标签页选择器（仅在线时显示） */}
