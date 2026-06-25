@@ -262,7 +262,21 @@ export async function agentChat(
 	const browserContext = await getBrowserContext();
 	let pluginHint = "";
 	if (activePlugins && activePlugins.length > 0) {
-		pluginHint = `\n<active-plugins>\n  用户选择了以下插件，优先使用：\n${activePlugins.map((p) => `  - ${p}`).join("\n")}\n</active-plugins>`;
+		// 把工具 ID 映射成 Agent 能理解的描述
+		const toolDescs: Record<string, string> = {
+			scrape: "采集当前页面内容转 Markdown（xbrowser scrape）",
+			crawl: "批量爬取网站多个页面（xbrowser crawl）",
+			map: "发现网站所有 URL 结构（xbrowser map）",
+			screenshot: "截取当前页面（xbrowser screenshot）",
+			search: "搜索引擎搜索关键词（xbrowser search）",
+			"scrape-xhs": "采集小红书笔记（scrapeXhs 专用流程）",
+			xiaohongshu: "采集小红书内容（xiaohongshu 插件）",
+		};
+		const toolList = activePlugins.map((p) => {
+			const desc = toolDescs[p];
+			return desc ? `  - ${p}: ${desc}` : `  - ${p}`;
+		}).join("\n");
+		pluginHint = `\n<active-plugins>\n  用户选择了以下工具/插件，请优先使用它们完成任务。根据用户的需求自动编排执行顺序：\n${toolList}\n</active-plugins>`;
 	}
 	const fullMessage = `${browserContext}${pluginHint}\n\n用户请求: ${message}`;
 

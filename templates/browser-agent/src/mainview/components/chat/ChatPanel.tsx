@@ -5,7 +5,7 @@
  * 通过 RPC 事件订阅接收 Agent 的实时推送
  */
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageSquare } from "lucide-react";
 import { useChatStore } from "../../stores/use-chat-store";
@@ -13,6 +13,7 @@ import { useSessionStore } from "../../stores/use-session-store";
 import { useConnectionStore } from "../../stores/use-connection-store";
 import { MessageBubble } from "./MessageBubble";
 import { CommandBar } from "./CommandBar";
+import { ToolPicker } from "./ToolPicker";
 import { useAgentChat } from "../../hooks/use-agent-chat";
 
 export function ChatPanel() {
@@ -27,6 +28,13 @@ export function ChatPanel() {
 
 	const inputRef = useRef<HTMLInputElement>(null);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
+	const [selectedTools, setSelectedTools] = useState<string[]>([]);
+
+	const toggleTool = (toolId: string): void => {
+		setSelectedTools((prev) =>
+			prev.includes(toolId) ? prev.filter((t) => t !== toolId) : [...prev, toolId],
+		);
+	};
 
 	// 自动滚底
 	useEffect(() => {
@@ -51,8 +59,12 @@ export function ChatPanel() {
 		const text = input.value.trim();
 		input.value = "";
 
-		await chat(text, currentSessionId, activePlugins);
-	}, [currentSessionId, running, activePlugins, chat]);
+		// 组合选中工具 + 用户文本
+		const tools = [...activePlugins, ...selectedTools];
+		const allPlugins = [...new Set(tools)]; // 去重
+		await chat(text, currentSessionId, allPlugins);
+		setSelectedTools([]);
+	}, [currentSessionId, running, activePlugins, selectedTools, chat]);
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === "Enter" && !e.shiftKey) {
@@ -133,31 +145,16 @@ export function ChatPanel() {
 					</button>
 				</div>
 
-				{/* 快捷按钮 */}
-				<div className="flex gap-2 mt-2 flex-wrap">
-					{QUICK_ACTIONS.map((qa) => (
-						<button
-							key={qa.label}
-							onClick={() => {
-								if (inputRef.current) inputRef.current.value = qa.prompt;
-							}}
-							className="px-3 py-1 rounded-full text-xs border border-[var(--color-border-primary)] hover:bg-[var(--color-bg-hover)] transition-colors text-[var(--color-text-secondary)]"
-						>
-							{qa.icon} {qa.label}
-						</button>
-					))}
-				</div>
+				{/* 工具/插件选择 + 快捷输入 */}
+				<ToolPicker
+					selectedTools={selectedTools}
+					onToggle={toggleTool}
+					onClear={() => setSelectedTools([])}
+				/>
 			</div>
 		</div>
 	);
 }
-
-const QUICK_ACTIONS = [
-	{ icon: "📸", label: "截图", prompt: "帮我截图当前页面" },
-	{ icon: "📕", label: "小红书", prompt: "采集小红书首页热门笔记" },
-	{ icon: "🌐", label: "豆瓣", prompt: "帮我采集豆瓣首页内容" },
-	{ icon: "📋", label: "标签页", prompt: "列出当前所有标签页" },
-];
 
 function InlineAssets({ assets }: { assets: any[] }) {
 	return (
