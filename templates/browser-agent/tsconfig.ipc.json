@@ -1,0 +1,14 @@
+{
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"noUnusedLocals": false,
+		"noUnusedParameters": false,
+		"skipLibCheck": true,
+		"noUncheckedIndexedAccess": true,
+		"noImplicitReturns": true,
+		"noFallthroughCasesInSwitch": true,
+		"strict": true
+	},
+	"include": ["src/bun", "src/gateway/ipc-transport.ts", "src/shared"],
+	"exclude": ["node_modules", "dist", "build", "**/__tests__/**", "**/*.test.ts", "**/*.test.tsx"]
+}
