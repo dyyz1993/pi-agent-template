@@ -1,0 +1,8 @@
+- [x] Implement all missing features (chat history, DebugPanel, form prevention, etc.)
+- [x] CSS variables replacement across 3 templates
+- [x] i18n for hardcoded strings
+- [x] Husky hooks (pre-rebase, pre-commit, pre-push)
+- [x] Lint-staged fix for pi-cli/templates
+- [x] Commit and push all changes
+- [x] Unit tests verified (837+ passing)
+- [x] E2E verified on shanbox (general/chat/agent all passing)

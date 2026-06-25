@@ -127,7 +127,7 @@ describe("useExplorerStore", () => {
 		const { useExplorerStore } = await import("../use-explorer-store");
 		useExplorerStore.setState({
 			selectedPath: "/file.ts",
-			filePreview: { path: "/file.ts", name: "file.ts" } as any,
+			filePreview: { path: "/file.ts", name: "file.ts" } as { path: string; name: string },
 		});
 		useExplorerStore.getState().closePreview();
 		expect(useExplorerStore.getState().selectedPath).toBeNull();
