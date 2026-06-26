@@ -1,4 +1,4 @@
-import { createTypedClient, IPCTransport } from "@dyyz1993/rpc-core";
+import { createTypedClient, IPCTransport } from '@dyyz1993/rpc-core';
 import type {
 	TypedClient,
 	MethodParams,
@@ -6,10 +6,10 @@ import type {
 	EventPayload,
 	EventMetadata,
 	Transport,
-} from "@dyyz1993/rpc-core";
-import type { RPCMethods, RPCEvents } from "../../shared/rpc-schema";
-import { rpcCache, CACHEABLE_METHODS } from "./rpc-cache";
-import { networkBus } from "./network-bus";
+} from '@dyyz1993/rpc-core';
+import type { RPCMethods, RPCEvents } from '../../shared/rpc-schema';
+import { rpcCache, CACHEABLE_METHODS } from './rpc-cache';
+import { networkBus } from './network-bus';
 
 /**
  * Token 来源优先级：
@@ -19,18 +19,19 @@ import { networkBus } from "./network-bus";
  * 4. 默认值（开发备用）
  */
 function resolveAuthToken(): string {
-	if (typeof window !== "undefined") {
+	if (typeof window !== 'undefined') {
 		// Vite 注入的环境变量（来自 .env 的 VITE_AUTH_TOKEN）
 		const viteToken =
-			typeof import.meta !== "undefined" && (import.meta as any).env?.VITE_AUTH_TOKEN;
+			typeof import.meta !== 'undefined' &&
+			(import.meta as Record<string, unknown>).env?.VITE_AUTH_TOKEN;
 		if (viteToken) return viteToken;
 
-		const fromQuery = new URLSearchParams(window.location.search).get("token");
+		const fromQuery = new URLSearchParams(window.location.search).get('token');
 		if (fromQuery) return fromQuery;
-		const fromStorage = localStorage.getItem("rpc-auth-token");
+		const fromStorage = localStorage.getItem('rpc-auth-token');
 		if (fromStorage) return fromStorage;
 	}
-	return "pi-agent-template-token";
+	return 'pi-agent-template-token';
 }
 
 const AUTH_TOKEN = resolveAuthToken();
@@ -51,7 +52,7 @@ class BrowserSseTransport implements Transport {
 	private disconnectHandlers = new Set<() => void>();
 	private eventSource: EventSource | null = null;
 	clientId: string | null = null;
-	private baseUrl = "";
+	private baseUrl = '';
 	private connected = false;
 	private closed = false;
 
@@ -67,7 +68,7 @@ class BrowserSseTransport implements Transport {
 
 		// "ready" event carries the clientId — fires on every (re)connect.
 		// Must update clientId each time because reconnect assigns a new one.
-		es.addEventListener("ready", (ev: MessageEvent) => {
+		es.addEventListener('ready', (ev: MessageEvent) => {
 			try {
 				const data = JSON.parse(ev.data);
 				this.clientId = data.clientId;
@@ -82,10 +83,10 @@ class BrowserSseTransport implements Transport {
 			try {
 				const msg = JSON.parse(ev.data);
 				// Debug: log SSE messages to console for troubleshooting
-				if (msg.type === "event") {
-					console.debug(`[SSE] event: ${msg.eventType}`, msg.payload);
-				} else if (msg.type === "response") {
-					console.debug(`[SSE] response: ${msg.id}`, msg.result || msg.error);
+				if (msg.type === 'event') {
+					console.warn(`[SSE] event: ${msg.eventType}`, msg.payload);
+				} else if (msg.type === 'response') {
+					console.warn(`[SSE] response: ${msg.id}`, msg.result || msg.error);
 				}
 				for (const handler of [...this.messageHandlers]) {
 					handler(msg);
@@ -103,7 +104,7 @@ class BrowserSseTransport implements Transport {
 			if (this.closed) return;
 			this.connected = false;
 			for (const handler of [...this.errorHandlers]) {
-				handler(new Error("SSE connection error"));
+				handler(new Error('SSE connection error'));
 			}
 			for (const handler of [...this.disconnectHandlers]) {
 				handler();
@@ -113,7 +114,7 @@ class BrowserSseTransport implements Transport {
 	}
 
 	async send(message: unknown): Promise<void> {
-		if (this.closed) throw new Error("SSE transport closed");
+		if (this.closed) throw new Error('SSE transport closed');
 
 		// Wait for clientId (with timeout to avoid hanging forever)
 		if (!this.clientId) {
@@ -122,8 +123,8 @@ class BrowserSseTransport implements Transport {
 
 		const url = `${this.baseUrl}/api/rpc?token=${encodeURIComponent(AUTH_TOKEN)}&clientId=${encodeURIComponent(this.clientId!)}`;
 		const res = await fetch(url, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify(message),
 		});
 
@@ -136,8 +137,8 @@ class BrowserSseTransport implements Transport {
 			// Retry the POST with the fresh clientId
 			const retryUrl = `${this.baseUrl}/api/rpc?token=${encodeURIComponent(AUTH_TOKEN)}&clientId=${encodeURIComponent(this.clientId!)}`;
 			const retryRes = await fetch(retryUrl, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(message),
 			});
 			if (!retryRes.ok) {
@@ -161,7 +162,7 @@ class BrowserSseTransport implements Transport {
 					resolve();
 				} else if (Date.now() - start > timeoutMs) {
 					clearInterval(check);
-					reject(new Error("SSE 连接超时：未收到 clientId"));
+					reject(new Error('SSE 连接超时：未收到 clientId'));
 				}
 			}, 50);
 		});
@@ -213,7 +214,7 @@ class BrowserSseTransport implements Transport {
 class APIClientImpl {
 	private client: TypedClient<RPCMethods, RPCEvents> | null = null;
 	private initPromise: Promise<void> | null = null;
-	private _transport: "ipc" | "sse" = "sse";
+	private _transport: 'ipc' | 'sse' = 'sse';
 	private _baseUrl: string | null = null;
 	private sseTransport: BrowserSseTransport | null = null;
 
@@ -224,7 +225,7 @@ class APIClientImpl {
 		if (this.client) return;
 
 		const ipcTransport = new IPCTransport();
-		this._transport = "ipc";
+		this._transport = 'ipc';
 		this._baseUrl = null;
 		this.client = createTypedClient<RPCMethods, RPCEvents>(ipcTransport);
 		this.setupElectrobunBridge(ipcTransport);
@@ -235,7 +236,7 @@ class APIClientImpl {
 	 */
 	async initialize(): Promise<void> {
 		// 已连接且 transport 正常 → 直接返回
-		if (this.client && (this._transport === "ipc" || this.sseTransport?.isConnected())) {
+		if (this.client && (this._transport === 'ipc' || this.sseTransport?.isConnected())) {
 			return;
 		}
 
@@ -252,12 +253,12 @@ class APIClientImpl {
 		this.initPromise = (async () => {
 			const env = this.detectEnvironment();
 
-			if (env === "electrobun") {
+			if (env === 'electrobun') {
 				// 不应走到这里，桌面端应通过 initSyncForDesktop() 初始化
 				this.initSyncForDesktop();
 			} else {
 				try {
-					this._transport = "sse";
+					this._transport = 'sse';
 					const baseUrl = this.resolveBaseUrl();
 					this.sseTransport = new BrowserSseTransport(baseUrl, AUTH_TOKEN);
 					this.client = createTypedClient<RPCMethods, RPCEvents>(this.sseTransport);
@@ -279,14 +280,14 @@ class APIClientImpl {
 		return this.initPromise;
 	}
 
-	private detectEnvironment(): "electrobun" | "browser" {
-		if (typeof window === "undefined") return "browser";
-		if ((window as any).__electrobunBunBridge) return "electrobun";
-		return "browser";
+	private detectEnvironment(): 'electrobun' | 'browser' {
+		if (typeof window === 'undefined') return 'browser';
+		if ((window as Record<string, unknown>).__electrobunBunBridge) return 'electrobun';
+		return 'browser';
 	}
 
 	private resolveBaseUrl(): string {
-		if (typeof window === "undefined") return "http://localhost:5200";
+		if (typeof window === 'undefined') return 'http://localhost:5200';
 		// In dev, Vite proxies /api → backend, so relative path works.
 		// For standalone deployment, use window.location.origin.
 		return window.location.origin;
@@ -298,9 +299,9 @@ class APIClientImpl {
 	 * - Browser → Bun: 通过 __electrobunBunBridge.postMessage 发送 Electrobun 消息格式
 	 */
 	private setupElectrobunBridge(ipcTransport: IPCTransport): void {
-		if (typeof window === "undefined") return;
+		if (typeof window === 'undefined') return;
 
-		const win = window as any;
+		const win = window as Record<string, unknown>;
 
 		// 1. 注册接收函数：Bun 通过 executeJavascript 调用此函数发送消息到 Browser
 		win.__piAgentIPC = (msg: unknown) => {
@@ -314,8 +315,8 @@ class APIClientImpl {
 			ipcTransport.send = async (message: unknown) => {
 				// 包装成 Electrobun message packet，bun 端 defineRPC 注册了 "rpc-message" handler
 				const electrobunPacket = {
-					type: "message",
-					id: "rpc-message",
+					type: 'message',
+					id: 'rpc-message',
 					payload: JSON.stringify(message),
 				};
 				bridge.postMessage(JSON.stringify(electrobunPacket));
@@ -323,7 +324,7 @@ class APIClientImpl {
 		}
 	}
 
-	getTransport(): "ipc" | "sse" {
+	getTransport(): 'ipc' | 'sse' {
 		return this._transport;
 	}
 
@@ -339,7 +340,7 @@ class APIClientImpl {
 
 	async call<K extends keyof RPCMethods>(
 		method: K,
-		params: MethodParams<RPCMethods, K>
+		params: MethodParams<RPCMethods, K>,
 	): Promise<MethodResult<RPCMethods, K>> {
 		const methodStr = method as string;
 		const ttl = CACHEABLE_METHODS[methodStr];
@@ -365,13 +366,19 @@ class APIClientImpl {
 	async subscribe<K extends keyof RPCEvents>(
 		eventType: K,
 		handler: (payload: EventPayload<RPCEvents[K]>, metadata: EventMetadata<RPCEvents[K]>) => void,
-		filter?: Record<string, unknown>
+		filter?: Record<string, unknown>,
 	): Promise<string> {
 		await this.initialize();
 
 		// Wrap handler to capture SSE events for the network panel
-		const wrapped = (payload: EventPayload<RPCEvents[K]>, metadata: EventMetadata<RPCEvents[K]>) => {
-			networkBus.emitEvent(eventType as string, metadata as unknown as Record<string, unknown> | undefined);
+		const wrapped = (
+			payload: EventPayload<RPCEvents[K]>,
+			metadata: EventMetadata<RPCEvents[K]>,
+		) => {
+			networkBus.emitEvent(
+				eventType as string,
+				metadata as unknown as Record<string, unknown> | undefined,
+			);
 			handler(payload, metadata);
 		};
 

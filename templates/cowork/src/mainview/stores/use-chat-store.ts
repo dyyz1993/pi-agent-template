@@ -4,14 +4,14 @@
  * 对应 PRD §4.2-4.3：SSE 流式渲染、轮次展示、工具调用卡片
  */
 
-import { create } from "zustand";
+import { create } from 'zustand';
 
 export interface ToolCall {
 	id: string;
 	tool: string;
 	input: string;
 	output: string;
-	status: "running" | "done";
+	status: 'running' | 'done';
 }
 
 export interface Turn {
@@ -23,22 +23,22 @@ export interface Turn {
 
 export interface AgentMessage {
 	id: string;
-	role: "agent";
+	role: 'agent';
 	text: string;
 	turns: Turn[];
 	thinking: string;
 	steps?: { label: string; status: string; detail?: string }[];
-	summary?: any;
+	summary?: unknown;
 	error?: string;
 	at: number;
 }
 
 interface ChatState {
-	messages: (AgentMessage | { id: string; role: "user"; text: string; at: number })[];
+	messages: (AgentMessage | { id: string; role: 'user'; text: string; at: number })[];
 
 	// 流式回调，由 ChatPanel 绑定
-	_onEventCallback: ((event: any) => void) | null;
-	setOnEventCallback: (cb: ((event: any) => void) | null) => void;
+	_onEventCallback: ((event: unknown) => void) | null;
+	setOnEventCallback: (cb: ((event: unknown) => void) | null) => void;
 
 	addUserMessage: (text: string) => void;
 	addAgentPlaceholder: (id: string) => void;
@@ -48,7 +48,7 @@ interface ChatState {
 	appendThinking: (delta: string) => void;
 	appendText: (delta: string) => void;
 	markTurnDone: (turnNum: number) => void;
-	setMessages: (msgs: any[]) => void;
+	setMessages: (msgs: unknown[]) => void;
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -61,7 +61,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 		set((s) => ({
 			messages: [
 				...s.messages,
-				{ id: `msg_${Date.now()}`, role: "user" as const, text, at: Date.now() },
+				{ id: `msg_${Date.now()}`, role: 'user' as const, text, at: Date.now() },
 			],
 		})),
 
@@ -71,10 +71,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
 				...s.messages,
 				{
 					id,
-					role: "agent" as const,
-					text: "",
+					role: 'agent' as const,
+					text: '',
 					turns: [],
-					thinking: "",
+					thinking: '',
 					at: Date.now(),
 				},
 			],
@@ -84,7 +84,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 		const msgs = [...get().messages];
 		for (let i = msgs.length - 1; i >= 0; i--) {
 			const entry = msgs[i];
-			if (!entry || entry.role !== "agent") continue;
+			if (!entry || entry.role !== 'agent') continue;
 			msgs[i] = { ...(entry as AgentMessage), ...patch };
 			break;
 		}
@@ -95,7 +95,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 		const msgs = [...get().messages];
 		for (let i = msgs.length - 1; i >= 0; i--) {
 			const entry = msgs[i];
-			if (!entry || entry.role !== "agent") continue;
+			if (!entry || entry.role !== 'agent') continue;
 			const m = entry as AgentMessage;
 			const turns = [...(m.turns || [])];
 			const lastTurn = turns[turns.length - 1];
@@ -103,7 +103,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 				turns.push({
 					turn: turns.length + 1,
 					toolCalls: [],
-					text: "",
+					text: '',
 					done: false,
 				});
 			}
@@ -121,7 +121,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 		const msgs = [...get().messages];
 		for (let i = msgs.length - 1; i >= 0; i--) {
 			const entry = msgs[i];
-			if (!entry || entry.role !== "agent") continue;
+			if (!entry || entry.role !== 'agent') continue;
 			const m = entry as AgentMessage;
 			const turns = [...(m.turns || [])];
 			const cur = turns[turns.length - 1];
@@ -130,14 +130,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
 				const idx = calls.findIndex((c) => c.id === tcId);
 				if (idx >= 0) {
 					const c = calls[idx];
-					if (c) calls[idx] = { ...c, output, status: "done" as const };
+					if (c) calls[idx] = { ...c, output, status: 'done' as const };
 				} else {
 					const ri =
-						calls.length -
-						1 -
-						[...calls].reverse().findIndex((c) => c.status === "running");
+						calls.length - 1 - [...calls].reverse().findIndex((c) => c.status === 'running');
 					const c = calls[ri];
-					if (c) calls[ri] = { ...c, output, status: "done" as const };
+					if (c) calls[ri] = { ...c, output, status: 'done' as const };
 				}
 				cur.toolCalls = calls;
 			}
@@ -151,9 +149,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
 		const msgs = [...get().messages];
 		for (let i = msgs.length - 1; i >= 0; i--) {
 			const entry = msgs[i];
-			if (!entry || entry.role !== "agent") continue;
+			if (!entry || entry.role !== 'agent') continue;
 			const m = entry as AgentMessage;
-			msgs[i] = { ...m, thinking: (m.thinking || "") + delta };
+			msgs[i] = { ...m, thinking: (m.thinking || '') + delta };
 			break;
 		}
 		set({ messages: msgs });
@@ -163,14 +161,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
 		const msgs = [...get().messages];
 		for (let i = msgs.length - 1; i >= 0; i--) {
 			const entry = msgs[i];
-			if (!entry || entry.role !== "agent") continue;
+			if (!entry || entry.role !== 'agent') continue;
 			const m = entry as AgentMessage;
 			const turns = [...(m.turns || [])];
 			const openTurn = turns.find((t) => !t.done);
 			if (openTurn) {
-				openTurn.text = (openTurn.text || "") + delta;
+				openTurn.text = (openTurn.text || '') + delta;
 			}
-			msgs[i] = { ...m, turns, text: (m.text || "") + delta };
+			msgs[i] = { ...m, turns, text: (m.text || '') + delta };
 			break;
 		}
 		set({ messages: msgs });
@@ -180,7 +178,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 		const msgs = [...get().messages];
 		for (let i = msgs.length - 1; i >= 0; i--) {
 			const entry = msgs[i];
-			if (!entry || entry.role !== "agent") continue;
+			if (!entry || entry.role !== 'agent') continue;
 			const m = entry as AgentMessage;
 			const turns = [...(m.turns || [])];
 			const lastTurn = turns[turns.length - 1];

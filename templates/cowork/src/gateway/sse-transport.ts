@@ -10,13 +10,13 @@
  * route the message into the correct RPCServer.
  */
 
-import type { IncomingMessage, Server, ServerResponse } from "http";
-import { randomUUID, timingSafeEqual } from "crypto";
-import { RPCServer, type Transport } from "@dyyz1993/rpc-core";
-import { registerAllHandlers } from "../shared/register-all-handlers";
-import { createLogger } from "../shared/lib/logger";
+import type { IncomingMessage, Server, ServerResponse } from 'http';
+import { randomUUID, timingSafeEqual } from 'crypto';
+import { RPCServer, type Transport } from '@dyyz1993/rpc-core';
+import { registerAllHandlers } from '../shared/register-all-handlers';
+import { createLogger } from '../shared/lib/logger';
 
-const log = createLogger("gateway");
+const log = createLogger('gateway');
 
 function safeEqual(a: string, b: string): boolean {
 	const bufA = Buffer.from(a);
@@ -91,11 +91,11 @@ export function createSseHandler(_httpServer: Server, deps: SseHandlerDeps): Sse
 	function handleSseConnect(req: IncomingMessage, res: ServerResponse): void {
 		// SSE response headers — disable proxy buffering for real-time streaming
 		res.writeHead(200, {
-			"Content-Type": "text/event-stream",
-			"Cache-Control": "no-cache, no-transform",
-			Connection: "keep-alive",
-			"X-Accel-Buffering": "no",
-			"Access-Control-Allow-Origin": "*",
+			'Content-Type': 'text/event-stream',
+			'Cache-Control': 'no-cache, no-transform',
+			Connection: 'keep-alive',
+			'X-Accel-Buffering': 'no',
+			'Access-Control-Allow-Origin': '*',
 		});
 
 		const id = randomUUID();
@@ -112,7 +112,7 @@ export function createSseHandler(_httpServer: Server, deps: SseHandlerDeps): Sse
 
 		client.transport = createSseTransport(client);
 		client.rpcServer = new RPCServer(client.transport);
-		registerAllHandlers(client.rpcServer, { platform: "web" });
+		registerAllHandlers(client.rpcServer, { platform: 'web' });
 
 		clients.set(id, client);
 
@@ -122,68 +122,78 @@ export function createSseHandler(_httpServer: Server, deps: SseHandlerDeps): Sse
 		// Heartbeat every 25s to keep proxies from timing out
 		const heartbeat = setInterval(() => {
 			if (res.writableEnded) return;
-			res.write(": ping\n\n");
+			res.write(': ping\n\n');
 		}, 25000);
 
-		log.info("SSE client connected", { id, total: clients.size });
+		log.info('SSE client connected', { id, total: clients.size });
 
 		const onClose = (): void => {
 			clearInterval(heartbeat);
 			clients.delete(id);
 			client.cleanup();
 			client.rpcServer.close();
-			log.info("SSE client disconnected", { id, total: clients.size });
+			log.info('SSE client disconnected', { id, total: clients.size });
 		};
 
-		req.on("close", onClose);
-		req.on("error", onClose);
+		req.on('close', onClose);
+		req.on('error', onClose);
 	}
 
 	async function handleRpcPost(req: IncomingMessage, res: ServerResponse): Promise<void> {
-		const url = req.url ? new URL(req.url, "http://localhost") : null;
-		const clientId = url?.searchParams.get("clientId");
+		const url = req.url ? new URL(req.url, 'http://localhost') : null;
+		const clientId = url?.searchParams.get('clientId');
 
 		if (!clientId) {
-			res.writeHead(400, { "Content-Type": "application/json" });
-			res.end(JSON.stringify({ error: "Missing clientId" }));
+			res.writeHead(400, { 'Content-Type': 'application/json' });
+			res.end(JSON.stringify({ error: 'Missing clientId' }));
 			return;
 		}
 
 		const client = clients.get(clientId);
 		if (!client) {
-			res.writeHead(404, { "Content-Type": "application/json" });
-			res.end(JSON.stringify({ error: "Unknown clientId (SSE not connected)" }));
+			res.writeHead(404, { 'Content-Type': 'application/json' });
+			res.end(JSON.stringify({ error: 'Unknown clientId (SSE not connected)' }));
 			return;
 		}
 
 		// Read JSON body
-		let body = "";
+		let body = '';
 		for await (const chunk of req) {
-			body += typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf8");
+			body += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8');
 		}
 
 		let message: unknown;
 		try {
 			message = JSON.parse(body);
 		} catch {
-			res.writeHead(400, { "Content-Type": "application/json" });
-			res.end(JSON.stringify({ error: "Invalid JSON" }));
+			res.writeHead(400, { 'Content-Type': 'application/json' });
+			res.end(JSON.stringify({ error: 'Invalid JSON' }));
 			return;
 		}
 
 		// Acknowledge receipt — the actual RPC response will arrive via the SSE stream
-		res.writeHead(202, { "Content-Type": "application/json" });
+		res.writeHead(202, { 'Content-Type': 'application/json' });
 		res.end(JSON.stringify({ accepted: true }));
 
 		// Route the message into the client's RPCServer via its transport handlers
-		const msgType = (message as any)?.type;
-		const msgMethod = (message as any)?.method;
-		log.info("RPC routing", { clientId, msgType, msgMethod, handlerCount: client.messageHandlers.size });
+		const msg = message as Record<string, unknown>;
+		const msgType = msg?.type;
+		const msgMethod = msg?.method;
+		log.info('RPC routing', {
+			clientId,
+			msgType,
+			msgMethod,
+			handlerCount: client.messageHandlers.size,
+		});
 		for (const handler of client.messageHandlers) {
 			try {
 				handler(message);
 			} catch (err) {
-				log.error("RPC handler error", { clientId, msgMethod, error: err instanceof Error ? err.message : String(err) });
+				log.error('RPC handler error', {
+					clientId,
+					msgMethod,
+					error: err instanceof Error ? err.message : String(err),
+				});
 			}
 		}
 	}
@@ -205,13 +215,13 @@ export function createSseHandler(_httpServer: Server, deps: SseHandlerDeps): Sse
 }
 
 export function verifyToken(req: IncomingMessage, authToken: string): boolean {
-	const auth = req.headers["authorization"];
+	const auth = req.headers['authorization'];
 	if (auth && safeEqual(auth, `Bearer ${authToken}`)) return true;
 
 	if (req.url) {
 		try {
-			const url = new URL(req.url, "http://localhost");
-			const token = url.searchParams.get("token");
+			const url = new URL(req.url, 'http://localhost');
+			const token = url.searchParams.get('token');
 			if (token && safeEqual(token, authToken)) return true;
 		} catch {
 			/* invalid URL */

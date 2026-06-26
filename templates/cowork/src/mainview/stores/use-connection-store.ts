@@ -1,7 +1,7 @@
-import { create } from "zustand";
-import { apiClient } from "../lib/api-client";
-import { useLogStore } from "./use-log-store";
-import { networkBus } from "../lib/network-bus";
+import { create } from 'zustand';
+import { apiClient } from '../lib/api-client';
+import { useLogStore } from './use-log-store';
+import { networkBus } from '../lib/network-bus';
 
 export interface BrowserTab {
 	index: number;
@@ -14,10 +14,10 @@ export interface BrowserTab {
 let _pollTimer: ReturnType<typeof setInterval> | null = null;
 
 interface ConnectionState {
-	mode: "web" | "desktop";
+	mode: 'web' | 'desktop';
 	ready: boolean;
 	// 浏览器连接状态
-	browserStatus: "offline" | "online";
+	browserStatus: 'offline' | 'online';
 	browsers: { pluginId: string; name: string; tabs: number }[];
 	tabs: BrowserTab[];
 	activeTabIndex: number;
@@ -26,14 +26,14 @@ interface ConnectionState {
 	plugins: { name: string; description: string }[];
 	activePlugins: string[];
 	// 系统信息
-	systemInfo: any;
+	systemInfo: unknown;
 
 	setReady: (ready: boolean) => void;
-	setMode: (mode: "web" | "desktop") => void;
-	setBrowserStatus: (status: "offline" | "online", browsers?: any[]) => void;
+	setMode: (mode: 'web' | 'desktop') => void;
+	setBrowserStatus: (status: 'offline' | 'online', browsers?: unknown[]) => void;
 	setTabs: (tabs: BrowserTab[], activeIndex: number) => void;
 	selectTab: (index: number | null) => void;
-	setPlugins: (plugins: any[]) => void;
+	setPlugins: (plugins: unknown[]) => void;
 	setActivePlugins: (plugins: string[]) => void;
 	toggleActivePlugin: (name: string) => void;
 	initializeConnection: () => void;
@@ -44,9 +44,9 @@ interface ConnectionState {
 }
 
 export const useConnectionStore = create<ConnectionState>((set, get) => ({
-	mode: "web",
+	mode: 'web',
 	ready: false,
-	browserStatus: "offline",
+	browserStatus: 'offline',
 	browsers: [],
 	tabs: [],
 	activeTabIndex: 0,
@@ -58,8 +58,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 	setReady: (ready) => set({ ready }),
 	setMode: (mode) => set({ mode }),
 
-	setBrowserStatus: (status, browsers) =>
-		set({ browserStatus: status, browsers: browsers || [] }),
+	setBrowserStatus: (status, browsers) => set({ browserStatus: status, browsers: browsers || [] }),
 
 	setTabs: (tabs, activeIndex) => set({ tabs, activeTabIndex: activeIndex }),
 
@@ -86,18 +85,16 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 				await apiClient.initialize();
 				const transport = apiClient.getTransport();
 				set({
-					mode: transport === "ipc" ? "desktop" : "web",
+					mode: transport === 'ipc' ? 'desktop' : 'web',
 					ready: true,
 				});
 				useLogStore
 					.getState()
-					.addLog(
-						`${transport === "ipc" ? "Desktop" : "Web"} mode - ${transport.toUpperCase()}`,
-					);
+					.addLog(`${transport === 'ipc' ? 'Desktop' : 'Web'} mode - ${transport.toUpperCase()}`);
 
 				// 初始检测浏览器连接 + 加载标签页
 				await get().checkBrowser();
-				if (get().browserStatus === "online") {
+				if (get().browserStatus === 'online') {
 					await get().loadTabs();
 				} else {
 					// 未连接 → 启动轮询，用户装好扩展后自动发现
@@ -108,9 +105,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 				if (retries < MAX_RETRIES) {
 					setTimeout(init, 1000);
 				} else {
-					useLogStore
-						.getState()
-						.addLog(`Failed to connect after ${MAX_RETRIES} retries`);
+					useLogStore.getState().addLog(`Failed to connect after ${MAX_RETRIES} retries`);
 				}
 			}
 		};
@@ -119,10 +114,10 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 
 	checkBrowser: async () => {
 		try {
-			const result = await apiClient.call("browser.checkConnection", {});
-			const wasOffline = get().browserStatus === "offline";
+			const result = await apiClient.call('browser.checkConnection', {});
+			const wasOffline = get().browserStatus === 'offline';
 			set({
-				browserStatus: result.connected ? "online" : "offline",
+				browserStatus: result.connected ? 'online' : 'offline',
 				browsers: result.browsers,
 			});
 			// 刚连上时，立即加载标签页
@@ -130,13 +125,13 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 				await get().loadTabs();
 			}
 		} catch {
-			set({ browserStatus: "offline", browsers: [] });
+			set({ browserStatus: 'offline', browsers: [] });
 		}
 	},
 
 	loadTabs: async () => {
 		try {
-			const result = await apiClient.call("browser.listTabs", {});
+			const result = await apiClient.call('browser.listTabs', {});
 			set({ tabs: result.tabs, activeTabIndex: result.activeIndex });
 		} catch (err) {
 			networkBus.emitStatus(`加载标签页失败: ${err instanceof Error ? err.message : String(err)}`);
@@ -149,13 +144,13 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
 	 */
 	startConnectionPolling: () => {
 		// 已连接就不轮询
-		if (get().browserStatus === "online") return;
+		if (get().browserStatus === 'online') return;
 		if (_pollTimer) return; // 已有轮询在跑
 
 		_pollTimer = setInterval(async () => {
 			await get().checkBrowser();
 			// 连上了就停止轮询
-			if (get().browserStatus === "online") {
+			if (get().browserStatus === 'online') {
 				if (_pollTimer) {
 					clearInterval(_pollTimer);
 					_pollTimer = null;
