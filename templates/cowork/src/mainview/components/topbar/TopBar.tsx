@@ -49,9 +49,9 @@ export function TopBar() {
 					}`}
 				>
 					{sbSidebarMode === 'hidden' && !sbDrawerOpen ? (
-						<PanelLeftOpen className="w-[18px] h-[18px]" />
+						<PanelLeftOpen className="w-[18px] h-[18px] pointer-events-none" />
 					) : (
-						<PanelLeft className="w-[18px] h-[18px]" />
+						<PanelLeft className="w-[18px] h-[18px] pointer-events-none" />
 					)}
 				</button>
 

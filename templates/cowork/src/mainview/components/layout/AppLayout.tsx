@@ -3,14 +3,15 @@
  *
  * 核心交互：Tab 切换驱动中间内容区
  * - Chat: 纯聊天界面
- * - Code: 代码编辑界面（预留）
- * - Cowork: 任务协作界面（当前主界面）
+ * - Code: 内嵌浏览器预览
+ * - Cowork: 任务协作界面
  */
 import { useTranslation } from 'react-i18next';
 import { PanelLeftClose } from 'lucide-react';
 import { TopBar } from '../topbar/TopBar';
 import { TaskSidebar } from '../sidebar/TaskSidebar';
 import { TaskChat } from '../chat/TaskChat';
+import { CodeView } from '../code/CodeView';
 import { ProgressPanel } from '../right/ProgressPanel';
 import { ArtifactsPanel } from '../right/ArtifactsPanel';
 import { ContextPanel } from '../right/ContextPanel';
@@ -107,17 +108,7 @@ function ChatView() {
 	);
 }
 
-// ===== Code 视图 =====
-function CodeView() {
-	return (
-		<div className="flex-1 flex flex-col items-center justify-center text-[var(--color-text-tertiary)]">
-			<div className="text-center">
-				<p className="text-lg mb-2">Code 模式</p>
-				<p className="text-sm">代码编辑界面（开发中）</p>
-			</div>
-		</div>
-	);
-}
+// ===== Code 视图（导入自 components/code/CodeView） =====
 
 // ===== 侧栏内容 =====
 function SidebarInner({

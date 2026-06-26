@@ -14,11 +14,11 @@ import {
 	Clock,
 	Loader2,
 	MessageSquare,
-	FolderOpen,
 	type LucideIcon,
 } from 'lucide-react';
 import { useTaskStore, type TaskStatus } from '../../stores/use-task-store';
 import { useViewStore, type CenterTab } from '../../stores/use-view-store';
+import { usePreviewStore } from '../../stores/use-preview-store';
 
 const STATUS_CONFIG: Record<
 	TaskStatus,
@@ -226,12 +226,44 @@ export function TaskSidebar({ collapsed }: TaskSidebarProps) {
 			)}
 
 			{centerTab === 'code' && (
-				<div className="flex-1 flex flex-col items-center justify-center text-[var(--color-text-tertiary)] px-4">
-					<FolderOpen className="w-8 h-8 mb-2 opacity-40" />
-					<p className="text-sm font-medium">文件浏览器</p>
-					<p className="text-xs mt-1">开发中...</p>
+				<div className="flex-1 overflow-auto px-3 pt-3">
+					<p className="text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-2 px-2">
+						Recents
+					</p>
+					<CodeHistory />
 				</div>
 			)}
+		</div>
+	);
+}
+
+// ===== Code Tab 右侧历史 =====
+function CodeHistory() {
+	const history = usePreviewStore((s) => s.history);
+	const openUrl = usePreviewStore((s) => s.openUrl);
+
+	if (history.length === 0) {
+		return (
+			<div className="px-2">
+				<div className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] text-[var(--color-text-tertiary)]">
+					暂无浏览记录
+				</div>
+			</div>
+		);
+	}
+
+	return (
+		<div className="space-y-0.5">
+			{history.slice(0, 10).map((url, i) => (
+				<button
+					key={i}
+					onClick={() => openUrl(url)}
+					className="w-full text-left px-3 py-2 rounded-lg hover:bg-[var(--color-bg-hover)] transition-colors text-[13px] text-[var(--color-text-secondary)] truncate flex items-center gap-2"
+				>
+					<div className="w-1.5 h-1.5 rounded-full bg-[var(--color-text-tertiary)] flex-shrink-0" />
+					<span className="truncate">{url}</span>
+				</button>
+			))}
 		</div>
 	);
 }

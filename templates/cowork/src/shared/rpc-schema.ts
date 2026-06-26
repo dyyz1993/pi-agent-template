@@ -1,16 +1,17 @@
-import type { AnyMethods } from "@dyyz1993/rpc-core";
-import type { SystemMethods } from "./modules/system";
-import type { FileMethods } from "./modules/file";
-import type { TimerMethods, TimerEvents } from "./modules/timer";
-import type { ChatMethods, ChatEvents } from "./modules/chat";
-import type { TaskMethods } from "./modules/task";
-import type { ContextMethods } from "./modules/context";
-import type { OutputMethods } from "./modules/output";
+import type { AnyMethods } from '@dyyz1993/rpc-core';
+import type { SystemMethods } from './modules/system';
+import type { FileMethods } from './modules/file';
+import type { TimerMethods, TimerEvents } from './modules/timer';
+import type { ChatMethods, ChatEvents } from './modules/chat';
+import type { TaskMethods } from './modules/task';
+import type { ContextMethods } from './modules/context';
+import type { OutputMethods } from './modules/output';
+import type { PreviewMethods, PreviewEvents } from './modules/preview';
 
 /**
  * RPC 方法定义 — 前后端共享的唯一类型入口
  *
- * Cowork 模块组合：system + chat + file + timer + task + context + output
+ * Cowork 模块组合：system + chat + file + timer + task + context + output + preview
  */
 export interface RPCMethods
 	extends
@@ -21,16 +22,17 @@ export interface RPCMethods
 		ChatMethods,
 		TaskMethods,
 		ContextMethods,
-		OutputMethods {}
+		OutputMethods,
+		PreviewMethods {}
 
 /**
  * RPC 事件定义
  */
-export interface RPCEvents extends TimerEvents, ChatEvents {}
+export interface RPCEvents extends TimerEvents, ChatEvents, PreviewEvents {}
 
 /**
  * Handler 注册选项
  */
 export interface HandlerOptions {
-	platform: "desktop" | "web";
+	platform: 'desktop' | 'web';
 }
