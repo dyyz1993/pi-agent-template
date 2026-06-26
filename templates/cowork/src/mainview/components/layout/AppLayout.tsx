@@ -1,32 +1,29 @@
 /**
  * Cowork — 响应式三栏布局
  *
- * 左栏：TaskSidebar（任务列表）
- * 中栏：TaskChat（任务对话）
- * 右栏：ProgressPanel + ArtifactsPanel + ContextPanel（可折叠）
- *
- * 侧栏三态折叠：full → icon → hidden
+ * 核心交互：Tab 切换驱动中间内容区
+ * - Chat: 纯聊天界面
+ * - Code: 代码编辑界面（预留）
+ * - Cowork: 任务协作界面（当前主界面）
  */
-import { useTranslation } from "react-i18next";
-import { PanelLeftClose } from "lucide-react";
-import { TopBar } from "../topbar/TopBar";
-import { TaskSidebar } from "../sidebar/TaskSidebar";
-import { TaskChat } from "../chat/TaskChat";
-import { ProgressPanel } from "../right/ProgressPanel";
-import { ArtifactsPanel } from "../right/ArtifactsPanel";
-import { ContextPanel } from "../right/ContextPanel";
-import { NetworkDrawer } from "../dev/NetworkPanel";
-import { useSidebarStore, SIDEBAR_ICON_WIDTH } from "../../stores/use-sidebar-store";
+import { useTranslation } from 'react-i18next';
+import { PanelLeftClose } from 'lucide-react';
+import { TopBar } from '../topbar/TopBar';
+import { TaskSidebar } from '../sidebar/TaskSidebar';
+import { TaskChat } from '../chat/TaskChat';
+import { ProgressPanel } from '../right/ProgressPanel';
+import { ArtifactsPanel } from '../right/ArtifactsPanel';
+import { ContextPanel } from '../right/ContextPanel';
+import { NetworkDrawer } from '../dev/NetworkPanel';
+import { useSidebarStore, SIDEBAR_ICON_WIDTH } from '../../stores/use-sidebar-store';
+import { useViewStore } from '../../stores/use-view-store';
 
 interface AppLayoutProps {
 	sidebarWidth: number;
 	handleResizeStart: (e: React.MouseEvent) => void;
 }
 
-export function AppLayout({
-	sidebarWidth,
-	handleResizeStart,
-}: AppLayoutProps) {
+export function AppLayout({ sidebarWidth, handleResizeStart }: AppLayoutProps) {
 	useTranslation();
 
 	// 侧栏状态
@@ -35,19 +32,18 @@ export function AppLayout({
 	const sbDrawerOpen = useSidebarStore((s) => s.drawerOpen);
 	const sbSetDrawerOpen = useSidebarStore((s) => s.setDrawerOpen);
 
-	// 视图 Tab（预留 Cowork 模式切换）
-	// const centerTab = useViewStore((s) => s.centerTab);
+	// 视图 Tab — 驱动中间内容切换
+	const centerTab = useViewStore((s) => s.centerTab);
 
 	// 侧栏：full/icon 占据布局空间
 	const sidebarInLayout =
-		(sbSidebarMode === "full" || sbSidebarMode === "icon") &&
-		sbBreakpoint !== "mobile";
+		(sbSidebarMode === 'full' || sbSidebarMode === 'icon') && sbBreakpoint !== 'mobile';
 	const sidebarDrawer = sbDrawerOpen && !sidebarInLayout;
-	const effectiveWidth = sbSidebarMode === "icon" ? SIDEBAR_ICON_WIDTH : sidebarWidth;
-	const isCollapsed = sbSidebarMode === "icon";
+	const effectiveWidth = sbSidebarMode === 'icon' ? SIDEBAR_ICON_WIDTH : sidebarWidth;
+	const isCollapsed = sbSidebarMode === 'icon';
 
-	// 右侧面板（Cowork 固定显示，不支持隐藏）
-	const showRightPanel = sbBreakpoint !== "mobile";
+	// 右侧面板（Cowork 固定显示）
+	const showRightPanel = sbBreakpoint !== 'mobile';
 
 	return (
 		<div className="h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] flex flex-col overflow-hidden">
@@ -60,10 +56,7 @@ export function AppLayout({
 						className="sidebar-container bg-[var(--color-bg-sidebar)] border-r border-[var(--color-border-primary)] flex flex-col flex-shrink-0 overflow-hidden relative"
 						style={{ width: effectiveWidth }}
 					>
-						<SidebarInner
-							handleResizeStart={handleResizeStart}
-							isCollapsed={isCollapsed}
-						/>
+						<SidebarInner handleResizeStart={handleResizeStart} isCollapsed={isCollapsed} />
 					</div>
 				) : sidebarDrawer ? (
 					<>
@@ -80,13 +73,15 @@ export function AppLayout({
 					</>
 				) : null}
 
-				{/* ── 中：任务对话 ── */}
+				{/* ── 中：根据 Tab 切换内容 ── */}
 				<div className="flex-1 flex flex-col overflow-hidden min-w-0">
-					<TaskChat />
+					{centerTab === 'chat' && <ChatView />}
+					{centerTab === 'code' && <CodeView />}
+					{centerTab === 'cowork' && <TaskChat />}
 				</div>
 
-				{/* ── 右：进度/产出物/上下文 ── */}
-				{showRightPanel && (
+				{/* ── 右：进度/产出物/上下文（仅 Cowork 模式显示） ── */}
+				{showRightPanel && centerTab === 'cowork' && (
 					<div className="w-[280px] bg-[var(--color-bg-secondary)] border-l border-[var(--color-border-primary)] flex flex-col flex-shrink-0 overflow-auto">
 						<ProgressPanel />
 						<ArtifactsPanel />
@@ -100,8 +95,31 @@ export function AppLayout({
 	);
 }
 
-// ===== 侧栏内容 =====
+// ===== Chat 视图 =====
+function ChatView() {
+	return (
+		<div className="flex-1 flex flex-col items-center justify-center text-[var(--color-text-tertiary)]">
+			<div className="text-center">
+				<p className="text-lg mb-2">Chat 模式</p>
+				<p className="text-sm">纯对话界面，无任务管理</p>
+			</div>
+		</div>
+	);
+}
 
+// ===== Code 视图 =====
+function CodeView() {
+	return (
+		<div className="flex-1 flex flex-col items-center justify-center text-[var(--color-text-tertiary)]">
+			<div className="text-center">
+				<p className="text-lg mb-2">Code 模式</p>
+				<p className="text-sm">代码编辑界面（开发中）</p>
+			</div>
+		</div>
+	);
+}
+
+// ===== 侧栏内容 =====
 function SidebarInner({
 	handleResizeStart,
 	isCollapsed,
@@ -128,11 +146,7 @@ function SidebarInner({
 			)}
 
 			{/* 任务列表（包含 Tab 切换） */}
-			{isCollapsed ? (
-				<TaskSidebar collapsed />
-			) : (
-				<TaskSidebar />
-			)}
+			{isCollapsed ? <TaskSidebar collapsed /> : <TaskSidebar />}
 
 			{/* 拖拽条（仅完整模式） */}
 			{!showClose && !isCollapsed && handleResizeStart && (
