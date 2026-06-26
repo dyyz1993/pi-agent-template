@@ -1,59 +1,104 @@
 /**
- * 右侧预览区块 — 在右侧边栏嵌入浏览器预览 + 元素选择器
+ * 右侧预览区块 — 浏览器预览 + 地址栏 + 元素选择器
  *
- * 仅在 Code Tab 下显示，有活跃标签时渲染 iframe。
- * 包含元素选择工具，用户可选取页面元素提取 CSS selector。
+ * Code Tab 下的右栏主内容。
+ * 包含 URL 地址栏、iframe 渲染、元素选取工具。
  */
-import { useRef, useCallback } from 'react';
-import { Globe, X } from 'lucide-react';
+import { useRef, useCallback, useState } from 'react';
+import { Globe, X, ArrowLeft, RotateCw, Loader2 } from 'lucide-react';
 import { usePreviewStore } from '../../stores/use-preview-store';
 import { ElementPicker } from './ElementPicker';
-import { useViewStore } from '../../stores/use-view-store';
 
 export function PreviewBlock() {
 	const currentTab = usePreviewStore((s) => s.currentTab);
 	const closeTab = usePreviewStore((s) => s.closeTab);
-	const centerTab = useViewStore((s) => s.centerTab);
+	const openUrl = usePreviewStore((s) => s.openUrl);
+	const navigate = usePreviewStore((s) => s.navigate);
+	const navState = usePreviewStore((s) => s.navState);
 	const iframeRef = useRef<HTMLIFrameElement | null>(null);
-
-	const isCodeTab = centerTab === 'code';
+	const [urlInput, setUrlInput] = useState(currentTab?.url ?? '');
 
 	const handleElementSelected = useCallback((selector: string, tagName: string) => {
-		// 将选择器写入剪贴板 + 控制台提示
 		console.warn(`[ElementPicker] Selected ${tagName}: ${selector}`);
 	}, []);
 
-	// 非 Code 模式或无标签时不显示
-	if (!isCodeTab || !currentTab) return null;
+	const handleUrlSubmit = useCallback(() => {
+		if (urlInput.trim()) openUrl(urlInput.trim());
+	}, [urlInput, openUrl]);
+
+	// 空状态：没有打开的标签
+	if (!currentTab) {
+		return (
+			<div className="flex-1 flex flex-col">
+				<div className="flex items-center justify-between px-3 py-2.5 border-b border-[var(--color-border-secondary)]">
+					<span className="text-sm font-semibold text-[var(--color-text-primary)]">Preview</span>
+				</div>
+				<div className="flex-1 flex items-center justify-center px-4">
+					<div className="text-center w-full">
+						<div className="w-12 h-12 rounded-xl bg-[var(--color-bg-tertiary)] flex items-center justify-center mx-auto mb-3">
+							<Globe className="w-6 h-6 text-[var(--color-text-tertiary)]" />
+						</div>
+						<p className="text-sm text-[var(--color-text-secondary)] mb-3">输入 URL 预览</p>
+						<input
+							value={urlInput}
+							onChange={(e) => setUrlInput(e.target.value)}
+							onKeyDown={(e) => e.key === 'Enter' && handleUrlSubmit()}
+							placeholder="localhost:5173"
+							className="w-full px-3 py-2 rounded-lg bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] text-xs font-mono text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)] focus:border-[var(--color-text-accent)] outline-none transition-colors"
+						/>
+					</div>
+				</div>
+			</div>
+		);
+	}
 
 	return (
-		<div className="flex flex-col h-full border-t border-[var(--color-border-secondary)]">
+		<div className="flex flex-col h-full">
 			{/* 标题栏 */}
-			<div className="flex items-center justify-between px-3 py-2">
+			<div className="flex items-center justify-between px-3 py-2 border-b border-[var(--color-border-secondary)]">
 				<div className="flex items-center gap-2 min-w-0">
 					<Globe className="w-3.5 h-3.5 text-[var(--color-text-accent)] flex-shrink-0" />
-					<span className="text-xs font-medium text-[var(--color-text-primary)] truncate">
-						Preview
-					</span>
+					<span className="text-sm font-semibold text-[var(--color-text-primary)]">Preview</span>
 				</div>
 				<button
 					onClick={closeTab}
 					className="p-1 rounded hover:bg-[var(--color-bg-hover)] transition-colors text-[var(--color-text-tertiary)]"
 					title="关闭预览"
 				>
-					<X className="w-3 h-3" />
+					<X className="w-3.5 h-3.5" />
 				</button>
 			</div>
 
-			{/* URL 路径 */}
-			<div className="px-3 pb-2">
-				<div className="px-2 py-1 rounded bg-[var(--color-bg-tertiary)] text-[10px] font-mono text-[var(--color-text-tertiary)] truncate">
-					{currentTab.url}
-				</div>
+			{/* 地址栏 */}
+			<div className="flex items-center gap-1 px-2 py-1.5 border-b border-[var(--color-border-secondary)]">
+				<button
+					onClick={() => navigate('back')}
+					disabled={!currentTab.canGoBack}
+					className="p-1 rounded hover:bg-[var(--color-bg-hover)] disabled:opacity-30 transition-colors text-[var(--color-text-tertiary)]"
+				>
+					<ArrowLeft className="w-3.5 h-3.5" />
+				</button>
+				<button
+					onClick={() => navigate('reload')}
+					className="p-1 rounded hover:bg-[var(--color-bg-hover)] transition-colors text-[var(--color-text-tertiary)]"
+				>
+					{navState === 'loading' ? (
+						<Loader2 className="w-3.5 h-3.5 animate-spin" />
+					) : (
+						<RotateCw className="w-3.5 h-3.5" />
+					)}
+				</button>
+				<input
+					value={urlInput || currentTab.url}
+					onChange={(e) => setUrlInput(e.target.value)}
+					onKeyDown={(e) => e.key === 'Enter' && handleUrlSubmit()}
+					placeholder="URL"
+					className="flex-1 min-w-0 px-2 py-1 rounded bg-[var(--color-bg-primary)] border border-[var(--color-border-primary)] text-[11px] font-mono text-[var(--color-text-primary)] focus:border-[var(--color-text-accent)] outline-none transition-colors"
+				/>
 			</div>
 
 			{/* iframe 浏览器 */}
-			<div className="flex-1 min-h-[200px] overflow-hidden bg-white mx-3 rounded-lg border border-[var(--color-border-primary)]">
+			<div className="flex-1 min-h-[150px] overflow-hidden bg-white mx-3 my-2 rounded-lg border border-[var(--color-border-primary)]">
 				<iframe
 					ref={iframeRef}
 					src={currentTab.url}

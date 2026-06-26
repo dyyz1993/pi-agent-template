@@ -1,23 +1,24 @@
 /**
  * Cowork — 响应式三栏布局
  *
- * 核心交互：Tab 切换驱动中间内容区
- * - Chat: 纯聊天界面
- * - Code: 内嵌浏览器预览
- * - Cowork: 任务协作界面
+ * 核心设计：
+ * - 中间区域永远是聊天内容（所有 Tab 共享）
+ * - 左栏：任务列表（三态折叠 full/icon/hidden）
+ * - 右栏：按 Tab 切换内容（Cowork=Progress+Artifacts+Context / Code=Preview浏览器）
+ *   可拖拽调宽 + 可收起
  */
 import { useTranslation } from 'react-i18next';
 import { PanelLeftClose } from 'lucide-react';
 import { TopBar } from '../topbar/TopBar';
 import { TaskSidebar } from '../sidebar/TaskSidebar';
 import { TaskChat } from '../chat/TaskChat';
-import { CodeView } from '../code/CodeView';
 import { ProgressPanel } from '../right/ProgressPanel';
 import { ArtifactsPanel } from '../right/ArtifactsPanel';
 import { ContextPanel } from '../right/ContextPanel';
 import { PreviewBlock } from '../right/PreviewBlock';
 import { NetworkDrawer } from '../dev/NetworkPanel';
 import { useSidebarStore, SIDEBAR_ICON_WIDTH } from '../../stores/use-sidebar-store';
+import { useRightPanelStore } from '../../stores/use-sidebar-store';
 import { useViewStore } from '../../stores/use-view-store';
 
 interface AppLayoutProps {
@@ -28,24 +29,52 @@ interface AppLayoutProps {
 export function AppLayout({ sidebarWidth, handleResizeStart }: AppLayoutProps) {
 	useTranslation();
 
-	// 侧栏状态
+	// 左栏状态
 	const sbBreakpoint = useSidebarStore((s) => s.breakpoint);
 	const sbSidebarMode = useSidebarStore((s) => s.sidebarMode);
 	const sbDrawerOpen = useSidebarStore((s) => s.drawerOpen);
 	const sbSetDrawerOpen = useSidebarStore((s) => s.setDrawerOpen);
 
-	// 视图 Tab — 驱动中间内容切换
+	// 右栏状态
+	const rpWidth = useRightPanelStore((s) => s.width);
+	const rpMode = useRightPanelStore((s) => s.mode);
+	const rpSetWidth = useRightPanelStore((s) => s.setWidth);
+
+	// 视图 Tab
 	const centerTab = useViewStore((s) => s.centerTab);
 
-	// 侧栏：full/icon 占据布局空间
+	// 左栏派生
 	const sidebarInLayout =
 		(sbSidebarMode === 'full' || sbSidebarMode === 'icon') && sbBreakpoint !== 'mobile';
 	const sidebarDrawer = sbDrawerOpen && !sidebarInLayout;
-	const effectiveWidth = sbSidebarMode === 'icon' ? SIDEBAR_ICON_WIDTH : sidebarWidth;
-	const isCollapsed = sbSidebarMode === 'icon';
+	const effectiveSidebarWidth = sbSidebarMode === 'icon' ? SIDEBAR_ICON_WIDTH : sidebarWidth;
+	const isSidebarCollapsed = sbSidebarMode === 'icon';
 
-	// 右侧面板（Cowork 固定显示）
-	const showRightPanel = sbBreakpoint !== 'mobile';
+	// 右栏派生：Chat 模式自动隐藏，其他模式看 rpMode
+	const rightPanelVisible = rpMode === 'full' && centerTab !== 'chat' && sbBreakpoint !== 'mobile';
+
+	// 右栏拖拽
+	const handleRightResizeStart = (e: React.MouseEvent) => {
+		e.preventDefault();
+		const startX = e.clientX;
+		const startWidth = rpWidth;
+		document.body.style.cursor = 'col-resize';
+		document.body.style.userSelect = 'none';
+
+		const onMove = (ev: MouseEvent) => {
+			// 右栏在右侧，拖拽方向相反（往左拖 = 加宽）
+			const delta = startX - ev.clientX;
+			rpSetWidth(startWidth + delta);
+		};
+		const onUp = () => {
+			document.body.style.cursor = '';
+			document.body.style.userSelect = '';
+			window.removeEventListener('mousemove', onMove);
+			window.removeEventListener('mouseup', onUp);
+		};
+		window.addEventListener('mousemove', onMove);
+		window.addEventListener('mouseup', onUp);
+	};
 
 	return (
 		<div className="h-screen bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] flex flex-col overflow-hidden">
@@ -56,9 +85,9 @@ export function AppLayout({ sidebarWidth, handleResizeStart }: AppLayoutProps) {
 				{sidebarInLayout ? (
 					<div
 						className="sidebar-container bg-[var(--color-bg-sidebar)] border-r border-[var(--color-border-primary)] flex flex-col flex-shrink-0 overflow-hidden relative"
-						style={{ width: effectiveWidth }}
+						style={{ width: effectiveSidebarWidth }}
 					>
-						<SidebarInner handleResizeStart={handleResizeStart} isCollapsed={isCollapsed} />
+						<SidebarInner handleResizeStart={handleResizeStart} isCollapsed={isSidebarCollapsed} />
 					</div>
 				) : sidebarDrawer ? (
 					<>
@@ -75,27 +104,50 @@ export function AppLayout({ sidebarWidth, handleResizeStart }: AppLayoutProps) {
 					</>
 				) : null}
 
-				{/* ── 中：根据 Tab 切换内容 ── */}
+				{/* ── 中：聊天（所有 Tab 共享） ── */}
 				<div className="flex-1 flex flex-col overflow-hidden min-w-0">
-					{centerTab === 'chat' && <ChatView />}
-					{centerTab === 'code' && <CodeView />}
-					{centerTab === 'cowork' && <TaskChat />}
+					<TaskChat />
 				</div>
 
-				{/* ── 右：根据 Tab 显示不同内容 ── */}
-				{showRightPanel && centerTab === 'cowork' && (
-					<div className="w-[300px] bg-[var(--color-bg-panel)] border-l border-[var(--color-border-primary)] flex flex-col flex-shrink-0 overflow-auto">
-						<ProgressPanel />
-						<ArtifactsPanel />
-						<ContextPanel />
+				{/* ── 右：按 Tab 切换内容 ── */}
+				{rightPanelVisible && (
+					<div
+						className="bg-[var(--color-bg-panel)] border-l border-[var(--color-border-primary)] flex flex-col flex-shrink-0 overflow-hidden relative"
+						style={{ width: rpWidth }}
+					>
+						{centerTab === 'cowork' && (
+							<div className="flex-1 overflow-auto">
+								<ProgressPanel />
+								<ArtifactsPanel />
+								<ContextPanel />
+							</div>
+						)}
+						{centerTab === 'code' && (
+							<div className="flex-1 flex flex-col overflow-hidden">
+								<PreviewBlock />
+							</div>
+						)}
+
+						{/* 右栏拖拽条 */}
+						<div
+							className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[var(--color-accent)]/50 active:bg-[var(--color-accent)] transition-colors z-10 group"
+							onMouseDown={handleRightResizeStart}
+							style={{ width: 4, marginLeft: -4 }}
+						>
+							<div className="absolute inset-y-0 left-1/2 w-0.5 bg-[var(--color-border-primary)] group-hover:bg-[var(--color-text-accent)] transition-colors -translate-x-1/2" />
+						</div>
 					</div>
 				)}
-				{showRightPanel && centerTab === 'code' && (
-					<div className="w-[300px] bg-[var(--color-bg-panel)] border-l border-[var(--color-border-primary)] flex flex-col flex-shrink-0 overflow-auto">
-						<ProgressPanel />
-						<ArtifactsPanel />
-						<PreviewBlock />
-					</div>
+
+				{/* 右栏收起时的展开按钮 */}
+				{!rightPanelVisible && centerTab !== 'chat' && sbBreakpoint !== 'mobile' && (
+					<button
+						onClick={() => useRightPanelStore.getState().setMode('full')}
+						title="展开右侧面板"
+						className="absolute top-1/2 right-0 -translate-y-1/2 z-10 px-1 py-4 bg-[var(--color-bg-panel)] border border-r-0 border-[var(--color-border-primary)] rounded-l-lg hover:bg-[var(--color-bg-hover)] transition-colors"
+					>
+						<span className="text-[var(--color-text-tertiary)] text-xs">◀</span>
+					</button>
 				)}
 			</div>
 
@@ -103,20 +155,6 @@ export function AppLayout({ sidebarWidth, handleResizeStart }: AppLayoutProps) {
 		</div>
 	);
 }
-
-// ===== Chat 视图 =====
-function ChatView() {
-	return (
-		<div className="flex-1 flex flex-col items-center justify-center text-[var(--color-text-tertiary)]">
-			<div className="text-center">
-				<p className="text-lg mb-2">Chat 模式</p>
-				<p className="text-sm">纯对话界面，无任务管理</p>
-			</div>
-		</div>
-	);
-}
-
-// ===== Code 视图（导入自 components/code/CodeView） =====
 
 // ===== 侧栏内容 =====
 function SidebarInner({
@@ -144,10 +182,8 @@ function SidebarInner({
 				</div>
 			)}
 
-			{/* 任务列表（包含 Tab 切换） */}
 			{isCollapsed ? <TaskSidebar collapsed /> : <TaskSidebar />}
 
-			{/* 拖拽条（仅完整模式） */}
 			{!showClose && !isCollapsed && handleResizeStart && (
 				<div
 					className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-[var(--color-accent)]/50 active:bg-[var(--color-accent)] transition-colors z-10 group"

@@ -159,17 +159,74 @@ export const useSidebarStore = create<SidebarState>((set, get) => ({
 	_setBreakpoint: (bp) => set({ breakpoint: bp }),
 }));
 
-/** 资源面板（右侧）状态 */
-interface PanelState {
-	assetsVisible: boolean;
-	assetsDrawerOpen: boolean;
-	setAssetsVisible: (v: boolean) => void;
-	setAssetsDrawerOpen: (open: boolean) => void;
+/** 右侧面板状态 — 可调宽 + 可收起（类似左栏） */
+export type RightPanelMode = 'full' | 'hidden';
+
+const RIGHT_WIDTH_KEY = 'rightpanel-width';
+const RIGHT_MODE_KEY = 'rightpanel-mode';
+export const RIGHT_PANEL_MIN_WIDTH = 240;
+export const RIGHT_PANEL_MAX_WIDTH = 600;
+export const RIGHT_PANEL_DEFAULT_WIDTH = 320;
+
+function readRightWidth(): number {
+	try {
+		const v = Number(localStorage.getItem(RIGHT_WIDTH_KEY));
+		if (Number.isNaN(v) || v < RIGHT_PANEL_MIN_WIDTH || v > RIGHT_PANEL_MAX_WIDTH)
+			return RIGHT_PANEL_DEFAULT_WIDTH;
+		return v;
+	} catch {
+		return RIGHT_PANEL_DEFAULT_WIDTH;
+	}
 }
 
-export const useAssetsPanelStore = create<PanelState>((set) => ({
-	assetsVisible: true,
-	assetsDrawerOpen: false,
-	setAssetsVisible: (v) => set({ assetsVisible: v }),
-	setAssetsDrawerOpen: (open) => set({ assetsDrawerOpen: open }),
+function readRightMode(): RightPanelMode {
+	try {
+		const v = localStorage.getItem(RIGHT_MODE_KEY);
+		if (v === 'hidden') return 'hidden';
+	} catch {
+		/* ignore */
+	}
+	return 'full';
+}
+
+interface RightPanelState {
+	width: number;
+	mode: RightPanelMode;
+	setWidth: (w: number) => void;
+	setMode: (m: RightPanelMode) => void;
+	toggleMode: () => void;
+}
+
+export const useRightPanelStore = create<RightPanelState>((set, get) => ({
+	width: readRightWidth(),
+	mode: readRightMode(),
+
+	setWidth: (w) => {
+		const clamped = Math.min(RIGHT_PANEL_MAX_WIDTH, Math.max(RIGHT_PANEL_MIN_WIDTH, w));
+		try {
+			localStorage.setItem(RIGHT_WIDTH_KEY, String(clamped));
+		} catch {
+			/* ignore */
+		}
+		set({ width: clamped });
+	},
+
+	setMode: (m) => {
+		try {
+			localStorage.setItem(RIGHT_MODE_KEY, m);
+		} catch {
+			/* ignore */
+		}
+		set({ mode: m });
+	},
+
+	toggleMode: () => {
+		const next: RightPanelMode = get().mode === 'full' ? 'hidden' : 'full';
+		try {
+			localStorage.setItem(RIGHT_MODE_KEY, next);
+		} catch {
+			/* ignore */
+		}
+		set({ mode: next });
+	},
 }));

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useSidebarStore, useAssetsPanelStore, type Breakpoint } from '../stores/use-sidebar-store';
+import { useSidebarStore, useRightPanelStore, type Breakpoint } from '../stores/use-sidebar-store';
 
 function getBreakpoint(width: number): Breakpoint {
 	if (width < 768) return 'mobile';
@@ -11,22 +11,16 @@ function getBreakpoint(width: number): Breakpoint {
 /**
  * 单一 ResizeObserver，同步 breakpoint 到 store。
  *
- * 仅在断点**变化**时调整面板，不覆盖用户的 sidebarMode 手动设置。
+ * 仅在断点**变化**时调整面板，不覆盖用户的 sidebarMode/rightPanelMode 手动设置。
  */
 export function useBreakpointSync() {
 	useEffect(() => {
 		const applyBreakpoint = (bp: Breakpoint): void => {
-			const ap = useAssetsPanelStore.getState();
+			const rp = useRightPanelStore.getState();
 
-			if (bp === 'wide') {
-				if (!ap.assetsVisible) ap.setAssetsVisible(true);
-				if (ap.assetsDrawerOpen) ap.setAssetsDrawerOpen(false);
-			} else if (bp === 'desktop') {
-				if (ap.assetsVisible) ap.setAssetsVisible(false);
-				if (ap.assetsDrawerOpen) ap.setAssetsDrawerOpen(false);
-			} else {
-				// tablet / mobile：侧栏走抽屉，资源面板收起
-				if (ap.assetsVisible) ap.setAssetsVisible(false);
+			// 移动端/平板自动收起右栏
+			if (bp === 'mobile' || bp === 'tablet') {
+				if (rp.mode !== 'hidden') rp.setMode('hidden');
 			}
 		};
 
