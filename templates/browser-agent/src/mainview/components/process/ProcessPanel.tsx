@@ -118,6 +118,7 @@ export function ProcessPanel() {
 
 	const durationSec = Math.round(lastRecording.durationMs / 1000);
 	const actions = lastRecording.data?.actions || [];
+	const networks = lastRecording.data?.network || [];
 
 	return (
 		<div className="flex-1 overflow-auto p-4">
@@ -196,9 +197,45 @@ export function ProcessPanel() {
 						)}
 					</div>
 				</div>
-			)}
+				)}
 
-			{/* Agent 思考过程 */}
+				{/* 网络请求时间线（actions 为空时展示） */}
+				{actions.length === 0 && networks.length > 0 && (
+					<div className="bg-[var(--color-bg-sidebar)] border border-[var(--color-border-primary)] rounded-xl p-4 mb-4">
+						<h4 className="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wide mb-3">
+							🌐 网络请求时间线 ({networks.length})
+						</h4>
+						<div className="space-y-1 max-h-64 overflow-auto">
+							{networks.slice(0, 30).map((n: any, i: number) => {
+								const seenPaths = new Set<string>();
+								const key = `${n.method || 'GET'} ${n.path || n.url}`;
+								if (seenPaths.has(key)) return null;
+								seenPaths.add(key);
+								const isApi = n.resourceType === 'XHR' || n.resourceType === 'Fetch';
+								return (
+									<div key={i} className="flex items-center gap-2 px-2 py-1 text-xs hover:bg-[var(--color-bg-hover)] rounded">
+										<span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-mono ${isApi ? 'bg-[var(--color-accent)]/15 text-[var(--color-text-accent)]' : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-tertiary)]'}`}>
+											{n.method || 'GET'}
+										</span>
+										<span className="text-[var(--color-text-secondary)] truncate flex-1">
+											{n.path || n.url}
+										</span>
+										<span className="flex-shrink-0 text-[var(--color-text-tertiary)]">
+											{n.status || '—'}
+										</span>
+									</div>
+								);
+							})}
+							{networks.length > 30 && (
+								<div className="text-center text-xs text-[var(--color-text-tertiary)] py-1">
+									... 还有 {networks.length - 30} 个请求
+								</div>
+							)}
+						</div>
+					</div>
+				)}
+
+				{/* Agent 思考过程 */}
 			{thinking && (
 				<details className="mb-4 text-xs text-[var(--color-text-tertiary)]" open>
 					<summary className="cursor-pointer mb-1 font-medium">💭 Agent 思考中...</summary>
