@@ -3,76 +3,87 @@
 @tailwind utilities;
 
 :root {
-  --color-bg-primary: #ffffff;
-  --color-bg-secondary: #f3f4f6;
-  --color-bg-tertiary: #e5e7eb;
-  --color-bg-input: #f9fafb;
-  --color-bg-hover: #e5e7eb;
-  --color-bg-active: #d1d5db;
-  --color-bg-sidebar: #f3f4f6;
-  --color-bg-overlay: rgba(0, 0, 0, 0.5);
+	--color-bg-primary: #ffffff;
+	--color-bg-secondary: #f9fafb;
+	--color-bg-tertiary: #f3f4f6;
+	--color-bg-input: #f9fafb;
+	--color-bg-hover: #f3f4f6;
+	--color-bg-active: #eef2ff;
+	--color-bg-sidebar: #f9fafb;
+	--color-bg-panel: #f9fafb;
+	--color-bg-overlay: rgba(0, 0, 0, 0.4);
 
-  --color-text-primary: #111827;
-  --color-text-secondary: #4b5563;
-  --color-text-tertiary: #9ca3af;
-  --color-text-placeholder: #6b7280;
-  --color-text-accent: #4f46e5;
-  --color-text-success: #16a34a;
-  --color-text-error: #dc2626;
-  --color-text-info: #0891b2;
+	--color-text-primary: #111827;
+	--color-text-secondary: #4b5563;
+	--color-text-tertiary: #9ca3af;
+	--color-text-placeholder: #6b7280;
+	--color-text-accent: #4f46e5;
+	--color-text-success: #16a34a;
+	--color-text-error: #dc2626;
+	--color-text-info: #0891b2;
 
-  --color-border-primary: #d1d5db;
-  --color-border-secondary: #e5e7eb;
+	--color-border-primary: #e5e7eb;
+	--color-border-secondary: #f3f4f6;
 
-  --color-accent: #4f46e5;
-  --color-accent-hover: #4338ca;
+	--color-accent: #4f46e5;
+	--color-accent-hover: #4338ca;
 
-  --color-badge-bg: #e0e7ff;
-  --color-badge-text: #3730a3;
+	--color-badge-bg: #eef2ff;
+	--color-badge-text: #3730a3;
+
+	/* Cowork 专用色 */
+	--color-cowork-instruction-bg: #faf7f0;
+
+	/* 阴影 */
+	--shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+	--shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+	--shadow-popover: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
 }
 
 .dark {
-  --color-bg-primary: #111827;
-  --color-bg-secondary: #1f2937;
-  --color-bg-tertiary: #374151;
-  --color-bg-input: #374151;
-  --color-bg-hover: #4b5563;
-  --color-bg-active: #6b7280;
-  --color-bg-sidebar: #1f2937;
-  --color-bg-overlay: rgba(0, 0, 0, 0.7);
+	--color-bg-primary: #0f172a;
+	--color-bg-secondary: #1e293b;
+	--color-bg-tertiary: #334155;
+	--color-bg-input: #1e293b;
+	--color-bg-hover: #334155;
+	--color-bg-active: #312e81;
+	--color-bg-sidebar: #1e293b;
+	--color-bg-panel: #1e293b;
+	--color-bg-overlay: rgba(0, 0, 0, 0.6);
 
-  --color-text-primary: #ffffff;
-  --color-text-secondary: #d1d5db;
-  --color-text-tertiary: #6b7280;
-  --color-text-placeholder: #9ca3af;
-  --color-text-accent: #818cf8;
-  --color-text-success: #4ade80;
-  --color-text-error: #f87171;
-  --color-text-info: #22d3ee;
+	--color-text-primary: #f1f5f9;
+	--color-text-secondary: #cbd5e1;
+	--color-text-tertiary: #64748b;
+	--color-text-placeholder: #94a3b8;
+	--color-text-accent: #818cf8;
+	--color-text-success: #4ade80;
+	--color-text-error: #f87171;
+	--color-text-info: #22d3ee;
 
-  --color-border-primary: #374151;
-  --color-border-secondary: #4b5563;
+	--color-border-primary: #334155;
+	--color-border-secondary: #1e293b;
 
-  --color-accent: #6366f1;
-  --color-accent-hover: #4f46e5;
+	--color-accent: #6366f1;
+	--color-accent-hover: #4f46e5;
 
-  --color-badge-bg: #312e81;
-  --color-badge-text: #a5b4fc;
+	--color-badge-bg: #312e81;
+	--color-badge-text: #a5b4fc;
 
-  /* Cowork 专用色 */
-  --color-cowork-instruction-bg: #f5f0e8;
-}
+	/* Cowork 专用色 */
+	--color-cowork-instruction-bg: #292524;
 
-.dark {
-  --color-cowork-instruction-bg: #2a2520;
+	/* 阴影 */
+	--shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.2);
+	--shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+	--shadow-popover: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
 }
 
 /* 侧边栏宽度过渡动画（三态折叠切换时平滑） */
 .sidebar-container {
-  transition: width 200ms ease;
+	transition: width 200ms ease;
 }
 
 /* 拖拽 resize 时禁用动画，保证跟手 */
 .sidebar-container.dragging {
-  transition: none;
+	transition: none;
 }

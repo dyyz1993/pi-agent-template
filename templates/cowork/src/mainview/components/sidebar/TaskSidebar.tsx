@@ -160,7 +160,7 @@ export function TaskSidebar({ collapsed }: TaskSidebarProps) {
 					</div>
 
 					{/* 任务列表 */}
-					<div className="flex-1 overflow-auto px-2 space-y-0.5">
+					<div className="flex-1 overflow-auto px-2 pt-2 space-y-1">
 						{tasks.map((task) => {
 							const cfg = STATUS_CONFIG[task.status] ?? STATUS_CONFIG.queued;
 							const Icon = cfg.icon;

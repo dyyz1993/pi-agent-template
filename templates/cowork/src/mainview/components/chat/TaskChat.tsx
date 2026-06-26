@@ -48,7 +48,10 @@ function CommandCard({ command, description }: { command: string; description: s
 	const [expanded, setExpanded] = useState(true);
 
 	return (
-		<div className="rounded-lg overflow-hidden my-3 border border-[var(--color-border-secondary)]">
+		<div
+			className="rounded-xl overflow-hidden my-3 border border-[var(--color-border-primary)]"
+			style={{ boxShadow: 'var(--shadow-card)' }}
+		>
 			<button
 				onClick={() => setExpanded(!expanded)}
 				className="w-full flex items-center gap-2.5 px-4 py-2.5 bg-[var(--color-bg-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors text-left"
@@ -86,11 +89,11 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 	if (message.role === 'user') {
 		// 用户指令卡片：左对齐，米色背景，无边框
 		return (
-			<div className="mb-5">
+			<div className="mb-6">
 				<div
-					className="max-w-[85%] px-4 py-3 rounded-xl rounded-tl-sm text-sm leading-relaxed"
+					className="max-w-[90%] px-4 py-3.5 rounded-2xl rounded-tl-md text-[14px] leading-relaxed"
 					style={{
-						backgroundColor: 'var(--color-cowork-instruction-bg, #f5f0e8)',
+						backgroundColor: 'var(--color-cowork-instruction-bg)',
 						color: 'var(--color-text-primary)',
 					}}
 				>
@@ -169,8 +172,8 @@ export function TaskChat() {
 	return (
 		<div className="flex-1 flex flex-col overflow-hidden bg-[var(--color-bg-primary)]">
 			{/* 任务标题 */}
-			<div className="px-6 py-3.5 border-b border-[var(--color-border-secondary)]">
-				<h2 className="text-[15px] font-semibold text-[var(--color-text-primary)] truncate">
+			<div className="px-6 py-4 border-b border-[var(--color-border-primary)]">
+				<h2 className="text-base font-semibold text-[var(--color-text-primary)] truncate">
 					{currentTask.title}
 				</h2>
 			</div>
