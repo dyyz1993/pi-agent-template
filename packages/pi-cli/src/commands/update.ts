@@ -32,6 +32,9 @@ function detectTemplateMeta(targetDir: string): TemplateMeta | null {
 		if (modules.has("browser")) {
 			return { templateType: "browser-agent", projectName };
 		}
+		if (modules.has("task") && modules.has("context") && modules.has("output")) {
+			return { templateType: "cowork", projectName };
+		}
 		if (modules.has("chat") && !modules.has("file") && !modules.has("git")) {
 			return { templateType: "chat", projectName };
 		}

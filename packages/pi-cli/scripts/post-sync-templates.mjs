@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 
 const templatesDir = join(import.meta.dirname, '..', 'templates');
-const templateNames = ['agent', 'browser-agent', 'chat', 'general'];
+const templateNames = ['agent', 'browser-agent', 'chat', 'cowork', 'general'];
 
 for (const name of templateNames) {
   const configPath = join(templatesDir, name, 'eslint.config.mjs');

@@ -33,6 +33,12 @@ const TEMPLATES: TemplateInfo[] = [
     available: true,
     dir: 'templates/browser-agent',
   },
+  {
+    type: 'cowork',
+    description: 'Cowork task collaboration agent (Task orchestration + Progress tracking + Artifacts + Context management)',
+    available: true,
+    dir: 'templates/cowork',
+  },
 ];
 
 export function getTemplateInfo(type: string): TemplateInfo | undefined {

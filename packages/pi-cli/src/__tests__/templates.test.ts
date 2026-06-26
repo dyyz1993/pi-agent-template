@@ -2,18 +2,19 @@ import { describe, test, expect } from 'bun:test';
 import { getAllTemplates, getTemplateInfo, resolveTemplateDir } from '../lib/templates';
 
 describe('getAllTemplates', () => {
-  test('returns 4 templates', () => {
+  test('returns 5 templates', () => {
     const templates = getAllTemplates();
-    expect(templates).toHaveLength(4);
+    expect(templates).toHaveLength(5);
   });
 
-  test('includes general, chat, agent, browser-agent types', () => {
+  test('includes general, chat, agent, browser-agent, cowork types', () => {
     const templates = getAllTemplates();
     const types = templates.map((t) => t.type);
     expect(types).toContain('general');
     expect(types).toContain('chat');
     expect(types).toContain('agent');
     expect(types).toContain('browser-agent');
+    expect(types).toContain('cowork');
   });
 
   test('all templates are available', () => {
@@ -61,6 +62,13 @@ describe('getTemplateInfo', () => {
     expect(info!.dir).toBe('templates/browser-agent');
   });
 
+  test('returns info for "cowork"', () => {
+    const info = getTemplateInfo('cowork');
+    expect(info).toBeDefined();
+    expect(info!.type).toBe('cowork');
+    expect(info!.dir).toBe('templates/cowork');
+  });
+
   test('returns undefined for unknown type', () => {
     expect(getTemplateInfo('nonexistent')).toBeUndefined();
     expect(getTemplateInfo('')).toBeUndefined();
@@ -86,6 +94,11 @@ describe('resolveTemplateDir', () => {
   test('resolves browser-agent template path', () => {
     const dir = resolveTemplateDir('/fake/root', 'browser-agent');
     expect(dir).toBe('/fake/root/templates/browser-agent');
+  });
+
+  test('resolves cowork template path', () => {
+    const dir = resolveTemplateDir('/fake/root', 'cowork');
+    expect(dir).toBe('/fake/root/templates/cowork');
   });
 
   test('throws for invalid template type', () => {
