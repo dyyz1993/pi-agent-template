@@ -207,37 +207,44 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 	// ===== 录制 =====
 
 	r('browser.recordStart', async (params) => {
-		// 用 default session（xbrowser CDP 连接的默认 session 名）
-		// 不用随机名，因为 xbrowser 要求 session 已存在或提供 --url
 		const session = params.session || 'default';
 		const args = ['record', 'start', '--session', session];
-		if (params.url) {
-			args.push('--url', params.url);
+
+		// 录制需要 --url 才能正确注入事件监听器
+		// 如果没传 url，自动获取当前活跃标签页的 URL
+		let url = params.url;
+		if (!url) {
+			try {
+				const tabResult = await execXbrowser(['tab', 'list']);
+				const tabs = tabResult?.data?.tabs;
+				if (tabs && tabs.length > 0) {
+					const activeTab = tabs.find((t: any) => t.active) || tabs[0];
+					if (activeTab?.url && !activeTab.url.startsWith('about:')) {
+						url = activeTab.url;
+					}
+				}
+			} catch {
+				/* ignore */
+			}
+		}
+		if (url) {
+			args.push('--url', url);
 		}
 		try {
-			// record start 是后台命令，不等待它结束
-			// 用短超时检测启动是否成功（3 秒内没报错就算启动成功）
 			const result = await execXbrowserTimed(args, 3000);
-			return {
-				success: !result?.error,
-				session,
-				startUrl: result?.startUrl || params.url,
-			};
+			return { success: !result?.error, session, startUrl: result?.startUrl || url };
 		} catch {
-			// 超时通常意味着录制已启动（命令在后台运行）
-			return {
-				success: true,
-				session,
-				startUrl: params.url,
-			}
-		};
+			return { success: true, session, startUrl: url };
+		}
 	});
 
 	r('browser.recordStop', async (params) => {
 		const session = params.session || 'default';
 		const args = ['record', 'stop', '--session', session];
+		log.info('recordStop called', { session });
 		try {
 			const result = await execXbrowser(args);
+			log.info('recordStop execXbrowser result', JSON.stringify(result).slice(0, 300) as any);
 			return {
 				success: !!result?.ok,
 				actions: result?.actions || 0,

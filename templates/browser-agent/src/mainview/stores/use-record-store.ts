@@ -101,6 +101,8 @@ export const useRecordStore = create<RecordState>((set, get) => ({
 				data: result.data,
 			};
 
+			console.log("[record] stopRecording result:", { actions: recording.actions, network: recording.network, durationMs: recording.durationMs, dataKeys: recording.data ? Object.keys(recording.data) : null });
+
 			set({
 				isRecording: false,
 				recordSession: null,
