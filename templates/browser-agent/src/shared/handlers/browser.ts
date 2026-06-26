@@ -257,7 +257,8 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 	// ===== 录制 =====
 
 	r('browser.recordStart', async (params) => {
-		const session = params.session || 'default';
+		// 每次录制用唯一 session 名，避免 default session 被污染
+		const session = params.session || `rec_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
 		const args = ['record', 'start', '--session', session];
 
 		// 录制需要 --url 才能正确注入事件监听器
