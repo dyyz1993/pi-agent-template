@@ -49,7 +49,57 @@ function checkBlockedCommand(args: string[]): string | null {
 	if (BLOCKED_XBROWSER_COMMANDS.has(cmd)) {
 		return `🚫 命令 "${cmd}" 在 Web 模式下不可用。该命令仅在桌面端支持。`;
 	}
-	return null;
+		return null;
+	}
+
+/**
+ * 使用 CDP 激活 Chrome 窗口（跨平台）。
+ * 通过 Browser.setWindowBounds({focused: true}) 将 Chrome 窗口弹到前台。
+ * 适用于所有支持 CDP 的平台（macOS/Windows/Linux）。
+ */
+async function bringChromeToFront(): Promise<void> {
+	const cdpEndpoint = process.env.CDP_ENDPOINT || 'http://localhost:9221';
+	try {
+		// 1. 获取页面 target ID
+		const tabsRes = await fetch(`${cdpEndpoint}/json`).then((r) => r.json()) as any[];
+		const page = Array.isArray(tabsRes) ? (tabsRes.find((t: any) => t.type === 'page') || tabsRes[0]) : null;
+		if (!page?.id) return;
+
+		// 2. 获取浏览器 WebSocket URL
+		const versionRes = await fetch(`${cdpEndpoint}/json/version`).then((r) => r.json()) as any;
+		const wsUrl: string | undefined = versionRes.webSocketDebuggerUrl;
+		if (!wsUrl) return;
+
+		// 3. 连接浏览器 WebSocket，调用 CDP 命令
+		const ws = new WebSocket(wsUrl);
+		let msgId = 1;
+
+		await new Promise<void>((resolve) => {
+			const timer = setTimeout(() => { ws.close(); resolve(); }, 3000);
+
+			ws.addEventListener('open', () => {
+				ws.send(JSON.stringify({ id: msgId++, method: 'Browser.getWindowForTarget', params: { targetId: page.id } }));
+			});
+
+			ws.addEventListener('message', (ev: MessageEvent) => {
+				try {
+					const resp = JSON.parse(ev.data as string);
+					if (resp.id === 1 && resp.result?.windowId) {
+						ws.send(JSON.stringify({ id: msgId++, method: 'Browser.setWindowBounds', params: { windowId: resp.result.windowId, bounds: { focused: true } } }));
+					}
+					if (resp.id === 2 || (resp.id === 1 && resp.error)) {
+						clearTimeout(timer);
+						ws.close();
+						resolve();
+					}
+				} catch { /* ignore */ }
+			});
+
+			ws.addEventListener('error', () => { clearTimeout(timer); resolve(); });
+		});
+	} catch {
+		/* CDP 不可用，忽略 */
+	}
 }
 
 // ===== xbrowser 版本检测 =====
@@ -227,20 +277,17 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 				/* ignore */
 			}
 		}
-		if (url) {
-			args.push('--url', url);
-		}
+			if (url) {
+				args.push('--url', url);
+			}
 			try {
 				const result = await execXbrowserTimed(args, 3000);
-				// 激活 Chrome 窗口（macOS）
-				try {
-					const { execSync } = await import('child_process');
-					execSync('osascript -e \'tell application "Google Chrome" to activate\'', { timeout: 2000, env: { ...process.env, NODE_OPTIONS: '' } });
-				} catch { /* non-macOS or Chrome not available */ }
+				// 激活 Chrome 窗口（跨平台 CDP 方案）
+				bringChromeToFront().catch(() => {});
 				return { success: !result?.error, session, startUrl: result?.startUrl || url };
-		} catch {
-			return { success: true, session, startUrl: url };
-		}
+			} catch {
+				return { success: true, session, startUrl: url };
+			}
 	});
 
 	r('browser.recordStop', async (params) => {
