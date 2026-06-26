@@ -15,6 +15,7 @@ import { CodeView } from '../code/CodeView';
 import { ProgressPanel } from '../right/ProgressPanel';
 import { ArtifactsPanel } from '../right/ArtifactsPanel';
 import { ContextPanel } from '../right/ContextPanel';
+import { PreviewBlock } from '../right/PreviewBlock';
 import { NetworkDrawer } from '../dev/NetworkPanel';
 import { useSidebarStore, SIDEBAR_ICON_WIDTH } from '../../stores/use-sidebar-store';
 import { useViewStore } from '../../stores/use-view-store';
@@ -81,12 +82,19 @@ export function AppLayout({ sidebarWidth, handleResizeStart }: AppLayoutProps) {
 					{centerTab === 'cowork' && <TaskChat />}
 				</div>
 
-				{/* ── 右：进度/产出物/上下文（仅 Cowork 模式显示） ── */}
+				{/* ── 右：根据 Tab 显示不同内容 ── */}
 				{showRightPanel && centerTab === 'cowork' && (
 					<div className="w-[300px] bg-[var(--color-bg-panel)] border-l border-[var(--color-border-primary)] flex flex-col flex-shrink-0 overflow-auto">
 						<ProgressPanel />
 						<ArtifactsPanel />
 						<ContextPanel />
+					</div>
+				)}
+				{showRightPanel && centerTab === 'code' && (
+					<div className="w-[300px] bg-[var(--color-bg-panel)] border-l border-[var(--color-border-primary)] flex flex-col flex-shrink-0 overflow-auto">
+						<ProgressPanel />
+						<ArtifactsPanel />
+						<PreviewBlock />
 					</div>
 				)}
 			</div>
