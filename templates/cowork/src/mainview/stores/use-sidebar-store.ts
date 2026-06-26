@@ -1,26 +1,26 @@
-import { create } from "zustand";
+import { create } from 'zustand';
 
-export type Breakpoint = "mobile" | "tablet" | "desktop" | "wide";
+export type Breakpoint = 'mobile' | 'tablet' | 'desktop' | 'wide';
 
 /** 侧边栏三态折叠模式 */
-export type SidebarMode = "full" | "icon" | "hidden";
+export type SidebarMode = 'full' | 'icon' | 'hidden';
 
-const PINNED_KEY = "sidebar-pinned";
-const WIDTH_KEY = "sidebar-width";
-const MODE_KEY = "sidebar-mode";
-const COLLAPSED_SECTIONS_KEY = "sidebar-collapsed-sections";
+const PINNED_KEY = 'sidebar-pinned';
+const WIDTH_KEY = 'sidebar-width';
+const MODE_KEY = 'sidebar-mode';
+const COLLAPSED_SECTIONS_KEY = 'sidebar-collapsed-sections';
 
-export const SIDEBAR_MIN_WIDTH = 180;
-export const SIDEBAR_MAX_WIDTH = 480;
+export const SIDEBAR_MIN_WIDTH = 220;
+export const SIDEBAR_MAX_WIDTH = 520;
 export const SIDEBAR_ICON_WIDTH = 56;
-const DEFAULT_WIDTH = 240;
+const DEFAULT_WIDTH = 280;
 
 /** 断点定义：mobile <768, tablet 768-1023, desktop 1024-1279, wide ≥1280 */
 function getBreakpoint(width: number): Breakpoint {
-	if (width < 768) return "mobile";
-	if (width < 1024) return "tablet";
-	if (width < 1280) return "desktop";
-	return "wide";
+	if (width < 768) return 'mobile';
+	if (width < 1024) return 'tablet';
+	if (width < 1280) return 'desktop';
+	return 'wide';
 }
 
 interface SidebarState {
@@ -46,7 +46,7 @@ interface SidebarState {
 function readPinned(): boolean {
 	try {
 		const stored = localStorage.getItem(PINNED_KEY);
-		if (stored !== null) return stored !== "false";
+		if (stored !== null) return stored !== 'false';
 		return window.innerWidth >= 1024;
 	} catch {
 		return true;
@@ -66,26 +66,32 @@ function readWidth(): number {
 function readMode(): SidebarMode {
 	try {
 		const v = localStorage.getItem(MODE_KEY);
-		if (v === "full" || v === "icon" || v === "hidden") return v;
-	} catch { /* ignore */ }
-	return "full";
+		if (v === 'full' || v === 'icon' || v === 'hidden') return v;
+	} catch {
+		/* ignore */
+	}
+	return 'full';
 }
 
 function readCollapsedSections(): Set<string> {
 	try {
 		const v = localStorage.getItem(COLLAPSED_SECTIONS_KEY);
 		if (v) return new Set(JSON.parse(v) as string[]);
-	} catch { /* ignore */ }
+	} catch {
+		/* ignore */
+	}
 	return new Set();
 }
 
 function persistCollapsedSections(set: Set<string>): void {
 	try {
 		localStorage.setItem(COLLAPSED_SECTIONS_KEY, JSON.stringify([...set]));
-	} catch { /* ignore */ }
+	} catch {
+		/* ignore */
+	}
 }
 
-const initialWidth = typeof window !== "undefined" ? window.innerWidth : 1024;
+const initialWidth = typeof window !== 'undefined' ? window.innerWidth : 1024;
 
 export const useSidebarStore = create<SidebarState>((set, get) => ({
 	breakpoint: getBreakpoint(initialWidth),
@@ -98,7 +104,9 @@ export const useSidebarStore = create<SidebarState>((set, get) => ({
 	setPinned: (pinned) => {
 		try {
 			localStorage.setItem(PINNED_KEY, String(pinned));
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 		set({ isPinned: pinned, drawerOpen: false });
 	},
 
@@ -110,24 +118,30 @@ export const useSidebarStore = create<SidebarState>((set, get) => ({
 		const clamped = Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, width));
 		try {
 			localStorage.setItem(WIDTH_KEY, String(clamped));
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 		set({ sidebarWidth: clamped });
 	},
 
 	setSidebarMode: (mode) => {
 		try {
 			localStorage.setItem(MODE_KEY, mode);
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 		set({ sidebarMode: mode });
 	},
 
 	cycleSidebarMode: () => {
-		const order: SidebarMode[] = ["full", "icon", "hidden"];
+		const order: SidebarMode[] = ['full', 'icon', 'hidden'];
 		const current = get().sidebarMode;
-		const next = order[(order.indexOf(current) + 1) % order.length] || "full";
+		const next = order[(order.indexOf(current) + 1) % order.length] || 'full';
 		try {
 			localStorage.setItem(MODE_KEY, next);
-		} catch { /* ignore */ }
+		} catch {
+			/* ignore */
+		}
 		set({ sidebarMode: next });
 	},
 

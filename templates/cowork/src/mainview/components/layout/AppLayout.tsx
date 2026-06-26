@@ -82,7 +82,7 @@ export function AppLayout({ sidebarWidth, handleResizeStart }: AppLayoutProps) {
 
 				{/* ── 右：进度/产出物/上下文（仅 Cowork 模式显示） ── */}
 				{showRightPanel && centerTab === 'cowork' && (
-					<div className="w-[280px] bg-[var(--color-bg-secondary)] border-l border-[var(--color-border-primary)] flex flex-col flex-shrink-0 overflow-auto">
+					<div className="w-[300px] bg-[var(--color-bg-secondary)] border-l border-[var(--color-border-primary)] flex flex-col flex-shrink-0 overflow-auto">
 						<ProgressPanel />
 						<ArtifactsPanel />
 						<ContextPanel />
