@@ -24,39 +24,90 @@ import { useConnectionStore } from "../../stores/use-connection-store";
 import { apiClient } from "../../lib/api-client";
 
 const ACTION_ICONS: Record<string, string> = {
-	click: "👆",
-	input: "⌨️",
-	change: "📝",
-	keydown: "🔑",
-	submit: "✅",
-	scroll: "⬇️",
-	navigation: "🧭",
-	goto: "🧭",
-	dblclick: "👆👆",
-	contextmenu: "🖱️",
-	hover: "💡",
-	drag: "🎯",
+	click: "👆", input: "⌨️", change: "📝", keydown: "🔑",
+	submit: "✅", scroll: "⬇️", navigation: "🧭", goto: "🧭",
+	dblclick: "👆👆", contextmenu: "🖱️", hover: "💡", drag: "🎯",
 };
 
 export function ProcessPanel() {
+	// ===== 所有 Hooks 必须在早期 return 之前声明 =====
+	const [expandedAction, setExpandedAction] = useState<number | null>(null);
+	const [capturing, setCapturing] = useState<number | null>(null);
+	const [screenshots, setScreenshots] = useState<Record<number, string>>({});
+	const [fullScreenshot, setFullScreenshot] = useState<string | null>(null);
+	const [capturingFull, setCapturingFull] = useState(false);
+
+	const captureActionScreenshot = useCallback(async (actionIndex: number) => {
+		setCapturing(actionIndex);
+		try {
+			const tabIdx = useConnectionStore.getState().selectedTabIndex ?? useConnectionStore.getState().activeTabIndex;
+			const cmd = `screenshot${tabIdx !== undefined ? ` --tab ${tabIdx}` : ''}`;
+			const result = await apiClient.call("browser.execXbrowser", { command: cmd });
+			if (result.data?.data) {
+				setScreenshots(prev => ({ ...prev, [actionIndex]: result.data.data }));
+			}
+		} catch (err) {
+			console.warn("截图失败:", err);
+		} finally {
+			setCapturing(null);
+		}
+	}, []);
+
+	const captureFullScreenshot = useCallback(async () => {
+		setCapturingFull(true);
+		try {
+			const tabIdx = useConnectionStore.getState().selectedTabIndex ?? useConnectionStore.getState().activeTabIndex;
+			const cmd = `screenshot --full-page${tabIdx !== undefined ? ` --tab ${tabIdx}` : ''}`;
+			const result = await apiClient.call("browser.execXbrowser", { command: cmd });
+			if (result.data?.data) {
+				setFullScreenshot(result.data.data);
+			}
+		} catch (err) {
+			console.warn("全页截图失败:", err);
+		} finally {
+			setCapturingFull(false);
+		}
+	}, []);
+
 	const lastRecording = useRecordStore((s) => s.lastRecording);
 	const ensureDefaultSession = useSessionStore((s) => s.ensureDefaultSession);
-
-	const [processing, setProcessing] = useState(false);
+	const [analyzing, setAnalyzing] = useState(false);
 	const [result, setResult] = useState<string | null>(null);
 	const [thinking, setThinking] = useState("");
 
+	// ===== 无录制数据时的空状态 =====
+	if (!lastRecording) {
+		return (
+			<div className="flex-1 flex items-center justify-center text-center p-8">
+				<div>
+					<div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[var(--color-bg-tertiary)] mb-4">
+						<Cpu className="w-8 h-8 text-[var(--color-text-tertiary)]" />
+					</div>
+					<h3 className="text-lg font-semibold mb-2">暂无录制数据</h3>
+					<p className="text-sm text-[var(--color-text-tertiary)] max-w-sm">
+						点击顶栏的录制按钮，在浏览器中操作后停止录制，
+						录制结果会显示在这里，可以交给 Agent 加工分析。
+					</p>
+				</div>
+			</div>
+		);
+	}
+
+	// ===== 有录制数据 =====
+	const durationSec = Math.round(lastRecording.durationMs / 1000);
+	const rawActions = lastRecording.data?.actions;
+	const rawNetworks = lastRecording.data?.network;
+	const actions = Array.isArray(rawActions) ? rawActions : (Array.isArray(lastRecording.data?.data?.actions) ? lastRecording.data.data.actions : []);
+	const networks = Array.isArray(rawNetworks) ? rawNetworks : (Array.isArray(lastRecording.data?.data?.network) ? lastRecording.data.data.network : []);
+
 	const handleProcess = useCallback(async () => {
 		if (!lastRecording) return;
-		setProcessing(true);
+		setAnalyzing(true);
 		setResult(null);
 		setThinking("");
-
 		try {
 			const sessionId = await ensureDefaultSession();
 			const messageId = `proc_${Date.now()}`;
-
-			// 订阅加工事件
 			const subs: string[] = [];
 			subs.push(
 				await apiClient.subscribe("browser.thinking", (evt: any) => {
@@ -76,94 +127,24 @@ export function ProcessPanel() {
 				await apiClient.subscribe("browser.done", (evt: any) => {
 					if (evt.messageId === messageId) {
 						setResult(evt.reply || "");
-						setProcessing(false);
+						setAnalyzing(false);
 					}
 				}),
 			);
-
 			await new Promise((r) => setTimeout(r, 300));
-
 			const res = await apiClient.call("browser.processRecording", {
 				sessionId,
 				recordingData: lastRecording.data,
 				title: "录制加工",
 			});
-
-			// Fallback: 用 RPC 响应填充
-			if (!result && res?.text) {
-				setResult(res.text);
-			}
-			setProcessing(false);
-
+			if (!result && res?.text) setResult(res.text);
+			setAnalyzing(false);
 			subs.forEach((id) => apiClient.unsubscribe(id));
 		} catch (err) {
 			setResult(`❌ 加工失败: ${err instanceof Error ? err.message : String(err)}`);
-			setProcessing(false);
+			setAnalyzing(false);
 		}
 	}, [lastRecording, ensureDefaultSession, result]);
-
-	// 无录制数据时的空状态
-	if (!lastRecording) {
-		return (
-			<div className="flex-1 flex items-center justify-center text-center p-8">
-				<div>
-					<div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[var(--color-bg-tertiary)] mb-4">
-						<Cpu className="w-8 h-8 text-[var(--color-text-tertiary)]" />
-					</div>
-					<h3 className="text-lg font-semibold mb-2">暂无录制数据</h3>
-					<p className="text-sm text-[var(--color-text-tertiary)] max-w-sm">
-						点击顶栏的 <Circle /> 录制按钮，在浏览器中操作后停止录制，
-						录制结果会显示在这里，可以交给 Agent 加工分析。
-					</p>
-				</div>
-			</div>
-		);
-	}
-
-	const durationSec = Math.round(lastRecording.durationMs / 1000);
-	// actions/network 可能是数组，也可能是数字（计数）
-	const rawActions = lastRecording.data?.actions;
-	const rawNetworks = lastRecording.data?.network;
-	const actions = Array.isArray(rawActions) ? rawActions : (Array.isArray(lastRecording.data?.data?.actions) ? lastRecording.data.data.actions : []);
-			const networks = Array.isArray(rawNetworks) ? rawNetworks : (Array.isArray(lastRecording.data?.data?.network) ? lastRecording.data.data.network : []);
-
-			const [expandedAction, setExpandedAction] = useState<number | null>(null);
-			const [capturing, setCapturing] = useState<number | null>(null);
-			const [screenshots, setScreenshots] = useState<Record<number, string>>({});
-			const [fullScreenshot, setFullScreenshot] = useState<string | null>(null);
-			const [capturingFull, setCapturingFull] = useState(false);
-
-			const captureActionScreenshot = useCallback(async (actionIndex: number) => {
-				setCapturing(actionIndex);
-				try {
-					const tabIdx = useConnectionStore.getState().selectedTabIndex ?? useConnectionStore.getState().activeTabIndex;
-					const cmd = `screenshot${tabIdx !== undefined ? ` --tab ${tabIdx}` : ''}`;
-					const result = await apiClient.call("browser.execXbrowser", { command: cmd });
-					if (result.data?.data) {
-						setScreenshots(prev => ({ ...prev, [actionIndex]: result.data.data }));
-					}
-				} catch (err) {
-					console.warn("截图失败:", err);
-				} finally {
-					setCapturing(null);
-				}
-			}, []);
-
-			const captureFullScreenshot = useCallback(async () => {
-				setCapturingFull(true);
-				try {
-					const tabIdx = useConnectionStore.getState().selectedTabIndex ?? useConnectionStore.getState().activeTabIndex;
-					const cmd = `screenshot --full-page${tabIdx !== undefined ? ` --tab ${tabIdx}` : ''}`;
-					const result = await apiClient.call("browser.execXbrowser", { command: cmd });
-					if (result.data?.data) {
-						setFullScreenshot(result.data.data);
-					}
-				} catch (err) {
-					console.warn("全页截图失败:", err);
-				} finally {
-					setCapturingFull(false);
-				}
-			}, []);
 
 	return (
 		<div className="flex-1 overflow-auto p-4">
@@ -176,26 +157,22 @@ export function ProcessPanel() {
 					</h3>
 					<button
 						onClick={handleProcess}
-						disabled={processing}
+						disabled={analyzing}
 						className="px-4 py-1.5 text-xs bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] rounded-lg transition-colors disabled:opacity-50 flex items-center gap-1.5"
 					>
-						{processing ? (
-							<Loader2 className="w-3 h-3 animate-spin" />
-						) : (
-							<Cpu className="w-3 h-3" />
-						)}
-						{processing ? "加工中..." : "Agent 加工"}
+						{analyzing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Cpu className="w-3 h-3" />}
+						{analyzing ? "加工中..." : "Agent 加工"}
 					</button>
 				</div>
 				<div className="grid grid-cols-4 gap-3 text-center">
 					<div className="p-2 bg-[var(--color-bg-tertiary)] rounded-lg">
 						<MousePointerClick className="w-4 h-4 text-[var(--color-text-accent)] mx-auto mb-1" />
-						<div className="text-lg font-bold">{lastRecording.actions}</div>
+						<div className="text-lg font-bold">{actions.length || lastRecording.actions}</div>
 						<div className="text-[10px] text-[var(--color-text-tertiary)]">操作数</div>
 					</div>
 					<div className="p-2 bg-[var(--color-bg-tertiary)] rounded-lg">
 						<Network className="w-4 h-4 text-[var(--color-text-accent)] mx-auto mb-1" />
-						<div className="text-lg font-bold">{lastRecording.network}</div>
+						<div className="text-lg font-bold">{networks.length || lastRecording.network}</div>
 						<div className="text-[10px] text-[var(--color-text-tertiary)]">网络请求</div>
 					</div>
 					<div className="p-2 bg-[var(--color-bg-tertiary)] rounded-lg">
@@ -224,20 +201,14 @@ export function ProcessPanel() {
 							className="px-2 py-1 text-[10px] border border-[var(--color-border-secondary)] rounded hover:bg-[var(--color-bg-hover)] flex items-center gap-1"
 						>
 							<Camera className={`w-3 h-3 ${capturingFull ? "animate-pulse" : ""}`} />
-							{capturingFull ? "截取中..." : "全页截图"}
+							{capturingFull ? "截取中..." : "📸 全页截图"}
 						</button>
 					</div>
 
-					{/* 全页截图展示 */}
 					{fullScreenshot && (
 						<div className="mb-3">
-							<img
-								src={`data:image/png;base64,${fullScreenshot}`}
-								alt="页面截图"
-								className="w-full rounded-lg border border-[var(--color-border-secondary)] max-h-48 object-cover cursor-pointer hover:opacity-90 transition-opacity"
-								onClick={() => {/* TODO: 放大查看 */}}
-							/>
-							<p className="text-[10px] text-[var(--color-text-tertiary)] mt-1">点击放大</p>
+							<img src={`data:image/png;base64,${fullScreenshot}`} alt="页面截图"
+								className="w-full rounded-lg border border-[var(--color-border-secondary)] max-h-48 object-cover" />
 						</div>
 					)}
 
@@ -260,66 +231,41 @@ export function ProcessPanel() {
 
 							return (
 								<div key={i}>
-									{/* 操作行 */}
 									<div
 										className={`flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-[var(--color-bg-hover)] rounded cursor-pointer ${isExpanded ? "bg-[var(--color-bg-tertiary)]" : ""}`}
 										onClick={() => setExpandedAction(isExpanded ? null : i)}
 									>
 										<span className="flex-shrink-0 w-5 text-center text-sm">{icon}</span>
-										<span className="text-[var(--color-text-tertiary)] font-mono w-6 flex-shrink-0">#{i + 1}</span>
-										<span className="font-mono text-[var(--color-text-accent)] w-16 flex-shrink-0">{type}</span>
-										{elapsed > 0 && (
-											<span className="text-[var(--color-text-tertiary)] font-mono w-12 flex-shrink-0">+{formatMs(elapsed)}</span>
-										)}
+										<span className="text-[var(--color-text-tertiary)] font-mono w-6">#{i + 1}</span>
+										<span className="font-mono text-[var(--color-text-accent)] w-16">{type}</span>
+										{elapsed > 0 && <span className="text-[var(--color-text-tertiary)] font-mono w-12">+{fmt(elapsed)}</span>}
 										<span className="text-[var(--color-text-secondary)] truncate flex-1">
-											{selector ? selector.slice(0, 50) : tag || ""}
-											{value && <span className="ml-1 text-[var(--color-text-tertiary)]">= {value.slice(0, 20)}</span>}
+											{selector ? selector.slice(0, 50) : tag}
+											{value && <span className="ml-1 text-[var(--color-text-tertiary)]">={value.slice(0, 20)}</span>}
 										</span>
-										{isExpanded ? (
-											<ChevronDown className="w-3 h-3 text-[var(--color-text-tertiary)] flex-shrink-0" />
-										) : (
-											<ChevronRight className="w-3 h-3 text-[var(--color-text-tertiary)] flex-shrink-0" />
-										)}
+										{isExpanded ? <ChevronDown className="w-3 h-3 text-[var(--color-text-tertiary)]" /> : <ChevronRight className="w-3 h-3 text-[var(--color-text-tertiary)]" />}
 									</div>
 
-									{/* 展开详情 */}
 									{isExpanded && (
 										<div className="ml-8 mb-2 p-3 bg-[var(--color-bg-tertiary)] rounded-lg space-y-2">
-											{/* 详情网格 */}
 											<div className="grid grid-cols-2 gap-2 text-[11px]">
-												{selector && <DetailItem label="选择器" value={selector} copyable />}
-												{value && <DetailItem label="值" value={value} copyable />}
-												{tag && <DetailItem label="标签" value={tag} />}
-												{text && <DetailItem label="文本" value={text} copyable />}
-												{url && <DetailItem label="URL" value={url} copyable />}
-												{x !== undefined && y !== undefined && (
-													<DetailItem label="坐标" value={`(${x}, ${y})`} />
-												)}
-												<DetailItem label="时间" value={new Date(ts).toLocaleTimeString()} />
-												<DetailItem label="耗时" value={`+${formatMs(elapsed)}`} />
+												{selector && <D label="选择器" v={selector} />}
+												{value && <D label="值" v={value} />}
+												{tag && <D label="标签" v={tag} />}
+												{text && <D label="文本" v={text} />}
+												{url && <D label="URL" v={url} />}
+												{x !== undefined && y !== undefined && <D label="坐标" v={`(${x},${y})`} />}
+												<D label="时间" v={new Date(ts).toLocaleTimeString()} />
+												<D label="耗时" v={`+${fmt(elapsed)}`} />
 											</div>
-
-											{/* 元素截图 */}
 											{hasScreenshot ? (
 												<div>
-													<img
-														src={`data:image/png;base64,${hasScreenshot}`}
-														alt={`步骤${i + 1}截图`}
-														className="w-full rounded border border-[var(--color-border-secondary)] max-h-40 object-cover"
-													/>
-													<button
-														onClick={() => setScreenshots(prev => { const n = {...prev}; delete n[i]; return n; })}
-														className="text-[10px] text-[var(--color-text-error)] mt-1"
-													>
-														移除截图
-													</button>
+													<img src={`data:image/png;base64,${hasScreenshot}`} alt={`步骤${i+1}`}
+														className="w-full rounded border border-[var(--color-border-secondary)] max-h-40 object-cover" />
 												</div>
 											) : (
-												<button
-													onClick={() => captureActionScreenshot(i)}
-													disabled={capturing === i}
-													className="flex items-center gap-1 px-2 py-1 text-[10px] border border-[var(--color-border-secondary)] rounded hover:bg-[var(--color-bg-hover)] transition-colors"
-												>
+												<button onClick={() => captureActionScreenshot(i)} disabled={capturing === i}
+													className="flex items-center gap-1 px-2 py-1 text-[10px] border rounded hover:bg-[var(--color-bg-hover)]">
 													<Camera className={`w-3 h-3 ${capturing === i ? "animate-pulse" : ""}`} />
 													{capturing === i ? "截取中..." : "📸 截图此元素"}
 												</button>
@@ -329,74 +275,45 @@ export function ProcessPanel() {
 								</div>
 							);
 						})}
-						{actions.length > 50 && (
-							<div className="text-center text-xs text-[var(--color-text-tertiary)] py-1">
-								还有 {actions.length - 50} 条操作
-							</div>
-						)}
+						{actions.length > 50 && <div className="text-center text-xs text-[var(--color-text-tertiary)] py-1">还有 {actions.length - 50} 条</div>}
 					</div>
 				</div>
 			)}
 
-				{/* 网络请求时间线（actions 为空时展示） */}
-				{actions.length === 0 && networks.length > 0 && (
-					<div className="bg-[var(--color-bg-sidebar)] border border-[var(--color-border-primary)] rounded-xl p-4 mb-4">
-						<h4 className="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wide mb-3">
-							🌐 网络请求时间线 ({networks.length})
-						</h4>
-						<div className="space-y-1 max-h-64 overflow-auto">
-							{networks.slice(0, 30).map((n: any, i: number) => {
-								const seenPaths = new Set<string>();
-								const key = `${n.method || 'GET'} ${n.path || n.url}`;
-								if (seenPaths.has(key)) return null;
-								seenPaths.add(key);
-								const isApi = n.resourceType === 'XHR' || n.resourceType === 'Fetch';
-								return (
-									<div key={i} className="flex items-center gap-2 px-2 py-1 text-xs hover:bg-[var(--color-bg-hover)] rounded">
-										<span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-mono ${isApi ? 'bg-[var(--color-accent)]/15 text-[var(--color-text-accent)]' : 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-tertiary)]'}`}>
-											{n.method || 'GET'}
-										</span>
-										<span className="text-[var(--color-text-secondary)] truncate flex-1">
-											{n.path || n.url}
-										</span>
-										<span className="flex-shrink-0 text-[var(--color-text-tertiary)]">
-											{n.status || '—'}
-										</span>
-									</div>
-								);
-							})}
-							{networks.length > 30 && (
-								<div className="text-center text-xs text-[var(--color-text-tertiary)] py-1">
-									... 还有 {networks.length - 30} 个请求
-								</div>
-							)}
-						</div>
+			{/* 网络请求时间线 */}
+			{actions.length === 0 && networks.length > 0 && (
+				<div className="bg-[var(--color-bg-sidebar)] border border-[var(--color-border-primary)] rounded-xl p-4 mb-4">
+					<h4 className="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wide mb-3">🌐 网络请求 ({networks.length})</h4>
+					<div className="space-y-1 max-h-64 overflow-auto">
+						{networks.slice(0, 30).map((n: any, i: number) => (
+							<div key={i} className="flex items-center gap-2 px-2 py-1 text-xs hover:bg-[var(--color-bg-hover)] rounded">
+								<span className="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-mono bg-[var(--color-bg-tertiary)] text-[var(--color-text-tertiary)]">{n.method || 'GET'}</span>
+								<span className="text-[var(--color-text-secondary)] truncate flex-1">{n.path || n.url}</span>
+								<span className="flex-shrink-0 text-[var(--color-text-tertiary)]">{n.status || '—'}</span>
+							</div>
+						))}
+						{networks.length > 30 && <div className="text-center text-xs text-[var(--color-text-tertiary)] py-1">还有 {networks.length - 30} 个</div>}
 					</div>
-				)}
+				</div>
+			)}
 
-				{/* Agent 思考过程 */}
+			{/* Agent 思考过程 */}
 			{thinking && (
 				<details className="mb-4 text-xs text-[var(--color-text-tertiary)]" open>
-					<summary className="cursor-pointer mb-1 font-medium">💭 Agent 思考中...</summary>
-					<div className="p-2 bg-[var(--color-bg-tertiary)] rounded-lg whitespace-pre-wrap max-h-40 overflow-auto">
-						{thinking.slice(-1000)}
-					</div>
+					<summary className="cursor-pointer mb-1">💭 Agent 思考中...</summary>
+					<div className="p-2 bg-[var(--color-bg-tertiary)] rounded-lg whitespace-pre-wrap max-h-40 overflow-auto">{thinking.slice(-1000)}</div>
 				</details>
 			)}
 
 			{/* 加工结果 */}
 			{result && (
 				<div className="bg-[var(--color-bg-sidebar)] border border-[var(--color-accent)]/30 rounded-xl p-4">
-					<h4 className="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wide mb-2">
-						加工结果
-					</h4>
-					<div className="text-sm leading-relaxed whitespace-pre-wrap">
-						{result}
-					</div>
+					<h4 className="text-xs font-semibold text-[var(--color-text-tertiary)] uppercase tracking-wide mb-2">加工结果</h4>
+					<div className="text-sm leading-relaxed whitespace-pre-wrap">{result}</div>
 				</div>
 			)}
 
-			{processing && !result && !thinking && (
+			{analyzing && !result && !thinking && (
 				<div className="text-center py-8 text-sm text-[var(--color-text-tertiary)]">
 					<Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
 					Agent 正在分析录制数据...
@@ -406,33 +323,17 @@ export function ProcessPanel() {
 	);
 }
 
-// ===== 辅助组件 =====
-
-function DetailItem({ label, value, copyable }: { label: string; value: string; copyable?: boolean }) {
-	const handleCopy = () => {
-		navigator.clipboard.writeText(value).catch(() => {});
-	};
+// ===== 详情项 =====
+function D({ label, v }: { label: string; v: string }) {
 	return (
 		<div className="flex flex-col">
-			<span className="text-[var(--color-text-tertiary)]">{label}</span>
-			<span className="text-[var(--color-text-primary)] font-mono break-all">{value}</span>
-			{copyable && (
-				<button
-					onClick={handleCopy}
-					className="text-[10px] text-[var(--color-text-accent)] hover:underline self-start"
-				>
-					复制
-				</button>
-			)}
+			<span className="text-[var(--color-text-tertiary)] text-[10px]">{label}</span>
+			<span className="text-[var(--color-text-primary)] font-mono text-xs break-all">{v}</span>
 		</div>
 	);
 }
 
-function formatMs(ms: number): string {
+function fmt(ms: number): string {
 	if (ms < 1000) return `${ms}ms`;
 	return `${(ms / 1000).toFixed(1)}s`;
-}
-
-function Circle() {
-	return <span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500 align-middle" />;
 }
