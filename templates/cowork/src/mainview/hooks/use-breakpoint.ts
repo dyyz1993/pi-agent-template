@@ -1,41 +1,31 @@
-import { useEffect } from "react";
-import { useSidebarStore, useAssetsPanelStore, type Breakpoint } from "../stores/use-sidebar-store";
+import { useEffect } from 'react';
+import { useSidebarStore, useAssetsPanelStore, type Breakpoint } from '../stores/use-sidebar-store';
 
 function getBreakpoint(width: number): Breakpoint {
-	if (width < 768) return "mobile";
-	if (width < 1024) return "tablet";
-	if (width < 1280) return "desktop";
-	return "wide";
+	if (width < 768) return 'mobile';
+	if (width < 1024) return 'tablet';
+	if (width < 1280) return 'desktop';
+	return 'wide';
 }
 
 /**
- * 单一 ResizeObserver，同步 breakpoint 到 store，并根据断点自动调整面板。
+ * 单一 ResizeObserver，同步 breakpoint 到 store。
  *
- * 面板策略：
- * - wide (≥1280px)：侧栏 + 资源面板都固定展开
- * - desktop (1024-1279px)：侧栏固定，资源面板折叠为抽屉
- * - tablet (768-1023px)：侧栏抽屉，资源面板抽屉
- * - mobile (<768px)：全部抽屉，默认收起
+ * 仅在断点**变化**时调整面板，不覆盖用户的 sidebarMode 手动设置。
  */
 export function useBreakpointSync() {
 	useEffect(() => {
 		const applyBreakpoint = (bp: Breakpoint): void => {
-			const sb = useSidebarStore.getState();
 			const ap = useAssetsPanelStore.getState();
 
-			if (bp === "wide") {
-				// 宽屏：都展开
-				if (!sb.isPinned) sb.setPinned(true);
+			if (bp === 'wide') {
 				if (!ap.assetsVisible) ap.setAssetsVisible(true);
 				if (ap.assetsDrawerOpen) ap.setAssetsDrawerOpen(false);
-			} else if (bp === "desktop") {
-				// 中屏：侧栏展开，资源面板折叠
-				if (!sb.isPinned) sb.setPinned(true);
+			} else if (bp === 'desktop') {
 				if (ap.assetsVisible) ap.setAssetsVisible(false);
 				if (ap.assetsDrawerOpen) ap.setAssetsDrawerOpen(false);
 			} else {
-				// tablet / mobile：都收起为抽屉
-				if (sb.isPinned) sb.setPinned(false);
+				// tablet / mobile：侧栏走抽屉，资源面板收起
 				if (ap.assetsVisible) ap.setAssetsVisible(false);
 			}
 		};
@@ -58,6 +48,7 @@ export function useBreakpointSync() {
 
 		// 初始也应用一次
 		const initBp = getBreakpoint(document.documentElement.clientWidth);
+		useSidebarStore.getState()._setBreakpoint(initBp);
 		applyBreakpoint(initBp);
 
 		return () => {
