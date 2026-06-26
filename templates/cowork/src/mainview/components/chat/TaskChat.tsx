@@ -3,10 +3,45 @@
  *
  * 显示任务标题 + 用户指令卡片 + AI 回复 + 命令执行卡片 + 回复输入框
  * MVP 阶段使用 mock 数据流
+ *
+ * V4：聊天消息中出现的 localhost 链接会渲染为可点击的 🌐 标签，
+ * 点击后右侧面板自动展开并加载浏览器预览。
  */
 import { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ChevronUp, Plus, ArrowUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Plus, ArrowUp, Globe, ExternalLink } from 'lucide-react';
 import { useTaskStore } from '../../stores/use-task-store';
+import { usePreviewStore } from '../../stores/use-preview-store';
+import { useRightPanelStore } from '../../stores/use-sidebar-store';
+
+// ── localhost 链接解析 ──
+
+/** 匹配 localhost / 127.0.0.1 链接（可选协议、必带端口、可选路径） */
+const LOCALHOST_RE = /(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)([^\s，。、）)】]*)?/g;
+
+interface LinkSegment {
+	type: 'text' | 'link';
+	value: string;
+}
+
+/**
+ * 将文本拆分为「纯文本 / localhost 链接」片段。
+ * 仅高亮 localhost / 127.0.0.1 的本地预览地址。
+ */
+export function splitLocalhostLinks(text: string): LinkSegment[] {
+	const segments: LinkSegment[] = [];
+	let last = 0;
+	// 重置 lastIndex（全局正则复用）
+	LOCALHOST_RE.lastIndex = 0;
+	let match: RegExpExecArray | null;
+	while ((match = LOCALHOST_RE.exec(text)) !== null) {
+		const start = match.index;
+		if (start > last) segments.push({ type: 'text', value: text.slice(last, start) });
+		segments.push({ type: 'link', value: match[0] });
+		last = start + match[0].length;
+	}
+	if (last < text.length) segments.push({ type: 'text', value: text.slice(last) });
+	return segments;
+}
 
 // ── Mock 对话数据 ──
 interface ChatMessage {
@@ -41,7 +76,55 @@ const MOCK_MESSAGES: ChatMessage[] = [
 		role: 'assistant',
 		text: "Found 46 draft files. Now let me read the content of each to get their titles/topics, then search simonwillison.net for any matches to check if they've already been published.",
 	},
+	{
+		id: 'msg-5',
+		role: 'assistant',
+		text: '本地预览服务已启动，访问 http://localhost:7300 即可查看草稿管理界面。',
+	},
 ];
+
+// ── localhost 链接标签 ──
+function LocalhostLinkChip({ url }: { url: string }) {
+	const openUrl = usePreviewStore((s) => s.openUrl);
+	const openForPreview = useRightPanelStore((s) => s.openForPreview);
+
+	const handleClick = () => {
+		openForPreview();
+		openUrl(url);
+	};
+
+	return (
+		<button
+			onClick={handleClick}
+			className="inline-flex items-center gap-1 px-2 py-0.5 mx-0.5 rounded-md bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors text-[13px] font-mono align-middle"
+			title={`在右侧打开预览：${url}`}
+		>
+			<Globe className="w-3 h-3 flex-shrink-0" />
+			<span className="truncate max-w-[220px]">{url.replace(/^https?:\/\//, '')}</span>
+			<ExternalLink className="w-2.5 h-2.5 flex-shrink-0 opacity-60" />
+		</button>
+	);
+}
+
+/** 渲染可能包含 localhost 链接的文本 */
+function RichText({ text }: { text: string }) {
+	const segments = splitLocalhostLinks(text);
+	const only = segments.length === 1 ? segments[0] : undefined;
+	if (only && only.type === 'text') {
+		return <>{only.value}</>;
+	}
+	return (
+		<>
+			{segments.map((seg, i) =>
+				seg.type === 'link' ? (
+					<LocalhostLinkChip key={i} url={seg.value} />
+				) : (
+					<span key={i}>{seg.value}</span>
+				),
+			)}
+		</>
+	);
+}
 
 // ── 命令执行卡片 ──
 function CommandCard({ command, description }: { command: string; description: string }) {
@@ -109,7 +192,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 			<div className="max-w-[90%]">
 				{message.text && (
 					<div className="text-sm leading-relaxed text-[var(--color-text-primary)]">
-						{message.text}
+						<RichText text={message.text} />
 					</div>
 				)}
 				{message.command && (

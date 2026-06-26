@@ -192,14 +192,28 @@ function readRightMode(): RightPanelMode {
 interface RightPanelState {
 	width: number;
 	mode: RightPanelMode;
+	/**
+	 * 因点击聊天中的 localhost 链接而展开的预览态。
+	 * 为 true 时，右栏强制展开并以 ~40% 宽度显示浏览器预览，
+	 * 优先级高于 mode 和当前 Tab 的默认右栏内容。
+	 */
+	expandedForPreview: boolean;
+	/** 展开前的宽度，关闭预览后恢复 */
+	widthBeforeExpand: number | null;
 	setWidth: (w: number) => void;
 	setMode: (m: RightPanelMode) => void;
 	toggleMode: () => void;
+	/** 点击聊天链接触发：展开右栏到 ~40% 并显示预览 */
+	openForPreview: () => void;
+	/** 关闭预览：恢复展开前的宽度与 mode */
+	closePreview: () => void;
 }
 
 export const useRightPanelStore = create<RightPanelState>((set, get) => ({
 	width: readRightWidth(),
 	mode: readRightMode(),
+	expandedForPreview: false,
+	widthBeforeExpand: null,
 
 	setWidth: (w) => {
 		const clamped = Math.min(RIGHT_PANEL_MAX_WIDTH, Math.max(RIGHT_PANEL_MIN_WIDTH, w));
@@ -228,5 +242,31 @@ export const useRightPanelStore = create<RightPanelState>((set, get) => ({
 			/* ignore */
 		}
 		set({ mode: next });
+	},
+
+	/**
+	 * 聊天链接点击：展开右栏至视口的 ~40%，
+	 * 记录展开前的宽度以便关闭时恢复。
+	 */
+	openForPreview: () => {
+		const { expandedForPreview, width } = get();
+		if (expandedForPreview) return; // 已展开则不重复触发
+		const target = Math.round((typeof window !== 'undefined' ? window.innerWidth : 1440) * 0.4);
+		const clamped = Math.min(RIGHT_PANEL_MAX_WIDTH, Math.max(RIGHT_PANEL_MIN_WIDTH, target));
+		set({
+			expandedForPreview: true,
+			widthBeforeExpand: width,
+			width: clamped,
+		});
+	},
+
+	/** 关闭预览：恢复展开前的宽度 */
+	closePreview: () => {
+		const { widthBeforeExpand } = get();
+		set({
+			expandedForPreview: false,
+			width: widthBeforeExpand ?? readRightWidth(),
+			widthBeforeExpand: null,
+		});
 	},
 }));

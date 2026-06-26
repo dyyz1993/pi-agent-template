@@ -4,8 +4,8 @@
  * 核心设计：
  * - 中间区域永远是聊天内容（所有 Tab 共享）
  * - 左栏：任务列表（三态折叠 full/icon/hidden）
- * - 右栏：按 Tab 切换内容（Cowork=Progress+Artifacts+Context / Code=Preview浏览器）
- *   可拖拽调宽 + 可收起
+ * - 右栏：点击聊天中的 localhost 链接后自动展开浏览器预览（~40%）；
+ *   未预览时，按 Tab 切换内容（Cowork=Progress+Artifacts+Context / Code=Preview）
  */
 import { useTranslation } from 'react-i18next';
 import { PanelLeftClose } from 'lucide-react';
@@ -39,6 +39,8 @@ export function AppLayout({ sidebarWidth, handleResizeStart }: AppLayoutProps) {
 	const rpWidth = useRightPanelStore((s) => s.width);
 	const rpMode = useRightPanelStore((s) => s.mode);
 	const rpSetWidth = useRightPanelStore((s) => s.setWidth);
+	const rpExpandedForPreview = useRightPanelStore((s) => s.expandedForPreview);
+	const rpClosePreview = useRightPanelStore((s) => s.closePreview);
 
 	// 视图 Tab
 	const centerTab = useViewStore((s) => s.centerTab);
@@ -50,8 +52,12 @@ export function AppLayout({ sidebarWidth, handleResizeStart }: AppLayoutProps) {
 	const effectiveSidebarWidth = sbSidebarMode === 'icon' ? SIDEBAR_ICON_WIDTH : sidebarWidth;
 	const isSidebarCollapsed = sbSidebarMode === 'icon';
 
-	// 右栏派生：Chat 模式自动隐藏，其他模式看 rpMode
-	const rightPanelVisible = rpMode === 'full' && centerTab !== 'chat' && sbBreakpoint !== 'mobile';
+	// 右栏可见性：
+	// - 预览态（点击聊天链接）优先级最高，所有 Tab 下都展开
+	// - 否则 Chat 自动隐藏，其他 Tab 看 rpMode
+	const rightPanelVisible =
+		rpExpandedForPreview ||
+		(rpMode === 'full' && centerTab !== 'chat' && sbBreakpoint !== 'mobile');
 
 	// 右栏拖拽
 	const handleRightResizeStart = (e: React.MouseEvent) => {
@@ -109,23 +115,32 @@ export function AppLayout({ sidebarWidth, handleResizeStart }: AppLayoutProps) {
 					<TaskChat />
 				</div>
 
-				{/* ── 右：按 Tab 切换内容 ── */}
+				{/* ── 右：预览态优先，否则按 Tab 切换 ── */}
 				{rightPanelVisible && (
 					<div
 						className="bg-[var(--color-bg-panel)] border-l border-[var(--color-border-primary)] flex flex-col flex-shrink-0 overflow-hidden relative"
 						style={{ width: rpWidth }}
 					>
-						{centerTab === 'cowork' && (
-							<div className="flex-1 overflow-auto">
-								<ProgressPanel />
-								<ArtifactsPanel />
-								<ContextPanel />
-							</div>
-						)}
-						{centerTab === 'code' && (
+						{/* 预览态：点击聊天链接触发，PreviewBlock 自带标题栏+关闭（onClose=closePreview） */}
+						{rpExpandedForPreview ? (
 							<div className="flex-1 flex flex-col overflow-hidden">
-								<PreviewBlock />
+								<PreviewBlock onClose={rpClosePreview} />
 							</div>
+						) : (
+							<>
+								{centerTab === 'cowork' && (
+									<div className="flex-1 overflow-auto">
+										<ProgressPanel />
+										<ArtifactsPanel />
+										<ContextPanel />
+									</div>
+								)}
+								{centerTab === 'code' && (
+									<div className="flex-1 flex flex-col overflow-hidden">
+										<PreviewBlock />
+									</div>
+								)}
+							</>
 						)}
 
 						{/* 右栏拖拽条 */}
@@ -139,16 +154,19 @@ export function AppLayout({ sidebarWidth, handleResizeStart }: AppLayoutProps) {
 					</div>
 				)}
 
-				{/* 右栏收起时的展开按钮 */}
-				{!rightPanelVisible && centerTab !== 'chat' && sbBreakpoint !== 'mobile' && (
-					<button
-						onClick={() => useRightPanelStore.getState().setMode('full')}
-						title="展开右侧面板"
-						className="absolute top-1/2 right-0 -translate-y-1/2 z-10 px-1 py-4 bg-[var(--color-bg-panel)] border border-r-0 border-[var(--color-border-primary)] rounded-l-lg hover:bg-[var(--color-bg-hover)] transition-colors"
-					>
-						<span className="text-[var(--color-text-tertiary)] text-xs">◀</span>
-					</button>
-				)}
+				{/* 右栏收起时的展开按钮（预览态不显示） */}
+				{!rightPanelVisible &&
+					!rpExpandedForPreview &&
+					centerTab !== 'chat' &&
+					sbBreakpoint !== 'mobile' && (
+						<button
+							onClick={() => useRightPanelStore.getState().setMode('full')}
+							title="展开右侧面板"
+							className="absolute top-1/2 right-0 -translate-y-1/2 z-10 px-1 py-4 bg-[var(--color-bg-panel)] border border-r-0 border-[var(--color-border-primary)] rounded-l-lg hover:bg-[var(--color-bg-hover)] transition-colors"
+						>
+							<span className="text-[var(--color-text-tertiary)] text-xs">◀</span>
+						</button>
+					)}
 			</div>
 
 			<NetworkDrawer />
