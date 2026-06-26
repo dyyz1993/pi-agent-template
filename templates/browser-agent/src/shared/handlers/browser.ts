@@ -290,13 +290,14 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 		server.emitEvent('browser.agentStart', { messageId, reply: '🔧 正在分析录制数据...' });
 
 		// 构建 Agent 加工 prompt
-		const actionCount = recordingData.actions?.length || recordingData.totalActions || 0;
-		const networkCount = recordingData.network?.length || recordingData.totalNetworkRequests || 0;
+		// recordingData 可能是 recordStop 返回的摘要（actions 是数字），也可能是完整的录制文件
+		const actionCount = typeof recordingData.actions === 'number' ? recordingData.actions : (recordingData.actions?.length || recordingData.totalActions || 0);
+		const networkCount = typeof recordingData.network === 'number' ? recordingData.network : (recordingData.network?.length || recordingData.totalNetworkRequests || 0);
 		const durationSec = Math.round((recordingData.durationMs || 0) / 1000);
-		const startUrl = recordingData.startUrl || '未知';
+		const startUrl = recordingData.startUrl || recordingData.data?.startUrl || '未知';
 
-		// 提取操作摘要（最多 30 条）
-		const actions = recordingData.actions || recordingData.steps || [];
+		// 提取操作摘要（可能是完整 actions 数组，也可能是空）
+		const actions = Array.isArray(recordingData.actions) ? recordingData.actions : (Array.isArray(recordingData.data?.actions) ? recordingData.data.actions : []);
 		const actionSummary = actions.slice(0, 30).map((a: any, i: number) => {
 			const type = a.type || a.action?.type || 'unknown';
 			const selector = a.element?.selector || a.action?.element?.selector || '';
@@ -306,7 +307,7 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 		}).join('\n');
 
 		// 提取网络请求摘要（最多 20 条去重）
-		const networks = recordingData.network || [];
+		const networks = Array.isArray(recordingData.network) ? recordingData.network : (Array.isArray(recordingData.data?.network) ? recordingData.data.network : []);
 		const seenPaths = new Set<string>();
 		const networkSummary = networks.slice(0, 50).filter((n: any) => {
 			const key = `${n.method || 'GET'} ${n.path || n.url}`;

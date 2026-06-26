@@ -117,8 +117,11 @@ export function ProcessPanel() {
 	}
 
 	const durationSec = Math.round(lastRecording.durationMs / 1000);
-	const actions = lastRecording.data?.actions || [];
-	const networks = lastRecording.data?.network || [];
+	// actions/network 可能是数组，也可能是数字（计数）
+	const rawActions = lastRecording.data?.actions;
+	const rawNetworks = lastRecording.data?.network;
+	const actions = Array.isArray(rawActions) ? rawActions : (Array.isArray(lastRecording.data?.data?.actions) ? lastRecording.data.data.actions : []);
+	const networks = Array.isArray(rawNetworks) ? rawNetworks : (Array.isArray(lastRecording.data?.data?.network) ? lastRecording.data.data.network : []);
 
 	return (
 		<div className="flex-1 overflow-auto p-4">
