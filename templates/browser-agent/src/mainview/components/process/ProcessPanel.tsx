@@ -75,6 +75,41 @@ export function ProcessPanel() {
 	const [result, setResult] = useState<string | null>(null);
 	const [thinking, setThinking] = useState("");
 
+	const handleProcess = useCallback(async () => {
+		if (!lastRecording) return;
+		setAnalyzing(true);
+		setResult(null);
+		setThinking("");
+		try {
+			const sessionId = await ensureDefaultSession();
+			const messageId = `proc_${Date.now()}`;
+			const subs: string[] = [];
+			subs.push(
+				await apiClient.subscribe("browser.thinking", (evt: any) => {
+					if (evt.messageId === messageId) setThinking((prev) => prev + (evt.delta || ""));
+				}),
+			);
+			subs.push(
+				await apiClient.subscribe("browser.textDelta", (evt: any) => {
+					if (evt.messageId === messageId) setResult((prev) => (prev || "") + (evt.delta || ""));
+				}),
+			);
+			subs.push(
+				await apiClient.subscribe("browser.done", (evt: any) => {
+					if (evt.messageId === messageId) { setResult(evt.reply || ""); setAnalyzing(false); }
+				}),
+			);
+			await new Promise((r) => setTimeout(r, 300));
+			const res = await apiClient.call("browser.processRecording", { sessionId, recordingData: lastRecording.data, title: "录制加工" });
+			if (!result && res?.text) setResult(res.text);
+			setAnalyzing(false);
+			subs.forEach((id) => apiClient.unsubscribe(id));
+		} catch (err) {
+			setResult(`❌ 加工失败: ${err instanceof Error ? err.message : String(err)}`);
+			setAnalyzing(false);
+		}
+	}, [lastRecording, ensureDefaultSession, result]);
+
 	// ===== 无录制数据时的空状态 =====
 	if (!lastRecording) {
 		return (
@@ -100,51 +135,6 @@ export function ProcessPanel() {
 	const actions = Array.isArray(rawActions) ? rawActions : (Array.isArray(lastRecording.data?.data?.actions) ? lastRecording.data.data.actions : []);
 	const networks = Array.isArray(rawNetworks) ? rawNetworks : (Array.isArray(lastRecording.data?.data?.network) ? lastRecording.data.data.network : []);
 
-	const handleProcess = useCallback(async () => {
-		if (!lastRecording) return;
-		setAnalyzing(true);
-		setResult(null);
-		setThinking("");
-		try {
-			const sessionId = await ensureDefaultSession();
-			const messageId = `proc_${Date.now()}`;
-			const subs: string[] = [];
-			subs.push(
-				await apiClient.subscribe("browser.thinking", (evt: any) => {
-					if (evt.messageId === messageId) {
-						setThinking((prev) => prev + (evt.delta || ""));
-					}
-				}),
-			);
-			subs.push(
-				await apiClient.subscribe("browser.textDelta", (evt: any) => {
-					if (evt.messageId === messageId) {
-						setResult((prev) => (prev || "") + (evt.delta || ""));
-					}
-				}),
-			);
-			subs.push(
-				await apiClient.subscribe("browser.done", (evt: any) => {
-					if (evt.messageId === messageId) {
-						setResult(evt.reply || "");
-						setAnalyzing(false);
-					}
-				}),
-			);
-			await new Promise((r) => setTimeout(r, 300));
-			const res = await apiClient.call("browser.processRecording", {
-				sessionId,
-				recordingData: lastRecording.data,
-				title: "录制加工",
-			});
-			if (!result && res?.text) setResult(res.text);
-			setAnalyzing(false);
-			subs.forEach((id) => apiClient.unsubscribe(id));
-		} catch (err) {
-			setResult(`❌ 加工失败: ${err instanceof Error ? err.message : String(err)}`);
-			setAnalyzing(false);
-		}
-	}, [lastRecording, ensureDefaultSession, result]);
 
 	return (
 		<div className="flex-1 overflow-auto p-4">
