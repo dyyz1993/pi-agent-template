@@ -281,10 +281,10 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 			if (url) {
 				args.push('--url', url);
 			}
-			try {
-				const result = await execXbrowserTimed(args, 3000);
-				// 激活 Chrome 窗口（跨平台 CDP 方案）
-				bringChromeToFront().catch(() => {});
+		try {
+			const result = await execXbrowserTimed(args, 10000);
+			// 激活 Chrome 窗口（跨平台 CDP 方案）
+			bringChromeToFront().catch(() => {});
 				return { success: !result?.error, session, startUrl: result?.startUrl || url };
 			} catch {
 				return { success: true, session, startUrl: url };
