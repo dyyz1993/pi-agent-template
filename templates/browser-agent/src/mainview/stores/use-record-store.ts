@@ -40,24 +40,23 @@ export const useRecordStore = create<RecordState>((set, get) => ({
 	lastRecording: null,
 	error: null,
 
-		startRecording: async () => {
-			set({ error: null });
-			try {
-				// 获取当前选中标签页
-				const connState = useConnectionStore.getState();
-				const tabIdx = connState.selectedTabIndex ?? connState.activeTabIndex;
-				const currentTab = connState.tabs[tabIdx];
+			startRecording: async () => {
+				set({ error: null });
+				try {
+					// 获取当前选中标签页
+					const connState = useConnectionStore.getState();
+					const tabIdx = connState.selectedTabIndex ?? connState.activeTabIndex;
+					const currentTab = connState.tabs[tabIdx];
+					const url = currentTab?.url && currentTab.url !== "about:blank" ? currentTab.url : undefined;
 
-				// 先聚焦到选中标签页（确保录制正确的页面）
-				if (tabIdx !== connState.activeTabIndex) {
-					try {
-						await apiClient.call("browser.execXbrowser", { command: `tab switch --index ${tabIdx}` });
-					} catch {
-						/* ignore tab switch errors */
+					// 先导航 daemon 到目标 URL（确保录制正确的页面）
+					if (url) {
+						try {
+							await apiClient.call("browser.execXbrowser", { command: `goto "${url}"` });
+						} catch {
+							/* ignore navigation errors */
+						}
 					}
-				}
-
-				const url = currentTab?.url && currentTab.url !== "about:blank" ? currentTab.url : undefined;
 
 			networkBus.emitRequest("browser.recordStart", { url });
 			const result = await apiClient.call("browser.recordStart", { url });
