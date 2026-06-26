@@ -287,7 +287,7 @@ class APIClientImpl {
 	}
 
 	private resolveBaseUrl(): string {
-		if (typeof window === 'undefined') return 'http://localhost:5200';
+		if (typeof window === 'undefined') return `http://localhost:${process.env.PORT || '5300'}`;
 		// In dev, Vite proxies /api → backend, so relative path works.
 		// For standalone deployment, use window.location.origin.
 		return window.location.origin;

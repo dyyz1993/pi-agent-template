@@ -10,7 +10,7 @@ const log = createLogger('server');
 
 async function getMainViewUrl(): Promise<string> {
 	const channel = await Updater.localInfo.channel();
-	const DEV_SERVER_URL = 'http://localhost:7300';
+	const DEV_SERVER_URL = `http://localhost:${process.env.VITE_PORT || '7300'}`;
 	if (channel === 'dev') {
 		try {
 			await fetch(DEV_SERVER_URL, { method: 'HEAD' });

@@ -1,55 +1,12 @@
 {
 	"name": "cowork-app",
-		"version": "1.0.0",
-		"description": "Cowork task collaboration agent: AI-powered task orchestration with progress tracking, artifacts, and context management (Desktop + Web)",
+	"version": "1.0.0",
+	"description": "Cowork task collaboration agent: AI-powered task orchestration with progress tracking, artifacts, and context management (Desktop + Web)",
 	"author": {
 		"name": "xuyingzhou",
 		"email": "xuyingzhou@tuzhanai.com"
 	},
 	"homepage": "https://github.com/dyyz1993/pi-agent-template",
-	"main": "electron/main.js",
-	"build": {
-		"appId": "com.piagent.app",
-		"productName": "Pi Agent",
-		"directories": {
-			"output": "dist-electron"
-		},
-		"files": [
-			"dist/**/*",
-			"electron/**/*",
-			"package.json"
-		],
-		"mac": {
-			"category": "public.app-category.developer-tools",
-			"target": [
-				{
-					"target": "dmg",
-					"arch": [
-						"x64",
-						"arm64"
-					]
-				}
-			]
-		},
-		"win": {
-			"target": [
-				{
-					"target": "nsis",
-					"arch": [
-						"x64"
-					]
-				}
-			]
-		},
-		"linux": {
-			"maintainer": "xuyingzhou <xuyingzhou@tuzhanai.com>",
-			"target": [
-				"AppImage",
-				"deb"
-			],
-			"category": "Development"
-		}
-	},
 	"scripts": {
 		"start": "vite build && electrobun dev",
 		"dev": "electrobun dev --watch",
@@ -60,11 +17,6 @@
 		"build:mac": "vite build && electrobun build --env=canary",
 		"build:win": "vite build && electrobun build --env=canary",
 		"build:linux": "vite build && electrobun build --env=canary",
-		"electron:dev": "vite build && electron .",
-		"electron:build": "vite build && electron-builder --mac --win --linux",
-		"electron:build:mac": "vite build && electron-builder --mac",
-		"electron:build:win": "vite build && electron-builder --win",
-		"electron:build:linux": "vite build && electron-builder --linux",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
 		"format": "prettier --write .",
@@ -101,8 +53,6 @@
 		"@vitejs/plugin-react": "^4.3.4",
 		"autoprefixer": "^10.4.20",
 		"concurrently": "^9.1.0",
-		"electron": "^42.1.0",
-		"electron-builder": "^26.8.1",
 		"eslint": "^9.0.0",
 		"eslint-plugin-jsx-a11y": "^6.10.0",
 		"eslint-plugin-react-hooks": "^5.2.0",
