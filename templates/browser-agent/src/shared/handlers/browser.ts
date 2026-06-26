@@ -207,14 +207,16 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 	// ===== 录制 =====
 
 	r('browser.recordStart', async (params) => {
-		const session = params.session || `rec_${Date.now().toString(36)}`;
+		// 用 default session（xbrowser CDP 连接的默认 session 名）
+		// 不用随机名，因为 xbrowser 要求 session 已存在或提供 --url
+		const session = params.session || 'default';
 		const args = ['record', 'start', '--session', session];
 		if (params.url) {
 			args.push('--url', params.url);
 		}
 		try {
 			// record start 是后台命令，不等待它结束
-			// 用短超时检测启动是否成功（2 秒内没报错就算启动成功）
+			// 用短超时检测启动是否成功（3 秒内没报错就算启动成功）
 			const result = await execXbrowserTimed(args, 3000);
 			return {
 				success: !result?.error,
@@ -223,13 +225,12 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 			};
 		} catch {
 			// 超时通常意味着录制已启动（命令在后台运行）
-			// 这是正常行为，不是错误
 			return {
 				success: true,
 				session,
 				startUrl: params.url,
-			};
-		}
+			}
+		};
 	});
 
 	r('browser.recordStop', async (params) => {
