@@ -31,12 +31,13 @@ export function createViteConfig(dirname: string) {
 			chunkSizeWarningLimit: 1000,
 			rollupOptions: {
 				output: {
-					manualChunks: {
-						"vendor-react": ["react", "react-dom"],
-						"vendor-state": ["zustand"],
-						"vendor-i18n": ["i18next", "react-i18next"],
+					manualChunks(id) {
+						if (id.includes("node_modules")) {
+							if (id.includes("react") || id.includes("scheduler")) return "vendor-react";
+							if (id.includes("zustand")) return "vendor-state";
+							if (id.includes("i18next")) return "vendor-i18n";
+						}
 					},
-					compact: true,
 				},
 			},
 		},

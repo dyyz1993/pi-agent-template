@@ -1,6 +1,6 @@
 {
-	"appId": "com.piagent.app",
-	"productName": "Pi Agent",
+	"appId": "com.piagent.cowork",
+	"productName": "Cowork",
 	"copyright": "Copyright © 2024 dyyz1993",
 	"directories": {
 		"output": "dist-electron",
