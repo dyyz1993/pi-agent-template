@@ -230,9 +230,14 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 		if (url) {
 			args.push('--url', url);
 		}
-		try {
-			const result = await execXbrowserTimed(args, 3000);
-			return { success: !result?.error, session, startUrl: result?.startUrl || url };
+			try {
+				const result = await execXbrowserTimed(args, 3000);
+				// 激活 Chrome 窗口（macOS）
+				try {
+					const { execSync } = await import('child_process');
+					execSync('osascript -e \'tell application "Google Chrome" to activate\'', { timeout: 2000, env: { ...process.env, NODE_OPTIONS: '' } });
+				} catch { /* non-macOS or Chrome not available */ }
+				return { success: !result?.error, session, startUrl: result?.startUrl || url };
 		} catch {
 			return { success: true, session, startUrl: url };
 		}
