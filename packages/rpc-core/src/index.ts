@@ -1,43 +1,51 @@
-export { RPCClient, type RPCClientOptions } from './client';
-export { RPCServer, type RPCServerOptions } from './server';
-export { BaseTransport } from './transports/base-transport';
-export { IPCTransport, type IPCTransportOptions } from './transports/ipc';
-export { WebSocketTransport, type WebSocketTransportOptions } from './transports/websocket';
-export { InMemoryTransport, type InMemoryTransportOptions } from './transports/in-memory';
-export { StdioTransport, type StdioTransportOptions } from './transports/stdio';
-export { SSETransport, type SSETransportOptions } from './transports/sse';
-export { 
-  createTypedServer, 
-  createTypedClient,
-  defineRPC,
-  defineModule,
-  type TypedServer,
-  type TypedClient,
-  type MethodParams,
-  type MethodResult,
-  type AnyMethods,
-  type AnyEvents,
-  type RPCServerAPI,
-  type RPCClientAPI,
-  type RPCModule,
-  type ExtractMethods,
-  type FnsToMethods,
-} from './typed';
-export type { Transport, MessageHandler, ErrorHandler, DisconnectHandler } from './core/transport';
-export type { 
-  RPCMessage, 
-  RPCRequest, 
-  RPCResponse, 
-  RPCEvent, 
-  SubscriptionFilter, 
-  EventHandler,
-  StreamPayload,
-  RPCHandler,
-  RPCLogger,
-  DefaultEventMetadata,
-  EventWithMetadata,
-  EventWithOptionalMetadata,
-  EventWithoutMetadata,
-  EventPayload,
-  EventMetadata
-} from './core/types';
+export {
+	RPCClient,
+	RPCTimeoutError,
+	RPCAbortError,
+	RPCTransportError,
+	type RPCClientOptions,
+	type RPCCallOptions,
+	type RPCRetryOptions,
+} from "./client";
+export { RPCServer, type RPCServerOptions } from "./server";
+export { BaseTransport } from "./transports/base-transport";
+export { IPCTransport, type IPCTransportOptions } from "./transports/ipc";
+export { WebSocketTransport, type WebSocketTransportOptions } from "./transports/websocket";
+export { InMemoryTransport, type InMemoryTransportOptions } from "./transports/in-memory";
+export { StdioTransport, type StdioTransportOptions } from "./transports/stdio";
+export { SSETransport, type SSETransportOptions } from "./transports/sse";
+export {
+	createTypedServer,
+	createTypedClient,
+	defineRPC,
+	defineModule,
+	type TypedServer,
+	type TypedClient,
+	type MethodParams,
+	type MethodResult,
+	type AnyMethods,
+	type AnyEvents,
+	type RPCServerAPI,
+	type RPCClientAPI,
+	type RPCModule,
+	type ExtractMethods,
+	type FnsToMethods,
+} from "./typed";
+export type { Transport, MessageHandler, ErrorHandler, DisconnectHandler } from "./core/transport";
+export type {
+	RPCMessage,
+	RPCRequest,
+	RPCResponse,
+	RPCEvent,
+	SubscriptionFilter,
+	EventHandler,
+	StreamPayload,
+	RPCHandler,
+	RPCLogger,
+	DefaultEventMetadata,
+	EventWithMetadata,
+	EventWithOptionalMetadata,
+	EventWithoutMetadata,
+	EventPayload,
+	EventMetadata,
+} from "./core/types";

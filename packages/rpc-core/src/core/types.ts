@@ -10,6 +10,8 @@ export interface RPCMessage {
 	type: "request" | "response" | "event" | "subscribe" | "unsubscribe";
 	method?: string;
 	params?: unknown;
+	metadata?: Record<string, unknown>;
+	idempotencyKey?: string;
 	result?: unknown;
 	error?: { code: number; message: string };
 	eventType?: string;
@@ -26,6 +28,8 @@ export interface RPCRequest {
 	type: "request";
 	method: string;
 	params: unknown;
+	metadata?: Record<string, unknown>;
+	idempotencyKey?: string;
 }
 
 export interface RPCResponse {
@@ -99,6 +103,33 @@ export interface RPCEvent<Metadata = DefaultEventMetadata> {
 export type SubscriptionFilter<Metadata = DefaultEventMetadata> = Partial<Metadata>;
 
 export type RPCHandler = (params: unknown) => Promise<unknown>;
+
+export interface RPCRetryOptions {
+	/** Total attempts, including the initial attempt. Defaults to 2 when retry is enabled. */
+	maxAttempts?: number;
+	/** Delay before the second attempt. Defaults to 100ms. */
+	baseDelayMs?: number;
+	/** Maximum retry delay. Defaults to 1000ms. */
+	maxDelayMs?: number;
+	/** Add jitter to retry delays. Defaults to true. */
+	jitter?: boolean;
+}
+
+export interface RPCCallOptions {
+	/** Override the client default timeout for this call only. */
+	timeoutMs?: number;
+	/** Abort this client-side request and clean up its pending state. */
+	signal?: AbortSignal;
+	/**
+	 * Retry only transport send failures where the request was not accepted by
+	 * the transport. Timeouts and server errors are not retried by rpc-core.
+	 */
+	retry?: false | RPCRetryOptions;
+	/** Forwarded with the request for future server-side dedupe/tracing. */
+	idempotencyKey?: string;
+	/** Forwarded with the request for tracing or request policy metadata. */
+	metadata?: Record<string, unknown>;
+}
 
 export interface EventHandler {
 	(event: RPCEvent): void;
