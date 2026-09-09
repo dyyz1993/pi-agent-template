@@ -14,9 +14,7 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 
 	r("debug.subscriptions", async () => {
 		return {
-			subscriptions: (
-				server as unknown as { getActiveSubscriptions(): unknown }
-			).getActiveSubscriptions(),
+			subscriptions: server.getActiveSubscriptions(),
 		};
 	});
 }

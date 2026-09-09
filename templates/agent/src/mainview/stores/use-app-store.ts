@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { apiClient } from '../lib/api-client';
 import type { RPCMethods } from '../lib/api-client';
-import type { MethodResult } from '@dyyzz1993/rpc-core';
+import type { MethodResult } from '@dyyz1993/rpc-core';
 import type { DemoMethod } from '../types';
 import { useLogStore } from './use-log-store';
 

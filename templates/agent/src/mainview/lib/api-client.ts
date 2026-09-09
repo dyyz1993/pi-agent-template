@@ -1,13 +1,22 @@
-import { createTypedClient, WebSocketTransport, IPCTransport } from "@dyyz1993/rpc-core";
+import { createTypedClient, WebSocketTransport, IPCTransport } from '@dyyz1993/rpc-core';
 import type {
 	TypedClient,
 	MethodParams,
 	MethodResult,
 	EventPayload,
 	EventMetadata,
-} from "@dyyz1993/rpc-core";
-import type { RPCMethods, RPCEvents } from "../../shared/rpc-schema";
-import { rpcCache, CACHEABLE_METHODS } from "./rpc-cache";
+} from '@dyyz1993/rpc-core';
+import type { RPCMethods, RPCEvents } from '../../shared/rpc-schema';
+
+/** Keep the subscribe filter as strict as the typed client's (metadata keys). */
+type SubscribeFilter<K extends keyof RPCEvents = keyof RPCEvents> = RPCEvents[K] extends {
+	metadata: infer M;
+}
+	? Partial<M>
+	: RPCEvents[K] extends { metadata?: infer M }
+		? Partial<NonNullable<M>>
+		: Record<string, unknown>;
+import { rpcCache, CACHEABLE_METHODS } from './rpc-cache';
 
 /**
  * Token 来源优先级：
@@ -16,13 +25,13 @@ import { rpcCache, CACHEABLE_METHODS } from "./rpc-cache";
  * 3. 默认值（开发用）
  */
 function resolveAuthToken(): string {
-	if (typeof window !== "undefined") {
-		const fromQuery = new URLSearchParams(window.location.search).get("token");
+	if (typeof window !== 'undefined') {
+		const fromQuery = new URLSearchParams(window.location.search).get('token');
 		if (fromQuery) return fromQuery;
-		const fromStorage = localStorage.getItem("rpc-auth-token");
+		const fromStorage = localStorage.getItem('rpc-auth-token');
 		if (fromStorage) return fromStorage;
 	}
-	return "pi-agent-template-token";
+	return 'pi-agent-template-token';
 }
 
 const AUTH_TOKEN = resolveAuthToken();
@@ -30,7 +39,7 @@ const AUTH_TOKEN = resolveAuthToken();
 class APIClientImpl {
 	private client: TypedClient<RPCMethods, RPCEvents> | null = null;
 	private initPromise: Promise<void> | null = null;
-	private _transport: "ipc" | "websocket" = "websocket";
+	private _transport: 'ipc' | 'websocket' = 'websocket';
 	private _baseUrl: string | null = null;
 	private wsTransport: WebSocketTransport | null = null;
 
@@ -41,7 +50,7 @@ class APIClientImpl {
 		if (this.client) return;
 
 		const ipcTransport = new IPCTransport();
-		this._transport = "ipc";
+		this._transport = 'ipc';
 		this._baseUrl = null;
 		this.client = createTypedClient<RPCMethods, RPCEvents>(ipcTransport);
 		this.setupElectrobunBridge(ipcTransport);
@@ -52,7 +61,7 @@ class APIClientImpl {
 	 */
 	async initialize(): Promise<void> {
 		// 已连接且 transport 正常 → 直接返回
-		if (this.client && (this._transport === "ipc" || this.wsTransport?.isConnected())) {
+		if (this.client && (this._transport === 'ipc' || this.wsTransport?.isConnected())) {
 			return;
 		}
 
@@ -69,11 +78,11 @@ class APIClientImpl {
 		this.initPromise = (async () => {
 			const env = this.detectEnvironment();
 
-			if (env === "electrobun") {
+			if (env === 'electrobun') {
 				// 不应走到这里，桌面端应通过 initSyncForDesktop() 初始化
 				this.initSyncForDesktop();
 			} else {
-				this._transport = "websocket";
+				this._transport = 'websocket';
 				const wsUrl = this.getWebSocketUrl();
 				this.wsTransport = new WebSocketTransport({
 					url: wsUrl,
@@ -91,19 +100,19 @@ class APIClientImpl {
 		return this.initPromise;
 	}
 
-	private detectEnvironment(): "electrobun" | "browser" {
-		if (typeof window === "undefined") return "browser";
-		if (window.__electrobunBunBridge) return "electrobun";
-		return "browser";
+	private detectEnvironment(): 'electrobun' | 'browser' {
+		if (typeof window === 'undefined') return 'browser';
+		if (window.__electrobunBunBridge) return 'electrobun';
+		return 'browser';
 	}
 
 	private getWebSocketUrl(): string {
-		if (typeof window === "undefined") return `ws://localhost:3100?token=${AUTH_TOKEN}`;
+		if (typeof window === 'undefined') return `ws://localhost:3100?token=${AUTH_TOKEN}`;
 		const customUrl =
-			new URLSearchParams(window.location.search).get("ws") ||
-			localStorage.getItem("rpc-websocket-url");
+			new URLSearchParams(window.location.search).get('ws') ||
+			localStorage.getItem('rpc-websocket-url');
 		if (customUrl)
-			return customUrl.includes("token=") ? customUrl : `${customUrl}?token=${AUTH_TOKEN}`;
+			return customUrl.includes('token=') ? customUrl : `${customUrl}?token=${AUTH_TOKEN}`;
 		return `ws://${window.location.host}/ws?token=${AUTH_TOKEN}`;
 	}
 
@@ -113,7 +122,7 @@ class APIClientImpl {
 	 * - Browser → Bun: 通过 __electrobunBunBridge.postMessage 发送 Electrobun 消息格式
 	 */
 	private setupElectrobunBridge(ipcTransport: IPCTransport): void {
-		if (typeof window === "undefined") return;
+		if (typeof window === 'undefined') return;
 
 		const win = window;
 
@@ -129,8 +138,8 @@ class APIClientImpl {
 			ipcTransport.send = async (message: unknown) => {
 				// 包装成 Electrobun message packet，bun 端 defineRPC 注册了 "rpc-message" handler
 				const electrobunPacket = {
-					type: "message",
-					id: "rpc-message",
+					type: 'message',
+					id: 'rpc-message',
 					payload: JSON.stringify(message),
 				};
 				bridge.postMessage(JSON.stringify(electrobunPacket));
@@ -138,7 +147,7 @@ class APIClientImpl {
 		}
 	}
 
-	getTransport(): "ipc" | "websocket" {
+	getTransport(): 'ipc' | 'websocket' {
 		return this._transport;
 	}
 
@@ -154,7 +163,7 @@ class APIClientImpl {
 
 	async call<K extends keyof RPCMethods>(
 		method: K,
-		params: MethodParams<RPCMethods, K>
+		params: MethodParams<RPCMethods, K>,
 	): Promise<MethodResult<RPCMethods, K>> {
 		const methodStr = method as string;
 		const ttl = CACHEABLE_METHODS[methodStr];
@@ -176,7 +185,7 @@ class APIClientImpl {
 	async subscribe<K extends keyof RPCEvents>(
 		eventType: K,
 		handler: (payload: EventPayload<RPCEvents[K]>, metadata: EventMetadata<RPCEvents[K]>) => void,
-		filter?: Record<string, unknown>
+		filter?: SubscribeFilter<K>,
 	): Promise<string> {
 		await this.initialize();
 		return this.client!.subscribe(eventType, handler, filter);

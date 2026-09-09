@@ -94,6 +94,7 @@ export class SSETransport implements Transport {
 	private scheduleReconnect(): void {
 		const maxAttempts = this.options.maxReconnectAttempts ?? 10;
 		if (this.reconnectAttempts >= maxAttempts) {
+			this.logger?.warn?.(`SSE max reconnect attempts reached (${maxAttempts})`);
 			return;
 		}
 		if (this.reconnectTimer) {
@@ -105,12 +106,14 @@ export class SSETransport implements Transport {
 		const delay = Math.min(base * Math.pow(2, this.reconnectAttempts), max);
 
 		this.reconnectAttempts++;
+		this.logger?.info?.(`SSE reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
 
 		this.reconnectTimer = setTimeout(async () => {
 			this.reconnectTimer = null;
 			try {
 				await this.doReconnect();
 				this._isConnected = true;
+				this.logger?.info?.("SSE reconnected");
 				this.reconnectAttempts = 0;
 				for (const handler of [...this.reconnectHandlers]) {
 					handler();
