@@ -4,33 +4,113 @@
  * 对应 PRD §7 API 设计 + §6 Agent 设计
  */
 
-import type { RPCServer } from "@dyyz1993/rpc-core";
-import type { MethodParams, MethodResult } from "@dyyz1993/rpc-core";
-import type { RPCMethods, HandlerOptions } from "../rpc-schema";
-import { createLogger } from "../lib/logger";
-import {
-	execXbrowser,
-	agentChat,
-} from "../lib/agent";
-import { getOnlineBrowser, scrapeXhs } from "../lib/cdp";
+import type { RPCServer } from '@dyyz1993/rpc-core';
+import type { HandlerOptions } from '../rpc-schema';
+import { createLogger } from '../lib/logger';
+import { execXbrowser, execXbrowserTimed, agentChat } from '../lib/agent';
+import { getOnlineBrowser, scrapeXhs } from '../lib/cdp';
+import { runMockAgentChat } from '../lib/mock-stream';
+import { config } from '../../server-config';
 
-const log = createLogger("browser" as any);
+const log = createLogger('browser' as any);
 
 // ===== 内部状态 =====
 
-let _pluginsCache: any[] | null = null;
+let _pluginsCache: unknown[] | null = null;
 let _pluginsCacheTime = 0;
-let _systemCache: { data: any; ts: number } = { data: null, ts: 0 };
+const _systemCache: { data: unknown; ts: number } = { data: null, ts: 0 };
+
+/**
+ * 将命令字符串拆分为参数数组，支持引号包裹的参数（如 URL）。
+ * 例如："scrape https://example.com --limit 5" → ["scrape", "https://example.com", "--limit", "5"]
+ */
+function parseCommandString(cmd: string): string[] {
+	const args: string[] = [];
+	const regex = /"([^"]*)"|'([^']*)'|(\S+)/g;
+	let match: RegExpExecArray | null;
+	while ((match = regex.exec(cmd)) !== null) {
+		args.push(match[1] ?? match[2] ?? match[3] ?? '');
+	}
+	return args;
+}
+
+/**
+ * Web 模式下禁止的 xbrowser 子命令。
+ * record/replay/convert/extract 已解禁（录制功能需要）。
+ */
+const BLOCKED_XBROWSER_COMMANDS = new Set<string>([
+	'open', // 桌面端打开文件/程序
+]);
+
+/** 检查命令是否被禁止，返回 null 表示允许，否则返回拒绝信息 */
+function checkBlockedCommand(args: string[]): string | null {
+	if (args.length === 0) return null;
+	const cmd = args[0]!.toLowerCase();
+	if (BLOCKED_XBROWSER_COMMANDS.has(cmd)) {
+		return `🚫 命令 "${cmd}" 在 Web 模式下不可用。该命令仅在桌面端支持。`;
+	}
+		return null;
+	}
+
+/**
+ * 使用 CDP 激活 Chrome 窗口（跨平台）。
+ * 通过 Browser.setWindowBounds({focused: true}) 将 Chrome 窗口弹到前台。
+ * 适用于所有支持 CDP 的平台（macOS/Windows/Linux）。
+ */
+async function bringChromeToFront(): Promise<void> {
+	const cdpEndpoint = process.env.CDP_ENDPOINT || 'http://localhost:9221';
+	try {
+		// 1. 获取页面 target ID
+		const tabsRes = await fetch(`${cdpEndpoint}/json`).then((r) => r.json()) as any[];
+		const page = Array.isArray(tabsRes) ? (tabsRes.find((t: any) => t.type === 'page') || tabsRes[0]) : null;
+		if (!page?.id) return;
+
+		// 2. 获取浏览器 WebSocket URL
+		const versionRes = await fetch(`${cdpEndpoint}/json/version`).then((r) => r.json()) as any;
+		const wsUrl: string | undefined = versionRes.webSocketDebuggerUrl;
+		if (!wsUrl) return;
+
+		// 3. 连接浏览器 WebSocket，调用 CDP 命令
+		const ws = new WebSocket(wsUrl);
+		let msgId = 1;
+
+		await new Promise<void>((resolve) => {
+			const timer = setTimeout(() => { ws.close(); resolve(); }, 3000);
+
+			ws.addEventListener('open', () => {
+				ws.send(JSON.stringify({ id: msgId++, method: 'Browser.getWindowForTarget', params: { targetId: page.id } }));
+			});
+
+			ws.addEventListener('message', (ev: MessageEvent) => {
+				try {
+					const resp = JSON.parse(ev.data as string);
+					if (resp.id === 1 && resp.result?.windowId) {
+						ws.send(JSON.stringify({ id: msgId++, method: 'Browser.setWindowBounds', params: { windowId: resp.result.windowId, bounds: { focused: true } } }));
+					}
+					if (resp.id === 2 || (resp.id === 1 && resp.error)) {
+						clearTimeout(timer);
+						ws.close();
+						resolve();
+					}
+				} catch { /* ignore */ }
+			});
+
+			ws.addEventListener('error', () => { clearTimeout(timer); resolve(); });
+		});
+	} catch {
+		/* CDP 不可用，忽略 */
+	}
+}
 
 // ===== xbrowser 版本检测 =====
 
 async function detectXbrowser(): Promise<{ available: boolean; version: string | null }> {
 	try {
-		const { execFileSync } = await import("child_process");
-		const out = execFileSync("/usr/local/bin/xbrowser", ["--version"], {
+		const { execFileSync } = await import('child_process');
+		const out = execFileSync('/usr/local/bin/xbrowser', ['--version'], {
 			timeout: 5000,
-			encoding: "utf8",
-			env: { ...process.env, NODE_OPTIONS: "" },
+			encoding: 'utf8',
+			env: { ...process.env, NODE_OPTIONS: '' },
 		}).trim();
 		const m = out.match(/v?(\d+\.\d+\.\d+)/);
 		return { available: true, version: m ? (m[1] ?? null) : null };
@@ -39,7 +119,7 @@ async function detectXbrowser(): Promise<{ available: boolean; version: string |
 	}
 }
 
-async function getSystemInfo(force = false): Promise<any> {
+async function getSystemInfo(force = false): Promise<unknown> {
 	const now = Date.now();
 	if (!force && _systemCache.data && now - _systemCache.ts < 30_000) {
 		return _systemCache.data;
@@ -50,7 +130,7 @@ async function getSystemInfo(force = false): Promise<any> {
 			.then((b) => ({ connected: !!b, browsers: b ? [b] : [] }))
 			.catch(() => ({ connected: false, browsers: [] })),
 	]);
-	const data = { xbrowser, browser, serverVersion: "0.4.0" };
+	const data = { xbrowser, browser, serverVersion: '0.4.0' };
 	_systemCache.data = data;
 	_systemCache.ts = now;
 	return data;
@@ -58,21 +138,17 @@ async function getSystemInfo(force = false): Promise<any> {
 
 // ===== Handler 注册 =====
 
-type RegisterFn = <K extends keyof RPCMethods & string>(
-	method: K,
-	handler: (params: MethodParams<RPCMethods, K>) => Promise<MethodResult<RPCMethods, K>>,
-) => void;
-
 export function register(server: RPCServer, _options: HandlerOptions): void {
-	const r: RegisterFn = (method, handler) => {
+	// 放宽类型：handler 统一转为 (params: unknown) => Promise<unknown>
+	const r = (method: string, handler: (params: any) => Promise<any>) => {
 		server.register(method, handler as (params: unknown) => Promise<unknown>);
 	};
 
-	r("browser.getSystemInfo", async () => {
+	r('browser.getSystemInfo', async () => {
 		return await getSystemInfo();
 	});
 
-	r("browser.checkConnection", async (params) => {
+	r('browser.checkConnection', async (params) => {
 		const browser = await getOnlineBrowser(params.pluginId);
 		return {
 			connected: !!browser,
@@ -81,52 +157,62 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 		};
 	});
 
-	r("browser.listTabs", async () => {
+	r('browser.getConnectionGuide', async () => {
+		const browser = await getOnlineBrowser();
+		return {
+			// 用户视角：只有"浏览器是否已连接"
+			connected: !!browser,
+			tabs: browser?.tabs ?? 0,
+		};
+	});
+
+	r('browser.listTabs', async () => {
 		try {
-			const result = await execXbrowser(["tab", "list"]);
+			const result = await execXbrowser(['tab', 'list']);
 			const tabs = result?.data?.tabs || [];
 			return {
 				total: tabs.length,
 				activeIndex: result?.data?.activeIndex ?? 0,
-				tabs: tabs.map((t: any) => ({
+				tabs: tabs.map((t: Record<string, unknown>) => ({
 					index: t.index,
 					url: t.url,
 					title: t.title,
 					active: t.active,
 				})),
 			};
-		} catch (e: any) {
-			log.error("listTabs failed", { error: e.message });
+		} catch (e: unknown) {
+			log.error('listTabs failed', { error: e instanceof Error ? e.message : String(e) });
 			return { total: 0, activeIndex: 0, tabs: [] };
 		}
 	});
 
-	r("browser.listPlugins", async () => {
+	r('browser.listPlugins', async () => {
 		if (_pluginsCache && Date.now() - _pluginsCacheTime < 5 * 60 * 1000) {
 			return { plugins: _pluginsCache };
 		}
 		try {
-			const { execFileSync } = await import("child_process");
-			const { tmpdir } = await import("os");
-			const { join } = await import("path");
-			const { unlinkSync, existsSync, readFileSync } = await import("fs");
+			const { execFileSync } = await import('child_process');
+			const { tmpdir } = await import('os');
+			const { join } = await import('path');
+			const { unlinkSync, existsSync, readFileSync } = await import('fs');
 			const tmpFile = join(tmpdir(), `xb-plugins-${Date.now()}.json`);
-			execFileSync("sh", [
-				"-c",
-				`'/usr/local/bin/xbrowser' plugin list --json > '${tmpFile}' 2>/dev/null`,
-			], {
-				timeout: 30000,
-				env: { ...process.env, NODE_OPTIONS: "" },
-			});
-			let plugins: any[] = [];
+			execFileSync(
+				'sh',
+				['-c', `'/usr/local/bin/xbrowser' plugin list --json > '${tmpFile}' 2>/dev/null`],
+				{
+					timeout: 30000,
+					env: { ...process.env, NODE_OPTIONS: '' },
+				},
+			);
+			let plugins: unknown[] = [];
 			if (existsSync(tmpFile)) {
-				const raw = readFileSync(tmpFile, "utf8").trim();
+				const raw = readFileSync(tmpFile, 'utf8').trim();
 				try {
 					const data = JSON.parse(raw);
 					const rawList = Array.isArray(data) ? data : data?.plugins || [];
 					plugins = rawList.map((p: any) => ({
 						name: p.name || p.id || p,
-						description: p.description || p.metadata?.description || "",
+						description: p.description || p.metadata?.description || '',
 					}));
 				} catch {}
 				try {
@@ -136,103 +222,329 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 			_pluginsCache = plugins;
 			_pluginsCacheTime = Date.now();
 			return { plugins };
-		} catch (e: any) {
-			log.error("listPlugins failed", { error: e.message });
+		} catch (e: unknown) {
+			log.error('listPlugins failed', { error: e instanceof Error ? e.message : String(e) });
 			return { plugins: [] };
 		}
 	});
 
-	r("browser.execXbrowser", async (params) => {
+	r('browser.execXbrowser', async (params) => {
 		try {
-			const result = await execXbrowser([params.command]);
+			// 把命令字符串拆分为参数数组（支持引号包裹的 URL 等）
+			const args = parseCommandString(params.command);
+
+			// Web 模式命令拦截
+			const blocked = checkBlockedCommand(args);
+			if (blocked) {
+				return { success: false, data: { error: blocked, blocked: true } };
+			}
+
+			// 如果指定了 tabIndex，自动注入 --tab 参数
+			if (params.tabIndex !== undefined && params.tabIndex >= 0) {
+				// 避免重复添加 --tab
+				if (!args.some((a) => a === '--tab' || a === '-t')) {
+					args.push('--tab', String(params.tabIndex));
+				}
+			}
+
+			const result = await execXbrowser(args);
 			return { success: !!result?.success, data: result?.data };
-		} catch (e: any) {
-			return { success: false, data: { error: e.message } };
+		} catch (e: unknown) {
+			return { success: false, data: { error: e instanceof Error ? e.message : String(e) } };
 		}
 	});
 
-	r("browser.agentChat", async (params) => {
+	// ===== 录制 =====
+
+	r('browser.recordStart', async (params) => {
+		// 每次录制用唯一 session 名，避免 default session 被污染
+		const session = params.session || `rec_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+		const args = ['record', 'start', '--session', session];
+
+		// 录制需要 --url 才能正确注入事件监听器
+		// 如果没传 url，自动获取当前活跃标签页的 URL
+		let url = params.url;
+		if (!url) {
+			try {
+				const tabResult = await execXbrowser(['tab', 'list']);
+				const tabs = tabResult?.data?.tabs;
+				if (tabs && tabs.length > 0) {
+					const activeTab = tabs.find((t: any) => t.active) || tabs[0];
+					if (activeTab?.url && !activeTab.url.startsWith('about:')) {
+						url = activeTab.url;
+					}
+				}
+			} catch {
+				/* ignore */
+			}
+		}
+			if (url) {
+				args.push('--url', url);
+			}
+		try {
+			const result = await execXbrowserTimed(args, 10000);
+			// 激活 Chrome 窗口（跨平台 CDP 方案）
+			bringChromeToFront().catch(() => {});
+				return { success: !result?.error, session, startUrl: result?.startUrl || url };
+			} catch {
+				return { success: true, session, startUrl: url };
+			}
+	});
+
+	r('browser.recordStop', async (params) => {
+		const session = params.session || 'default';
+		const args = ['record', 'stop', '--session', session];
+		log.info('recordStop called', { session });
+		try {
+			const result = await execXbrowser(args);
+			log.info('recordStop execXbrowser result', JSON.stringify(result).slice(0, 300) as any);
+			return {
+				success: !!result?.ok,
+				actions: result?.actions || 0,
+				network: result?.network || 0,
+				durationMs: result?.durationMs || 0,
+				steps: result?.steps || 0,
+				data: result,
+			};
+		} catch (e: unknown) {
+			return {
+				success: false,
+				actions: 0,
+				network: 0,
+				durationMs: 0,
+				steps: 0,
+				data: { error: e instanceof Error ? e.message : String(e) },
+			};
+		}
+	});
+
+	r('browser.recordStatus', async (params) => {
+		const session = params.session || 'default';
+		try {
+			const result = await execXbrowser(['record', 'status', '--session', session]);
+			return {
+				recording: !!result?.recording,
+				actions: result?.actions,
+				network: result?.network,
+				hasRecording: result?.hasRecording,
+			};
+		} catch {
+			return { recording: false };
+		}
+	});
+
+	r('browser.processRecording', async (params) => {
+		const { sessionId, recordingData, title } = params;
+		if (!sessionId || !recordingData) {
+			return { messageId: '', text: '缺少录制数据' };
+		}
+
+		const messageId = `proc_${Date.now().toString(36)}`;
+		server.emitEvent('browser.agentStart', { messageId, reply: '🔧 正在分析录制数据...' });
+
+		// 构建 Agent 加工 prompt
+		// recordingData 可能是 recordStop 返回的摘要（actions 是数字），也可能是完整的录制文件
+		const actionCount = typeof recordingData.actions === 'number' ? recordingData.actions : (recordingData.actions?.length || recordingData.totalActions || 0);
+		const networkCount = typeof recordingData.network === 'number' ? recordingData.network : (recordingData.network?.length || recordingData.totalNetworkRequests || 0);
+		const durationSec = Math.round((recordingData.durationMs || 0) / 1000);
+		const startUrl = recordingData.startUrl || recordingData.data?.startUrl || '未知';
+
+		// 提取操作摘要（可能是完整 actions 数组，也可能是空）
+		const actions = Array.isArray(recordingData.actions) ? recordingData.actions : (Array.isArray(recordingData.data?.actions) ? recordingData.data.actions : []);
+		const actionSummary = actions.slice(0, 30).map((a: any, i: number) => {
+			const type = a.type || a.action?.type || 'unknown';
+			const selector = a.element?.selector || a.action?.element?.selector || '';
+			const value = a.value || a.action?.value || '';
+			const url = a.url || '';
+			return `${i + 1}. [${type}] ${selector ? `选择器: ${selector}` : ''} ${value ? `值: ${value}` : ''} ${url ? `URL: ${url}` : ''}`.trim();
+		}).join('\n');
+
+		// 提取网络请求摘要（最多 20 条去重）
+		const networks = Array.isArray(recordingData.network) ? recordingData.network : (Array.isArray(recordingData.data?.network) ? recordingData.data.network : []);
+		const seenPaths = new Set<string>();
+		const networkSummary = networks.slice(0, 50).filter((n: any) => {
+			const key = `${n.method || 'GET'} ${n.path || n.url}`;
+			if (seenPaths.has(key)) return false;
+			seenPaths.add(key);
+			return true;
+		}).slice(0, 20).map((n: any) => {
+			return `- ${n.method || 'GET'} ${n.path || n.url} → ${n.status || '?'} [${n.resourceType || ''}]`;
+		}).join('\n');
+
+		const hasActions = actionSummary.trim().length > 0;
+		const hasNetwork = networkSummary.trim().length > 0;
+
+		let prompt: string;
+		if (hasActions) {
+			prompt = `用户录制了一段浏览器操作（共 ${actionCount} 步，耗时 ${durationSec} 秒，起始页面: ${startUrl}）。
+${title ? `用户建议的名称: ${title}\n` : ''}请分析这组操作，输出：
+
+1. **操作总结**：一句话描述这组操作做了什么
+2. **关键步骤**：列出核心步骤（去掉无意义的滚动/悬停）
+3. **技能命名**：建议一个简洁的技能名称
+4. **参数化建议**：哪些步骤可以替换为变量（如搜索关键词、URL 等）
+
+录制操作列表：
+${actionSummary}`;
+		} else if (hasNetwork) {
+			prompt = `用户录制了一段浏览器操作（共 ${networkCount} 个网络请求，耗时 ${durationSec} 秒，起始页面: ${startUrl}）。
+${title ? `用户建议的名称: ${title}\n` : ''}虽然没有捕获到用户的具体操作步骤，但捕获到了浏览器的网络请求。请根据网络请求序列分析用户的操作意图：
+
+1. **意图总结**：用户大概想做什么（从访问的 URL 和 API 调用推断）
+2. **关键步骤**：从网络请求推断用户访问了哪些页面、调用了什么接口
+3. **技能命名**：建议一个简洁的技能名称
+4. **参数化建议**：哪些信息可以替换为变量
+
+网络请求列表：
+${networkSummary}`;
+		} else {
+			prompt = `用户录制了一段浏览器操作（耗时 ${durationSec} 秒，起始页面: ${startUrl}），但没有捕获到操作数据或网络请求。
+${title ? `用户建议的名称: ${title}\n` : ''}请基于起始页面推断用户的可能意图，并给出建议。`;
+		}
+
+		try {
+			const agentResult = await agentChat(
+				prompt,
+				sessionId,
+				(event) => {
+					if (event.type === 'tool_call') {
+						server.emitEvent('browser.toolCall', {
+							messageId,
+							toolCall: { id: event.toolCallId || `tc_${Date.now()}`, tool: event.toolName || '', input: event.toolInput || '', status: 'running' },
+						});
+					}
+					if (event.type === 'tool_result') {
+						server.emitEvent('browser.toolResult', { messageId, toolCallId: event.toolCallId, output: event.toolOutput || '' });
+					}
+					if (event.type === 'thinking' && event.text) {
+						server.emitEvent('browser.thinking', { messageId, delta: event.text });
+					}
+					if (event.type === 'text' && event.text) {
+						server.emitEvent('browser.textDelta', { messageId, delta: event.text });
+					}
+					if (event.type === 'turn') {
+						server.emitEvent('browser.turn', { messageId, turn: event.turn || 1, maxTurns: 10 });
+					}
+				},
+				[],
+			);
+
+			server.emitEvent('browser.done', {
+				messageId,
+				reply: agentResult.text || '加工完成',
+				steps: agentResult.steps || [],
+			});
+
+			return { messageId, text: agentResult.text || '加工完成' };
+		} catch (e: unknown) {
+			const errMsg = e instanceof Error ? e.message : String(e);
+			server.emitEvent('browser.done', { messageId, reply: `❌ 加工失败: ${errMsg}`, steps: [] });
+			return { messageId, text: `加工失败: ${errMsg}` };
+		}
+	});
+
+	r('browser.agentChat', async (params) => {
 		const { message, sessionId, activePlugins } = params;
+		log.info('agentChat received', {
+			message: message.slice(0, 50),
+			sessionId,
+			hasPlugins: !!activePlugins,
+		});
 		if (!message || !sessionId) {
-			return { messageId: "", text: "缺少必要参数", steps: [] };
+			return { messageId: '', text: '缺少必要参数', steps: [] };
 		}
 
 		const messageId = `msg_${Date.now().toString(36)}`;
 
 		// 发送 Agent 开始事件
-		server.emitEvent("browser.agentStart", {
+		server.emitEvent('browser.agentStart', {
 			messageId,
-			reply: "🤔 思考中...",
+			reply: '🤔 思考中...',
 		});
+
+		// ── Mock 流式模式：跳过真实 Agent，用脚本化演示 ──────────
+		if (config.enableMockStream) {
+			log.info('agentChat running in MOCK mode (ENABLE_MOCK_STREAM=true)');
+			const mockResult = await runMockAgentChat(message, messageId, (event, payload) => {
+				server.emitEvent(event as never, payload);
+			});
+			return { messageId, text: mockResult.text, steps: mockResult.steps };
+		}
 
 		// 检查浏览器连接
 		const browser = await getOnlineBrowser();
 		if (!browser) {
-			server.emitEvent("browser.done", {
+			server.emitEvent('browser.done', {
 				messageId,
-				reply: "⚠️ 没有检测到在线浏览器，请先安装并加载 Chrome 扩展。",
+				reply: '⚠️ 没有检测到在线浏览器，请先安装并加载 Chrome 扩展。',
 				steps: [],
 			});
 			return {
 				messageId,
-				text: "⚠️ 没有检测到在线浏览器",
+				text: '⚠️ 没有检测到在线浏览器',
 				steps: [],
 			};
 		}
 
 		// 调用 Agent
-		const liveToolCalls: any[] = [];
+		const liveToolCalls: {
+			id: string;
+			tool: string;
+			input: string;
+			output: string;
+			status: string;
+		}[] = [];
 		const agentResult = await agentChat(
 			message,
 			sessionId,
 			(event) => {
-				if (event.type === "tool_call") {
+				if (event.type === 'tool_call') {
 					const tcId = event.toolCallId || `tc_${liveToolCalls.length}`;
-					liveToolCalls.push({
-						id: tcId,
-						tool: event.toolName,
-						input: event.toolInput || "",
-						output: "",
-						status: "running",
+						liveToolCalls.push({
+							id: tcId,
+							tool: event.toolName || '',
+							input: event.toolInput || '',
+						output: '',
+						status: 'running',
 					});
-					server.emitEvent("browser.toolCall", {
+					server.emitEvent('browser.toolCall', {
 						messageId,
 						toolCall: {
 							id: tcId,
-							tool: event.toolName || "",
-							input: event.toolInput || "",
-							status: "running",
+							tool: event.toolName || '',
+							input: event.toolInput || '',
+							status: 'running',
 						},
 					});
 				}
-				if (event.type === "tool_result") {
+				if (event.type === 'tool_result') {
 					const last = liveToolCalls[liveToolCalls.length - 1];
 					const tcId = event.toolCallId || last?.id;
 					if (last) {
-						last.output = event.toolOutput || "";
-						last.status = "done";
+						last.output = event.toolOutput || '';
+						last.status = 'done';
 					}
-					server.emitEvent("browser.toolResult", {
+					server.emitEvent('browser.toolResult', {
 						messageId,
 						toolCallId: tcId,
-						output: event.toolOutput || "",
+						output: event.toolOutput || '',
 					});
 				}
-				if (event.type === "thinking" && event.text) {
-					server.emitEvent("browser.thinking", {
+				if (event.type === 'thinking' && event.text) {
+					server.emitEvent('browser.thinking', {
 						messageId,
 						delta: event.text,
 					});
 				}
-				if (event.type === "turn" && event.turn) {
-					server.emitEvent("browser.turn", {
+				if (event.type === 'turn' && event.turn) {
+					server.emitEvent('browser.turn', {
 						messageId,
 						turn: event.turn,
 						maxTurns: Number(process.env.AGENT_MAX_TURNS || 30),
 					});
 				}
-				if (event.type === "text" && event.text) {
-					server.emitEvent("browser.textDelta", {
+				if (event.type === 'text' && event.text) {
+					server.emitEvent('browser.textDelta', {
 						messageId,
 						delta: event.text,
 					});
@@ -243,25 +555,24 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 
 		const steps = liveToolCalls.map((tc) => ({
 			label: tc.tool,
-			status: "done" as const,
+			status: 'done' as const,
 			detail: tc.input.slice(0, 80),
 		}));
 
 		// 触发采集
 		let finalText = agentResult.text;
 		if (agentResult.usedScrape) {
-			const urlMatch = message.match(/https?:\/\/[^\s,，""''）\)]+/);
-			const targetUrl =
-				urlMatch?.[0] || "https://www.xiaohongshu.com/explore";
+			const urlMatch = message.match(/https?:\/\/[^\s,，""''）)]+/);
+			const targetUrl = urlMatch?.[0] || 'https://www.xiaohongshu.com/explore';
 
 			const scrapeResult = await scrapeXhs(
-				"",
+				'',
 				sessionId,
 				messageId,
-				"",
+				'',
 				(scrapeSteps) => {
 					const allSteps = [...steps, ...scrapeSteps];
-					server.emitEvent("browser.progress", {
+					server.emitEvent('browser.progress', {
 						messageId,
 						steps: allSteps,
 					});
@@ -269,14 +580,12 @@ export function register(server: RPCServer, _options: HandlerOptions): void {
 				{ url: targetUrl },
 			);
 
-			finalText =
-				agentResult.text +
-				`\n\n✅ 采集完成: ${scrapeResult.notes.length} 条笔记`;
+			finalText = agentResult.text + `\n\n✅ 采集完成: ${scrapeResult.notes.length} 条笔记`;
 		}
 
 		// 发送完成事件
 		const allSteps = steps;
-		server.emitEvent("browser.done", {
+		server.emitEvent('browser.done', {
 			messageId,
 			reply: finalText,
 			steps: allSteps,

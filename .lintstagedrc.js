@@ -1,7 +1,10 @@
-const CLI_TEMPLATES_PREFIX = 'packages/pi-cli/templates/';
+const CLI_TEMPLATES_MARKER = 'packages/pi-cli/templates/';
 
+// Bundled template copies are linted by their own template configs; the root
+// config must not run on them. Match by path segment so this works whether
+// lint-staged hands us repo-relative or absolute paths.
 function isCliTemplate(f) {
-  return f.startsWith(CLI_TEMPLATES_PREFIX);
+  return f.replace(/\\/g, '/').includes(CLI_TEMPLATES_MARKER);
 }
 
 module.exports = {

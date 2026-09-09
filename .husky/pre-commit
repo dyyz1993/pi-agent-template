@@ -1,4 +1,7 @@
-npx lint-staged
+# Explicit root config: without it lint-staged discovers the templates' own
+# nested lint-staged configs inside packages/pi-cli/templates/** and tries to
+# run them there, where no dependencies are installed.
+npx lint-staged --config .lintstagedrc.js
 
 STAGED_TS=$(git diff --cached --name-only --diff-filter=ACMR | grep -c '\.tsx\?$' || true)
 

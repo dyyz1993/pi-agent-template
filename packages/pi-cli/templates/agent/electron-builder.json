@@ -1,0 +1,40 @@
+{
+	"appId": "com.piagent.app",
+	"productName": "Pi Agent",
+	"copyright": "Copyright © 2024 dyyz1993",
+	"directories": {
+		"output": "dist-electron",
+		"buildResources": "build"
+	},
+	"files": ["dist/**/*", "electron/**/*", "package.json"],
+	"mac": {
+		"category": "public.app-category.developer-tools",
+		"hardenedRuntime": true,
+		"gatekeeperAssess": false,
+		"entitlements": ["com.apple.security.cs.allow-jit"],
+		"target": [
+			{
+				"target": "dmg",
+				"arch": ["x64", "arm64"]
+			}
+		]
+	},
+	"win": {
+		"target": [
+			{
+				"target": "nsis",
+				"arch": ["x64"]
+			}
+		],
+		"artifactName": "${productName}-${version}-${arch}.${ext}"
+	},
+	"linux": {
+		"target": ["AppImage", "deb"],
+		"category": "Development"
+	},
+	"publish": {
+		"provider": "github",
+		"owner": "dyyz1993",
+		"repo": "pi-agent-app"
+	}
+}

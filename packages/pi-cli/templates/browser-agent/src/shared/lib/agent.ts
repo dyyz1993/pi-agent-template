@@ -59,6 +59,67 @@ export async function execXbrowser(args: string[]): Promise<any> {
 	});
 }
 
+/**
+ * 带自定义超时的 xbrowser 执行。
+ * 用于 record start 这类后台命令——超时后不杀进程（keepAlive=true），
+ * 因为录制命令需要持续运行。
+ */
+export async function execXbrowserTimed(
+	args: string[],
+	timeoutMs: number,
+	keepAlive = false,
+): Promise<any> {
+	const allArgs = [...args, "--cdp", CDP_ENDPOINT, "--json"];
+	return new Promise((resolve, reject) => {
+		const child = spawn(XBROWSER_CMD, allArgs, {
+			stdio: ["ignore", "pipe", "pipe"],
+			env: { ...process.env, NODE_OPTIONS: "" },
+		});
+		const chunks: Buffer[] = [];
+		let resolved = false;
+
+		child.stdout.on("data", (d: Buffer) => chunks.push(d));
+
+		const timer = setTimeout(() => {
+			if (resolved) return;
+			resolved = true;
+			if (!keepAlive) child.kill("SIGTERM");
+			// 超时：如果有输出就解析返回，否则 reject
+			const out = Buffer.concat(chunks as any).toString("utf8").trim();
+			if (out) {
+				const m = out.match(/\{[\s\S]*\}/);
+				try {
+					resolve(m ? JSON.parse(m[0]) : { success: true, timeout: true });
+				} catch {
+					resolve({ success: true, timeout: true });
+				}
+			} else {
+				resolve({ success: true, timeout: true });
+			}
+		}, timeoutMs);
+
+		child.on("error", (e) => {
+			if (resolved) return;
+			resolved = true;
+			clearTimeout(timer);
+			reject(e);
+		});
+
+		child.on("close", () => {
+			if (resolved) return;
+			resolved = true;
+			clearTimeout(timer);
+			const out = Buffer.concat(chunks as any).toString("utf8");
+			const m = out.match(/\{[\s\S]*\}/);
+			try {
+				resolve(m ? JSON.parse(m[0]) : { success: false });
+			} catch {
+				resolve({ success: false });
+			}
+		});
+	});
+}
+
 // ===== 浏览器上下文注入 =====
 
 async function getBrowserContext(): Promise<string> {
@@ -126,7 +187,6 @@ export async function getClient(sessionId: string): Promise<RpcClient | null> {
 			"xbrowser",
 			"web_search",
 			"fetch_content",
-			"bash",
 			"todo",
 		]);
 
@@ -202,7 +262,21 @@ export async function agentChat(
 	const browserContext = await getBrowserContext();
 	let pluginHint = "";
 	if (activePlugins && activePlugins.length > 0) {
-		pluginHint = `\n<active-plugins>\n  用户选择了以下插件，优先使用：\n${activePlugins.map((p) => `  - ${p}`).join("\n")}\n</active-plugins>`;
+		// 把工具 ID 映射成 Agent 能理解的描述
+		const toolDescs: Record<string, string> = {
+			scrape: "采集当前页面内容转 Markdown（xbrowser scrape）",
+			crawl: "批量爬取网站多个页面（xbrowser crawl）",
+			map: "发现网站所有 URL 结构（xbrowser map）",
+			screenshot: "截取当前页面（xbrowser screenshot）",
+			search: "搜索引擎搜索关键词（xbrowser search）",
+			"scrape-xhs": "采集小红书笔记（scrapeXhs 专用流程）",
+			xiaohongshu: "采集小红书内容（xiaohongshu 插件）",
+		};
+		const toolList = activePlugins.map((p) => {
+			const desc = toolDescs[p];
+			return desc ? `  - ${p}: ${desc}` : `  - ${p}`;
+		}).join("\n");
+		pluginHint = `\n<active-plugins>\n  用户选择了以下工具/插件，请优先使用它们完成任务。根据用户的需求自动编排执行顺序：\n${toolList}\n</active-plugins>`;
 	}
 	const fullMessage = `${browserContext}${pluginHint}\n\n用户请求: ${message}`;
 

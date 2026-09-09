@@ -40,6 +40,8 @@ interface SseClient {
 
 export interface SseHandler {
 	clients: Map<string, SseClient>;
+	handleSseConnect: (req: IncomingMessage, res: ServerResponse) => void;
+	handleRpcPost: (req: IncomingMessage, res: ServerResponse) => Promise<void>;
 	close: () => void;
 }
 
@@ -83,7 +85,7 @@ function createSseTransport(client: SseClient): Transport {
 }
 
 export function createSseHandler(_httpServer: Server, deps: SseHandlerDeps): SseHandler {
-	const { config: cfg } = deps;
+	void deps; // deps kept for API symmetry with createWsHandler; config is enforced by http-routes auth
 	const clients = new Map<string, SseClient>();
 
 	function handleSseConnect(req: IncomingMessage, res: ServerResponse): void {
@@ -174,13 +176,22 @@ export function createSseHandler(_httpServer: Server, deps: SseHandlerDeps): Sse
 		res.end(JSON.stringify({ accepted: true }));
 
 		// Route the message into the client's RPCServer via its transport handlers
+		const msgType = (message as any)?.type;
+		const msgMethod = (message as any)?.method;
+		log.info("RPC routing", { clientId, msgType, msgMethod, handlerCount: client.messageHandlers.size });
 		for (const handler of client.messageHandlers) {
-			handler(message);
+			try {
+				handler(message);
+			} catch (err) {
+				log.error("RPC handler error", { clientId, msgMethod, error: err instanceof Error ? err.message : String(err) });
+			}
 		}
 	}
 
 	return {
 		clients,
+		handleSseConnect,
+		handleRpcPost,
 		close: (): void => {
 			for (const client of clients.values()) {
 				client.rpcServer.close();
@@ -190,23 +201,6 @@ export function createSseHandler(_httpServer: Server, deps: SseHandlerDeps): Sse
 			}
 			clients.clear();
 		},
-		// Exposed for http-routes to delegate SSE/RPC paths
-		handleSseConnect,
-		handleRpcPost,
-	};
-}
-
-// Export the routing helpers for http-routes.ts to consume
-export interface SseRouteHandlers {
-	handleSseConnect: (req: IncomingMessage, res: ServerResponse) => void;
-	handleRpcPost: (req: IncomingMessage, res: ServerResponse) => Promise<void>;
-}
-
-export function getSseRouteHandlers(handler: SseHandler): SseRouteHandlers {
-	const h = handler as SseHandler & SseRouteHandlers;
-	return {
-		handleSseConnect: h.handleSseConnect,
-		handleRpcPost: h.handleRpcPost,
 	};
 }
 

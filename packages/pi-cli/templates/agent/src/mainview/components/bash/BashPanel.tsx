@@ -1,12 +1,12 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { useTranslation } from "react-i18next";
-import { Play, Square, X } from "lucide-react";
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { useBashStore } from "../../stores/use-bash-store";
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Play, Square, X } from 'lucide-react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { useBashStore } from '../../stores/use-bash-store';
 
 export function BashPanel() {
 	const { t } = useTranslation();
-	const [command, setCommand] = useState("");
+	const [command, setCommand] = useState('');
 	const processes = useBashStore((s) => s.processes);
 	const activePid = useBashStore((s) => s.activePid);
 	const executeCommand = useBashStore((s) => s.executeCommand);
@@ -16,7 +16,7 @@ export function BashPanel() {
 	const isUserScrollingRef = useRef(false);
 
 	const activeProcess = activePid != null ? processes.get(activePid) : null;
-	const lines = activeProcess?.output ? activeProcess.output.split("\n") : [];
+	const lines = activeProcess?.output ? activeProcess.output.split('\n') : [];
 
 	const virtualizer = useVirtualizer({
 		count: lines.length,
@@ -34,18 +34,18 @@ export function BashPanel() {
 
 	useEffect(() => {
 		if (!isUserScrollingRef.current && lines.length > 0) {
-			virtualizer.scrollToIndex(lines.length - 1, { align: "end" });
+			virtualizer.scrollToIndex(lines.length - 1, { align: 'end' });
 		}
 	}, [lines.length, virtualizer]);
 
 	const handleRun = () => {
 		if (!command.trim()) return;
 		executeCommand(command.trim());
-		setCommand("");
+		setCommand('');
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
-		if (e.key === "Enter" && !e.shiftKey) {
+		if (e.key === 'Enter' && !e.shiftKey) {
 			e.preventDefault();
 			handleRun();
 		}
@@ -61,7 +61,7 @@ export function BashPanel() {
 					value={command}
 					onChange={(e) => setCommand(e.target.value)}
 					onKeyDown={handleKeyDown}
-					placeholder={t("bash.enterCommand")}
+					placeholder={t('bash.enterCommand')}
 					className="flex-1 bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)] px-3 py-1.5 rounded text-sm font-mono border border-[var(--color-border-secondary)] focus:border-[var(--color-accent)] focus:outline-none"
 				/>
 				<button
@@ -70,7 +70,7 @@ export function BashPanel() {
 					className="flex items-center gap-1 px-3 py-1.5 bg-[var(--color-accent)] hover:bg-[var(--color-accent-hover)] disabled:opacity-40 disabled:cursor-not-allowed rounded text-sm text-[var(--color-text-primary)]"
 				>
 					<Play className="w-3.5 h-3.5" />
-					{t("bash.run")}
+					{t('bash.run')}
 				</button>
 			</div>
 
@@ -83,9 +83,9 @@ export function BashPanel() {
 							className={`group relative flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs whitespace-nowrap transition-colors ${
 								activePid === pid
 									? proc.running
-										? "bg-[var(--color-text-success)]/50 text-[var(--color-text-success)] border border-[var(--color-text-success)]"
-										: "bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] border border-[var(--color-border-secondary)]"
-									: "text-[var(--color-text-placeholder)] bg-[var(--color-bg-secondary)]/50 border border-transparent hover:text-[var(--color-text-secondary)]"
+										? 'bg-[var(--color-text-success)]/50 text-[var(--color-text-success)] border border-[var(--color-text-success)]'
+										: 'bg-[var(--color-bg-tertiary)] text-[var(--color-text-secondary)] border border-[var(--color-border-secondary)]'
+									: 'text-[var(--color-text-placeholder)] bg-[var(--color-bg-secondary)]/50 border border-transparent hover:text-[var(--color-text-secondary)]'
 							}`}
 						>
 							{proc.running && (
@@ -96,7 +96,7 @@ export function BashPanel() {
 							)}
 							{!proc.running && (
 								<span
-									className={`w-2 h-2 rounded-full ${proc.exitCode === 0 ? "bg-[var(--color-text-success)]" : "bg-[var(--color-text-error)]"}`}
+									className={`w-2 h-2 rounded-full ${proc.exitCode === 0 ? 'bg-[var(--color-text-success)]' : 'bg-[var(--color-text-error)]'}`}
 								/>
 							)}
 							PID {pid}
@@ -113,9 +113,9 @@ export function BashPanel() {
 							)}
 							{!proc.running && (
 								<span
-									className={`text-[10px] ${proc.exitCode === 0 ? "text-[var(--color-text-success)]/70" : "text-[var(--color-text-error)]/70"}`}
+									className={`text-[10px] ${proc.exitCode === 0 ? 'text-[var(--color-text-success)]/70' : 'text-[var(--color-text-error)]/70'}`}
 								>
-									{t("bash.exited", { code: proc.exitCode ?? "?" })}
+									{t('bash.exited', { code: proc.exitCode ?? '?' })}
 								</span>
 							)}
 						</button>
@@ -136,15 +136,15 @@ export function BashPanel() {
 									<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75" />
 									<span className="relative inline-flex rounded-full h-2 w-2 bg-yellow-500" />
 								</span>
-								{t("bash.processRunning", { pid: activePid })}
+								{t('bash.processRunning', { pid: activePid })}
 							</div>
 						)}
 						{lines.length > 0 ? (
 							<div
 								style={{
 									height: virtualizer.getTotalSize(),
-									width: "100%",
-									position: "relative",
+									width: '100%',
+									position: 'relative',
 								}}
 							>
 								{virtualizer.getVirtualItems().map((virtualRow) => {
@@ -153,10 +153,10 @@ export function BashPanel() {
 										<div
 											key={virtualRow.index}
 											style={{
-												position: "absolute",
+												position: 'absolute',
 												top: 0,
 												left: 0,
-												width: "100%",
+												width: '100%',
 												height: `${virtualRow.size}px`,
 												transform: `translateY(${virtualRow.start}px)`,
 											}}
@@ -165,31 +165,31 @@ export function BashPanel() {
 											<span className="text-[var(--color-text-placeholder)] select-none mr-2">
 												&gt;
 											</span>
-											<span>{line || "\u00A0"}</span>
+											<span>{line || '\u00A0'}</span>
 										</div>
 									);
 								})}
 							</div>
 						) : activeProcess.running ? (
-							<span className="text-[var(--color-text-tertiary)]">{t("bash.waitingOutput")}</span>
+							<span className="text-[var(--color-text-tertiary)]">{t('bash.waitingOutput')}</span>
 						) : null}
 						{!activeProcess.running && activeProcess.exitCode != null && (
 							<div
 								className={`mt-2 pt-2 border-t border-[var(--color-bg-secondary)] text-xs font-semibold ${
 									activeProcess.exitCode === 0
-										? "text-[var(--color-text-success)]"
-										: "text-[var(--color-text-error)]"
+										? 'text-[var(--color-text-success)]'
+										: 'text-[var(--color-text-error)]'
 								}`}
 							>
-								{t("bash.exit", { code: activeProcess.exitCode })}
+								{t('bash.exit', { code: activeProcess.exitCode })}
 							</div>
 						)}
 					</>
 				) : (
 					<div className="flex flex-col items-center justify-center h-full text-[var(--color-text-tertiary)]">
 						<TerminalIcon className="w-12 h-12 mb-3 opacity-30" />
-						<span className="text-sm">{t("bash.noActiveProcess")}</span>
-						<span className="text-xs mt-1">{t("bash.getStarted")}</span>
+						<span className="text-sm">{t('bash.noActiveProcess')}</span>
+						<span className="text-xs mt-1">{t('bash.getStarted')}</span>
 					</div>
 				)}
 			</div>
@@ -201,7 +201,7 @@ export function BashPanel() {
 						className="flex items-center gap-1 px-3 py-1 bg-[var(--color-text-error)] hover:opacity-80 rounded text-xs text-[var(--color-text-primary)]"
 					>
 						<Square className="w-3 h-3" />
-						{t("bash.kill")}
+						{t('bash.kill')}
 					</button>
 				</div>
 			)}

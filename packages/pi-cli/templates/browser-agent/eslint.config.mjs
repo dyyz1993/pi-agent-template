@@ -11,9 +11,9 @@ export default tseslint.config(
   {
     ignores: [
       'node_modules/**',
+      'eslint-plugin-rpc/**',
       'build/**',
       'dist/**',
-      'eslint-plugin-rpc/**',
       'dist-electron/**',
       'electron/**',
       'postcss.config.js',

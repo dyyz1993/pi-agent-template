@@ -85,6 +85,7 @@ export function DebugPanel() {
 				</div>
 				<div className="flex gap-2 mb-2">
 					<select
+						aria-label={t("debug.rpcCalls")}
 						value={method}
 						onChange={(e) => setMethod(e.target.value as DemoMethod)}
 						className="flex-1 px-2 py-1 text-xs bg-[var(--color-bg-tertiary)] rounded text-[var(--color-text-primary)] border border-[var(--color-border-secondary)]"

@@ -5,38 +5,36 @@
  * 通过 RPC 事件订阅接收 Agent 的实时推送
  */
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MessageSquare } from "lucide-react";
 import { useChatStore } from "../../stores/use-chat-store";
 import { useSessionStore } from "../../stores/use-session-store";
 import { useConnectionStore } from "../../stores/use-connection-store";
 import { MessageBubble } from "./MessageBubble";
-import { apiClient } from "../../lib/api-client";
+import { CommandBar } from "./CommandBar";
+import { ToolPicker } from "./ToolPicker";
+import { useAgentChat } from "../../hooks/use-agent-chat";
 
 export function ChatPanel() {
 	const { t } = useTranslation();
 	const messages = useChatStore((s) => s.messages);
-	const addUserMessage = useChatStore((s) => s.addUserMessage);
-	const addAgentPlaceholder = useChatStore((s) => s.addAgentPlaceholder);
-	const patchLastAgent = useChatStore((s) => s.patchLastAgent);
-	const pushToolCall = useChatStore((s) => s.pushToolCall);
-	const updateToolCall = useChatStore((s) => s.updateToolCall);
-	const appendThinking = useChatStore((s) => s.appendThinking);
-	const appendText = useChatStore((s) => s.appendText);
-	const markTurnDone = useChatStore((s) => s.markTurnDone);
 	const setMessages = useChatStore((s) => s.setMessages);
 
 	const currentSessionId = useSessionStore((s) => s.currentSessionId);
 	const running = useSessionStore((s) => s.running);
-	const setRunning = useSessionStore((s) => s.setRunning);
-	const loadSession = useSessionStore((s) => s.loadSession);
-	const refreshSessions = useSessionStore((s) => s.refreshSessions);
 
 	const activePlugins = useConnectionStore((s) => s.activePlugins);
 
 	const inputRef = useRef<HTMLInputElement>(null);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
+	const [selectedTools, setSelectedTools] = useState<string[]>([]);
+
+	const toggleTool = (toolId: string): void => {
+		setSelectedTools((prev) =>
+			prev.includes(toolId) ? prev.filter((t) => t !== toolId) : [...prev, toolId],
+		);
+	};
 
 	// 自动滚底
 	useEffect(() => {
@@ -52,89 +50,21 @@ export function ChatPanel() {
 		}
 	}, [currentSession?.messages?.length]);
 
+	const { chat } = useAgentChat();
+
 	const sendMessage = useCallback(async () => {
 		const input = inputRef.current;
 		if (!input || !input.value.trim() || running || !currentSessionId) return;
 
 		const text = input.value.trim();
 		input.value = "";
-		setRunning(true);
 
-		// 添加用户消息
-		addUserMessage(text);
-
-		// Agent 占位
-		const messageId = `msg_${Date.now()}`;
-		addAgentPlaceholder(messageId);
-
-		const subs: string[] = [];
-
-		try {
-			// 订阅 Agent 事件
-			const s1 = await apiClient.subscribe("browser.toolCall", (evt: any) => {
-				if (evt.messageId === messageId) pushToolCall(evt.toolCall);
-			});
-			subs.push(s1);
-
-			const s2 = await apiClient.subscribe("browser.toolResult", (evt: any) => {
-				if (evt.messageId === messageId)
-					updateToolCall(evt.toolCallId, evt.output);
-			});
-			subs.push(s2);
-
-			const s3 = await apiClient.subscribe("browser.thinking", (evt: any) => {
-				if (evt.messageId === messageId) appendThinking(evt.delta);
-			});
-			subs.push(s3);
-
-			const s4 = await apiClient.subscribe("browser.textDelta", (evt: any) => {
-				if (evt.messageId === messageId) appendText(evt.delta);
-			});
-			subs.push(s4);
-
-			const s5 = await apiClient.subscribe("browser.turn", (evt: any) => {
-				if (evt.messageId === messageId) markTurnDone(evt.turn);
-			});
-			subs.push(s5);
-
-			const s6 = await apiClient.subscribe("browser.done", async (evt: any) => {
-				if (evt.messageId === messageId) {
-					patchLastAgent({ text: evt.reply, steps: evt.steps });
-					setRunning(false);
-					await refreshSessions();
-					if (currentSessionId) await loadSession(currentSessionId);
-				}
-			});
-			subs.push(s6);
-
-			// 触发 Agent
-			await apiClient.call("browser.agentChat", {
-				message: text,
-				sessionId: currentSessionId,
-				activePlugins,
-			});
-		} catch (err: any) {
-			patchLastAgent({ error: err.message });
-			setRunning(false);
-		} finally {
-			subs.forEach((id) => apiClient.unsubscribe(id));
-		}
-	}, [
-		currentSessionId,
-		running,
-		activePlugins,
-		addUserMessage,
-		addAgentPlaceholder,
-		pushToolCall,
-		updateToolCall,
-		appendThinking,
-		appendText,
-		markTurnDone,
-		patchLastAgent,
-		setRunning,
-		loadSession,
-		refreshSessions,
-	]);
+		// 组合选中工具 + 用户文本
+		const tools = [...activePlugins, ...selectedTools];
+		const allPlugins = [...new Set(tools)]; // 去重
+		await chat(text, currentSessionId, allPlugins);
+		setSelectedTools([]);
+	}, [currentSessionId, running, activePlugins, selectedTools, chat]);
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === "Enter" && !e.shiftKey) {
@@ -157,6 +87,9 @@ export function ChatPanel() {
 					</span>
 				)}
 			</div>
+
+			{/* 直接命令栏（不经 Agent） */}
+			<CommandBar />
 
 			{/* 消息区 */}
 			<div className="flex-1 overflow-y-auto px-4 py-4" ref={messagesEndRef}>
@@ -212,31 +145,16 @@ export function ChatPanel() {
 					</button>
 				</div>
 
-				{/* 快捷按钮 */}
-				<div className="flex gap-2 mt-2 flex-wrap">
-					{QUICK_ACTIONS.map((qa) => (
-						<button
-							key={qa.label}
-							onClick={() => {
-								if (inputRef.current) inputRef.current.value = qa.prompt;
-							}}
-							className="px-3 py-1 rounded-full text-xs border border-[var(--color-border-primary)] hover:bg-[var(--color-bg-hover)] transition-colors text-[var(--color-text-secondary)]"
-						>
-							{qa.icon} {qa.label}
-						</button>
-					))}
-				</div>
+				{/* 工具/插件选择 + 快捷输入 */}
+				<ToolPicker
+					selectedTools={selectedTools}
+					onToggle={toggleTool}
+					onClear={() => setSelectedTools([])}
+				/>
 			</div>
 		</div>
 	);
 }
-
-const QUICK_ACTIONS = [
-	{ icon: "📸", label: "截图", prompt: "帮我截图当前页面" },
-	{ icon: "📕", label: "小红书", prompt: "采集小红书首页热门笔记" },
-	{ icon: "🌐", label: "豆瓣", prompt: "帮我采集豆瓣首页内容" },
-	{ icon: "📋", label: "标签页", prompt: "列出当前所有标签页" },
-];
 
 function InlineAssets({ assets }: { assets: any[] }) {
 	return (

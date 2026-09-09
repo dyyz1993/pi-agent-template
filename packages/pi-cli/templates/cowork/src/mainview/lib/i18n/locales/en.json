@@ -1,0 +1,130 @@
+{
+	"app": {
+		"title": "Browser Agent",
+		"connecting": "Connecting to RPC server...",
+		"online": "Online",
+		"offline": "Offline",
+		"mode": {
+			"desktop": "Desktop (IPC)",
+			"web": "Web (WebSocket)"
+		}
+	},
+	"sidebar": {
+		"explorer": "Explorer",
+		"git": "Source Control",
+		"search": "Search"
+	},
+	"tabs": {
+		"chat": "Chat",
+		"debug": "Debug"
+	},
+	"chat": {
+		"title": "Agent Chat",
+		"placeholder": "Type your request...",
+		"send": "Send",
+		"empty": "Start a conversation...",
+		"welcome": "Start your first collection"
+	},
+	"session": {
+		"new": "New Session",
+		"history": "History"
+	},
+	"skills": {
+		"title": "Skills",
+		"xhsExplore": "Xiaohongshu Explore",
+		"xhsSearch": "Keyword Search",
+		"xhsBlogger": "Blogger Profile"
+	},
+	"explorer": {
+		"title": "Explorer",
+		"pathPlaceholder": "Path",
+		"refresh": "Refresh",
+		"listDirectory": "List directory",
+		"newFile": "New File",
+		"newFolder": "New Folder",
+		"rename": "Rename",
+		"delete": "Delete",
+		"copyPath": "Copy Path",
+		"confirmDelete": "Confirm Delete",
+		"confirmDeleteMessage": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+		"emptyHint": "Enter path and click refresh"
+	},
+	"git": {
+		"title": "Source Control",
+		"staged": "Staged Changes",
+		"changes": "Changes",
+		"untracked": "Untracked",
+		"noChanges": "No changes detected",
+		"commits": "Commits",
+		"noCommits": "No commits",
+		"noFiles": "No files",
+		"loadingFiles": "Loading files...",
+		"commitPlaceholder": "Commit message (Ctrl+Enter to commit)",
+		"committing": "Committing...",
+		"commit": "Commit",
+		"openDiff": "Open Diff",
+		"openFile": "Open File",
+		"copyHash": "Copy Hash",
+		"copyMessage": "Copy Message",
+		"copyPath": "Copy Path",
+		"pull": "Pull",
+		"push": "Push",
+		"refresh": "Refresh",
+		"stage": "Stage",
+		"unstage": "Unstage",
+		"stageAll": "Stage all",
+		"unstageAll": "Unstage all",
+		"worktrees": "Worktrees",
+		"close": "Close",
+		"justNow": "just now",
+		"minutesAgo": "{{count}}m ago",
+		"hoursAgo": "{{count}}h ago",
+		"daysAgo": "{{count}}d ago"
+	},
+	"debug": {
+		"rpcCalls": "RPC Calls",
+		"call": "Call",
+		"subscriptions": "Subscriptions",
+		"subscribe": "Subscribe",
+		"unsubscribe": "Unsubscribe",
+		"events": "{{count}} events",
+		"noEvents": "No events yet",
+		"logs": "Logs",
+		"clear": "Clear",
+		"clearAll": "Clear all debug data",
+		"expandPanel": "Expand Debug Panel",
+		"collapsePanel": "Collapse Debug Panel"
+	},
+	"search": {
+		"noResults": "No results found",
+		"noResultsFor": "No results for \"{{query}}\"",
+		"resultsIn": "{{count}} result in {{fileCount}} file",
+		"resultsIn_plural": "{{count}} results in {{fileCount}} files",
+		"filesSearched": "({{count}} file searched)",
+		"filesSearched_plural": "({{count}} files searched)",
+		"typeToSearch": "Type a search term and press Enter",
+		"focusShortcut": "...{{key}}+F to focus search",
+		"tryDifferent": "Try different search terms"
+	},
+	"error": {
+		"title": "Something went wrong",
+		"unexpected": "An unexpected error occurred",
+		"retry": "Retry"
+	},
+	"theme": {
+		"light": "Light",
+		"dark": "Dark",
+		"toggle": "Toggle theme"
+	},
+	"locale": {
+		"en": "English",
+		"zh": "中文"
+	},
+	"common": {
+		"loading": "Loading...",
+		"cancel": "Cancel",
+		"confirm": "Confirm",
+		"save": "Save",
+		"delete": "Delete"
+	}
+}
