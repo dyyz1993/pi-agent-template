@@ -130,6 +130,7 @@ async function main() {
 		env: {
 			...process.env,
 			PORT: String(PORT),
+			VITE_PORT: String(VITE_PORT),
 			AUTH_TOKEN: TOKEN,
 		},
 	});

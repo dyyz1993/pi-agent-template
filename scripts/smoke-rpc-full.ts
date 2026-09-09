@@ -172,129 +172,131 @@ async function main() {
 		// ==========================================
 		// File Write / Create / Delete Lifecycle
 		// ==========================================
-
-		// Test: file.createFile
-		{
-			const name = "file.createFile";
-			try {
-				const r = await rpcClient.call<{ path: string }>("file.createFile", {
-					dirPath: ".",
-					name: "smoke-test-file.txt",
-				});
-				if (r.path && r.path.includes("smoke-test-file.txt")) {
-					pass(name, `path=${r.path}`);
-				} else {
-					fail(name, JSON.stringify(r));
-				}
-			} catch (e) {
-				fail(name, (e as Error).message);
-			}
-		}
-
-		// Test: file.readFile (created file)
-		{
-			const name = "file.readFile (created file)";
-			try {
-				const r = await rpcClient.call<{ content: string; size: number }>("file.readFile", {
-					path: "smoke-test-file.txt",
-				});
-				if (typeof r.content === "string" && r.size === 0) {
-					pass(name, `size=${r.size}`);
-				} else {
-					fail(name, JSON.stringify(r));
-				}
-			} catch (e) {
-				fail(name, (e as Error).message);
-			}
-		}
-
-		// Test: file.rename
-		{
-			const name = "file.rename";
-			try {
-				const r = await rpcClient.call<{ newPath: string }>("file.rename", {
-					oldPath: "smoke-test-file.txt",
-					newName: "smoke-test-renamed.txt",
-				});
-				if (r.newPath && r.newPath.includes("smoke-test-renamed.txt")) {
-					pass(name, `newPath=${r.newPath}`);
-				} else {
-					fail(name, JSON.stringify(r));
-				}
-			} catch (e) {
-				fail(name, (e as Error).message);
-			}
-		}
-
-		// Test: file.delete (renamed file)
-		{
-			const name = "file.delete";
-			try {
-				const r = await rpcClient.call<{ ok: boolean }>("file.delete", {
-					path: "smoke-test-renamed.txt",
-				});
-				if (r.ok === true) {
-					pass(name, `{ ok: true }`);
-				} else {
-					fail(name, JSON.stringify(r));
-				}
-			} catch (e) {
-				fail(name, (e as Error).message);
-			}
-		}
-
-		// ==========================================
-		// File Upload HTTP Endpoint
-		// ==========================================
-
-		// Test: POST /file/upload with token
-		{
-			const name = "POST /file/upload (with token)";
-			try {
-				const uploadPath = join(projectDir, "uploaded-test.txt");
-				const res = await fetch(
-					`http://localhost:${actualPort}/file/upload?path=${encodeURIComponent(uploadPath)}&token=${TOKEN}`,
-					{
-						method: "POST",
-						headers: { "Content-Type": "text/plain" },
-						body: "Hello from smoke test!",
+		// chat 模板不含 file 模块，跳过这一节
+		if (templateType === "general" || templateType === "agent") {
+			// Test: file.createFile
+			{
+				const name = "file.createFile";
+				try {
+					const r = await rpcClient.call<{ path: string }>("file.createFile", {
+						dirPath: ".",
+						name: "smoke-test-file.txt",
+					});
+					if (r.path && r.path.includes("smoke-test-file.txt")) {
+						pass(name, `path=${r.path}`);
+					} else {
+						fail(name, JSON.stringify(r));
 					}
-				);
-				const body = (await res.json()) as Record<string, unknown>;
-				if (res.status === 200 && body.ok === true) {
-					pass(name, `uploaded ${body.size} bytes`);
-				} else if (res.status === 403) {
-					pass(name, `403 (path outside HTTP allowed roots — expected in temp dir)`);
-				} else {
-					fail(name, `status=${res.status}, body=${JSON.stringify(body)}`);
+				} catch (e) {
+					fail(name, (e as Error).message);
 				}
-			} catch (e) {
-				fail(name, (e as Error).message);
 			}
-		}
 
-		// Test: POST /file/upload without token → 401
-		{
-			const name = "POST /file/upload (no token) → 401";
-			try {
-				const uploadPath = join(projectDir, "should-not-exist.txt");
-				const res = await fetch(
-					`http://localhost:${actualPort}/file/upload?path=${encodeURIComponent(uploadPath)}`,
-					{
-						method: "POST",
-						headers: { "Content-Type": "text/plain" },
-						body: "should fail",
+			// Test: file.readFile (created file)
+			{
+				const name = "file.readFile (created file)";
+				try {
+					const r = await rpcClient.call<{ content: string; size: number }>("file.readFile", {
+						path: "smoke-test-file.txt",
+					});
+					if (typeof r.content === "string" && r.size === 0) {
+						pass(name, `size=${r.size}`);
+					} else {
+						fail(name, JSON.stringify(r));
 					}
-				);
-				if (res.status === 401) {
-					pass(name, "401");
-				} else {
-					fail(name, `Got ${res.status}`);
+				} catch (e) {
+					fail(name, (e as Error).message);
 				}
-			} catch (e) {
-				fail(name, (e as Error).message);
 			}
-		}
+
+			// Test: file.rename
+			{
+				const name = "file.rename";
+				try {
+					const r = await rpcClient.call<{ newPath: string }>("file.rename", {
+						oldPath: "smoke-test-file.txt",
+						newName: "smoke-test-renamed.txt",
+					});
+					if (r.newPath && r.newPath.includes("smoke-test-renamed.txt")) {
+						pass(name, `newPath=${r.newPath}`);
+					} else {
+						fail(name, JSON.stringify(r));
+					}
+				} catch (e) {
+					fail(name, (e as Error).message);
+				}
+			}
+
+			// Test: file.delete (renamed file)
+			{
+				const name = "file.delete";
+				try {
+					const r = await rpcClient.call<{ ok: boolean }>("file.delete", {
+						path: "smoke-test-renamed.txt",
+					});
+					if (r.ok === true) {
+						pass(name, `{ ok: true }`);
+					} else {
+						fail(name, JSON.stringify(r));
+					}
+				} catch (e) {
+					fail(name, (e as Error).message);
+				}
+			}
+
+			// ==========================================
+			// File Upload HTTP Endpoint
+			// ==========================================
+
+			// Test: POST /file/upload with token
+			{
+				const name = "POST /file/upload (with token)";
+				try {
+					const uploadPath = join(projectDir, "uploaded-test.txt");
+					const res = await fetch(
+						`http://localhost:${actualPort}/file/upload?path=${encodeURIComponent(uploadPath)}&token=${TOKEN}`,
+						{
+							method: "POST",
+							headers: { "Content-Type": "text/plain" },
+							body: "Hello from smoke test!",
+						}
+					);
+					const body = (await res.json()) as Record<string, unknown>;
+					if (res.status === 200 && body.ok === true) {
+						pass(name, `uploaded ${body.size} bytes`);
+					} else if (res.status === 403) {
+						pass(name, `403 (path outside HTTP allowed roots — expected in temp dir)`);
+					} else {
+						fail(name, `status=${res.status}, body=${JSON.stringify(body)}`);
+					}
+				} catch (e) {
+					fail(name, (e as Error).message);
+				}
+			}
+
+			// Test: POST /file/upload without token → 401
+			{
+				const name = "POST /file/upload (no token) → 401";
+				try {
+					const uploadPath = join(projectDir, "should-not-exist.txt");
+					const res = await fetch(
+						`http://localhost:${actualPort}/file/upload?path=${encodeURIComponent(uploadPath)}`,
+						{
+							method: "POST",
+							headers: { "Content-Type": "text/plain" },
+							body: "should fail",
+						}
+					);
+					if (res.status === 401) {
+						pass(name, "401");
+					} else {
+						fail(name, `Got ${res.status}`);
+					}
+				} catch (e) {
+					fail(name, (e as Error).message);
+				}
+			}
+		} // end file-section template gate
 
 		// ==========================================
 		// Timer Lifecycle + Event Subscription
@@ -461,50 +463,51 @@ async function main() {
 		// ==========================================
 		// Path Security Tests
 		// ==========================================
-
-		// Test: path traversal attack → should be rejected
-		{
-			const name = "Path traversal → rejected";
-			try {
-				await rpcClient.call("file.readFile", { path: "../../../etc/passwd" });
-				fail(name, "Should have thrown an error");
-			} catch (e) {
-				const msg = (e as Error).message;
-				if (msg.includes("denied") || msg.includes("Access") || msg.includes("outside")) {
-					pass(name, `Error: ${msg}`);
-				} else {
-					pass(name, `Error thrown: ${msg}`);
+		if (templateType === "general" || templateType === "agent") {
+			// Test: path traversal attack → should be rejected
+			{
+				const name = "Path traversal → rejected";
+				try {
+					await rpcClient.call("file.readFile", { path: "../../../etc/passwd" });
+					fail(name, "Should have thrown an error");
+				} catch (e) {
+					const msg = (e as Error).message;
+					if (msg.includes("denied") || msg.includes("Access") || msg.includes("outside")) {
+						pass(name, `Error: ${msg}`);
+					} else {
+						pass(name, `Error thrown: ${msg}`);
+					}
 				}
 			}
-		}
 
-		// Test: null byte in path → rejected
-		{
-			const name = "Null byte in path → rejected";
-			try {
-				await rpcClient.call("file.readFile", { path: "test\0.txt" });
-				fail(name, "Should have thrown an error");
-			} catch (e) {
-				pass(name, `Error: ${(e as Error).message}`);
-			}
-		}
-
-		// Test: listDir with relative path
-		{
-			const name = "file.listDir (safe relative path)";
-			try {
-				const r = await rpcClient.call<{ entries: unknown[]; basePath: string }>("file.listDir", {
-					path: ".",
-				});
-				if (Array.isArray(r.entries)) {
-					pass(name, `${r.entries.length} entries`);
-				} else {
-					fail(name, JSON.stringify(r));
+			// Test: null byte in path → rejected
+			{
+				const name = "Null byte in path → rejected";
+				try {
+					await rpcClient.call("file.readFile", { path: "test\0.txt" });
+					fail(name, "Should have thrown an error");
+				} catch (e) {
+					pass(name, `Error: ${(e as Error).message}`);
 				}
-			} catch (e) {
-				fail(name, (e as Error).message);
 			}
-		}
+
+			// Test: listDir with relative path
+			{
+				const name = "file.listDir (safe relative path)";
+				try {
+					const r = await rpcClient.call<{ entries: unknown[]; basePath: string }>("file.listDir", {
+						path: ".",
+					});
+					if (Array.isArray(r.entries)) {
+						pass(name, `${r.entries.length} entries`);
+					} else {
+						fail(name, JSON.stringify(r));
+					}
+				} catch (e) {
+					fail(name, (e as Error).message);
+				}
+			}
+		} // end path-security template gate
 
 		// ==========================================
 		// Core RPC sanity checks
