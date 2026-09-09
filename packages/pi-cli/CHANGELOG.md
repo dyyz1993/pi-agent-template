@@ -1,5 +1,11 @@
 # @dyyz1993/create-agent
 
+## 2.1.3
+
+### Patch Changes
+
+- Refresh bundled templates: corrected `@dyyz1993/rpc-core` tsconfig paths (general/chat), typed subscribe filters and debug handler signatures, `@shared/*` path mapping that includes `src/shared`, and tsconfig excludes for shared config files. Generated projects now pass `tsc --noEmit` cleanly in pre-commit hooks.
+
 ## 2.1.2
 
 ### Patch Changes
