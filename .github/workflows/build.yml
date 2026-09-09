@@ -222,17 +222,17 @@ jobs:
         template: [agent, chat, general]
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: oven-sh/setup-bun@v2
 
+      # pnpm + 锁文件安装：workspace 依赖（rpc-core 等）在根 node_modules
+      # 生成确定性的链接，bun install 在此场景下链接不稳定
       - name: Install dependencies
-        run: bun install
+        run: pnpm install --frozen-lockfile
 
       - name: Start server and smoke test
         run: |
           cd templates/${{ matrix.template }}
-
-          # 模板内安装，确保 workspace:* 依赖（rpc-core 等）可解析
-          bun install
 
           PORT=$((4000 + RANDOM % 1000))
           AUTH_TOKEN="ci-smoke-test-token" PORT=$PORT bun src/server.ts &

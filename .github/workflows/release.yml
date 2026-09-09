@@ -17,6 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # 完整历史 + tags：后续 git describe 依赖最近 tag
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4

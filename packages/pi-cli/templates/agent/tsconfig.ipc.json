@@ -5,6 +5,7 @@
 		"noUnusedParameters": false,
 		"skipLibCheck": true,
 		"noUncheckedIndexedAccess": true,
+		"noImplicitReturns": false,
 		"noFallthroughCasesInSwitch": true,
 		"strict": true
 	},
