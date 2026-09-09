@@ -39,16 +39,30 @@ jobs:
           cd ../..
 
       - name: Download Electron artifacts
-        run: |
-          # 获取最新的 build workflow run
-          BUILD_RUN_ID=$(gh run list --workflow=build.yml --limit 1 --json databaseId --jq '.[0].databaseId')
-          
-          # 下载 desktop artifacts
-          gh run download $BUILD_RUN_ID --name desktop-macos-agent --dir dist-artifacts
-          gh run download $BUILD_RUN_ID --name desktop-windows-agent --dir dist-artifacts
-          gh run download $BUILD_RUN_ID --name desktop-linux-agent --dir dist-artifacts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Release 与 Build 由同一 push 触发；等待同一 commit 的 Build run
+          # 完成后再下载，避免 artifacts 尚未产出的竞态。
+          SHA=${{ github.sha }}
+          BUILD_RUN_ID=""
+          for i in $(seq 1 60); do
+            BUILD_RUN_ID=$(gh run list --workflow=build.yml --commit "$SHA" --json databaseId --jq '.[0].databaseId')
+            STATUS=$(gh run list --workflow=build.yml --commit "$SHA" --json status --jq '.[0].status')
+            [ "$STATUS" = "completed" ] && break
+            echo "Build run for $SHA still $STATUS; waiting (attempt $i/60)..."
+            sleep 30
+          done
+          if [ "$STATUS" != "completed" ] || [ -z "$BUILD_RUN_ID" ]; then
+            echo "::error::Build workflow for $SHA did not complete in time"
+            exit 1
+          fi
+          echo "Downloading artifacts from build run $BUILD_RUN_ID"
+
+          # 下载 desktop artifacts（linux 构建当前为 continue-on-error，失败不阻断发布）
+          gh run download $BUILD_RUN_ID --name desktop-macos-agent --dir dist-artifacts || echo "::warning::desktop-macos-agent artifact missing"
+          gh run download $BUILD_RUN_ID --name desktop-windows-agent --dir dist-artifacts || echo "::warning::desktop-windows-agent artifact missing"
+          gh run download $BUILD_RUN_ID --name desktop-linux-agent --dir dist-artifacts || echo "::warning::desktop-linux-agent artifact missing"
 
       - name: Upload Electron artifacts to Release
         env:

@@ -231,6 +231,9 @@ jobs:
         run: |
           cd templates/${{ matrix.template }}
 
+          # 模板内安装，确保 workspace:* 依赖（rpc-core 等）可解析
+          bun install
+
           PORT=$((4000 + RANDOM % 1000))
           AUTH_TOKEN="ci-smoke-test-token" PORT=$PORT bun src/server.ts &
           SERVER_PID=$!

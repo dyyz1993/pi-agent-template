@@ -215,49 +215,52 @@ async function main() {
 		}
 
 		// Test 5: Timer lifecycle + event subscription
-		{
-			const name1 = "timer.start";
-			const name2 = "timer.tick event received";
-			const name3 = "timer.stop";
+		// chat 模板不含 timer 模块，跳过
+		if (template === "general" || template === "agent") {
+			{
+				const name1 = "timer.start";
+				const name2 = "timer.tick event received";
+				const name3 = "timer.stop";
 
-			try {
-				let tickReceived = false;
-				const tickPromise = new Promise<boolean>((resolve) => {
-					const subId = clientA!.subscribe("timer.tick", () => {
-						tickReceived = true;
-						resolve(true);
-						clientA!.unsubscribe(subId);
+				try {
+					let tickReceived = false;
+					const tickPromise = new Promise<boolean>((resolve) => {
+						const subId = clientA!.subscribe("timer.tick", () => {
+							tickReceived = true;
+							resolve(true);
+							clientA!.unsubscribe(subId);
+						});
 					});
-				});
 
-				const startResult = await clientA.call<{ started?: boolean; alreadyRunning?: boolean }>(
-					"timer.start",
-					{}
-				);
-				if (startResult.started === true || startResult.alreadyRunning === true) {
-					pass(name1, JSON.stringify(startResult));
-				} else {
-					fail(name1, JSON.stringify(startResult));
+					const startResult = await clientA.call<{ started?: boolean; alreadyRunning?: boolean }>(
+						"timer.start",
+						{}
+					);
+					if (startResult.started === true || startResult.alreadyRunning === true) {
+						pass(name1, JSON.stringify(startResult));
+					} else {
+						fail(name1, JSON.stringify(startResult));
+					}
+
+					const gotTick = await Promise.race([tickPromise, sleep(4000).then(() => false)]);
+
+					if (gotTick && tickReceived) {
+						pass(name2, "Tick event received");
+					} else {
+						fail(name2, "No tick event within timeout");
+					}
+
+					const stopResult = await clientA.call<{ stopped: boolean }>("timer.stop", {});
+					if (stopResult.stopped === true) {
+						pass(name3, `{ stopped: true }`);
+					} else {
+						fail(name3, JSON.stringify(stopResult));
+					}
+				} catch (e) {
+					fail(name1, (e as Error).message);
 				}
-
-				const gotTick = await Promise.race([tickPromise, sleep(4000).then(() => false)]);
-
-				if (gotTick && tickReceived) {
-					pass(name2, "Tick event received");
-				} else {
-					fail(name2, "No tick event within timeout");
-				}
-
-				const stopResult = await clientA.call<{ stopped: boolean }>("timer.stop", {});
-				if (stopResult.stopped === true) {
-					pass(name3, `{ stopped: true }`);
-				} else {
-					fail(name3, JSON.stringify(stopResult));
-				}
-			} catch (e) {
-				fail(name1, (e as Error).message);
 			}
-		}
+		} // end timer template gate
 	} catch (e) {
 		fail("WS client A setup", (e as Error).message);
 	}
