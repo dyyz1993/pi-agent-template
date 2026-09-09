@@ -1,5 +1,6 @@
 {
 	"name": "pi-general-app",
+	"private": true,
 	"version": "1.0.0",
 	"description": "Electrobun app with React, Tailwind CSS, and Vite HMR",
 	"scripts": {

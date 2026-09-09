@@ -1,6 +1,7 @@
 {
 	"name": "cowork-app",
-	"version": "1.0.2",
+	"private": true,
+	"version": "1.0.0",
 	"description": "Cowork task collaboration agent: AI-powered task orchestration with progress tracking, artifacts, and context management (Desktop + Web)",
 	"author": {
 		"name": "xuyingzhou",

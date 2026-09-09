@@ -1,5 +1,6 @@
 {
 	"name": "pi-agent-app",
+	"private": true,
 	"version": "1.0.0",
 	"description": "Coding agent template with Bash, Rules, and Todo management",
 	"author": {

@@ -1,5 +1,6 @@
 {
 	"name": "pi-chat-app",
+	"private": true,
 	"version": "1.0.0",
 	"description": "Chat-focused template",
 	"scripts": {

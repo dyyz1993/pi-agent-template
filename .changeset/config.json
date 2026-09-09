@@ -1,11 +1,11 @@
 {
-  "$schema": "https://unpkg.com/@changesets/config@3.1.4/schema.json",
-  "changelog": ["@changesets/changelog-github", { "repo": "dyyz1993/pi-agent-template" }],
-  "commit": false,
-  "fixed": [],
-  "linked": [],
-  "access": "public",
-  "baseBranch": "main",
-  "updateInternalDependencies": "patch",
-  "ignore": []
+	"$schema": "https://unpkg.com/@changesets/config@3.1.4/schema.json",
+	"changelog": ["@changesets/changelog-github", { "repo": "dyyz1993/pi-agent-template" }],
+	"commit": false,
+	"fixed": [],
+	"linked": [],
+	"access": "public",
+	"baseBranch": "main",
+	"updateInternalDependencies": "patch",
+	"ignore": ["pi-general-app", "pi-chat-app", "pi-agent-app", "browser-agent-app", "cowork-app"]
 }

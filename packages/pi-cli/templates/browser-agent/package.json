@@ -1,6 +1,7 @@
 {
 	"name": "browser-agent-app",
-	"version": "1.0.2",
+	"private": true,
+	"version": "1.0.0",
 	"description": "Browser automation agent: AI-powered browser control (Desktop + Web)",
 	"author": {
 		"name": "xuyingzhou",
