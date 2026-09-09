@@ -1,15 +1,17 @@
 import { resolve } from "path";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, readdirSync, mkdtempSync, rmSync } from "fs";
+import { tmpdir } from "os";
+import { spawnSync } from "child_process";
 import { getRootDir, resolveTemplateDir } from "../lib/templates.js";
-import { copyAndReplace } from "../lib/copy.js";
-import { execSync } from "child_process";
+import { copyAndReplace, postProcessTemplate, expandTilde } from "../lib/copy.js";
 
 interface TemplateMeta {
 	templateType: string;
 	projectName: string;
 }
 
-function detectTemplateMeta(targetDir: string): TemplateMeta | null {
+/** Detect which template a project was created from (exported for tests). */
+export function detectTemplateMeta(targetDir: string): TemplateMeta | null {
 	const pkgPath = resolve(targetDir, "package.json");
 	if (!existsSync(pkgPath)) return null;
 
@@ -22,9 +24,7 @@ function detectTemplateMeta(targetDir: string): TemplateMeta | null {
 		const modulesDir = existsSync(sharedDir) ? resolve(sharedDir, "modules") : null;
 		if (!modulesDir || !existsSync(modulesDir)) return null;
 
-		const modules = new Set(
-			execSync(`ls ${modulesDir}`, { encoding: "utf-8" }).trim().split("\n").filter(Boolean)
-		);
+		const modules = new Set(readdirSync(modulesDir).filter((f) => !f.startsWith(".")));
 
 		if (modules.has("bash") && modules.has("todo") && modules.has("rules")) {
 			return { templateType: "agent", projectName };
@@ -44,6 +44,44 @@ function detectTemplateMeta(targetDir: string): TemplateMeta | null {
 	}
 }
 
+const DIFF_EXCLUDES = [
+	"node_modules",
+	"dist",
+	"build",
+	".git",
+	".husky",
+	".server-port",
+	"logs",
+	"bun.lock",
+	"pnpm-lock.yaml",
+].flatMap((e) => [`--exclude=${e}`]);
+
+function diffTemplateAgainstProject(
+	templateDir: string,
+	targetDir: string,
+	projectName: string
+): string {
+	// Render the template into a temp dir first so the diff compares what
+	// update --force would actually write, not the raw placeholders.
+	const tmpDir = mkdtempSync(resolve(tmpdir(), "create-agent-update-"));
+	try {
+		copyAndReplace(templateDir, tmpDir, projectName);
+		const result = spawnSync("diff", ["-rq", ...DIFF_EXCLUDES, `${tmpDir}/`, `${targetDir}/`], {
+			encoding: "utf-8",
+			maxBuffer: 10 * 1024 * 1024,
+		});
+		if (result.error) {
+			return `(diff unavailable: ${result.error.message})`;
+		}
+		if (result.status === 2) {
+			return `(diff failed: ${result.stderr.trim()})`;
+		}
+		return result.stdout.replaceAll(`${tmpDir}/`, "<template>/");
+	} finally {
+		rmSync(tmpDir, { recursive: true, force: true });
+	}
+}
+
 export async function runUpdate(args: string[]): Promise<void> {
 	let targetDir = process.cwd();
 	let force = false;
@@ -52,7 +90,7 @@ export async function runUpdate(args: string[]): Promise<void> {
 	for (let i = 0; i < args.length; i++) {
 		const arg = args[i];
 		if (arg === "--dir" && args[i + 1]) {
-			targetDir = resolve(args[++i]!);
+			targetDir = resolve(expandTilde(args[++i]!));
 		} else if (arg === "--force") {
 			force = true;
 		} else if (arg === "--dry-run") {
@@ -65,7 +103,7 @@ Update project to latest template version.
 
 Options:
   --dir <path>    Target project directory (default: current directory)
-  --force         Overwrite all template files without confirmation
+  --force         Overwrite ALL template files (including src/shared/, modules/, lib/)
   --dry-run       Show what would change without modifying files
   -h, --help      Show this help message
 
@@ -103,13 +141,7 @@ Examples:
 	if (dryRun) {
 		console.log("Dry run - showing changes:");
 		console.log("");
-		const diffResult = execSync(
-			`diff -rq --exclude='node_modules' --exclude='dist' --exclude='build' --exclude='.git' --exclude='.husky' --exclude='.server-port' --exclude='logs' --exclude='bun.lock' --exclude='pnpm-lock.yaml' "${templateDir}/" "${targetDir}/" 2>&1 || true`,
-			{
-				encoding: "utf-8",
-				maxBuffer: 10 * 1024 * 1024,
-			}
-		);
+		const diffResult = diffTemplateAgainstProject(templateDir, targetDir, projectName);
 		if (!diffResult.trim()) {
 			console.log("No changes detected. Project is up to date!");
 		} else {
@@ -119,16 +151,18 @@ Examples:
 	}
 
 	if (!force) {
-		console.log("This will update your project template files.");
-		console.log(
-			"Files in src/shared/handlers/, src/shared/modules/, and src/shared/lib/ will be preserved."
-		);
+		console.log("This command requires --force to run.");
 		console.log("");
-		console.log("Run with --force to overwrite all files, or --dry-run to preview changes.");
+		console.log("NOTE: --force overwrites ALL template files, including your edits in");
+		console.log("src/shared/handlers/, src/shared/modules/, src/shared/lib/. Commit or");
+		console.log("stash your work first, then review the result with: git diff");
+		console.log("");
+		console.log("Use --dry-run to preview changes before forcing.");
 		return;
 	}
 
 	copyAndReplace(templateDir, targetDir, projectName);
+	postProcessTemplate(targetDir, projectName);
 
 	console.log("");
 	console.log("Template files updated successfully!");

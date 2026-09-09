@@ -1,10 +1,26 @@
 import { resolve } from "path";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import { existsSync, readFileSync, mkdirSync } from "fs";
+import { homedir } from "os";
 import { createServer } from "net";
 import type { PortEntry } from "../lib/types.js";
 
-const PORT_REGISTRY = resolve(process.env.HOME || "~", ".pi-agent", "ports.json");
+const PORT_REGISTRY = resolve(homedir(), ".pi-agent", "ports.json");
+
+const WORKSPACE_NAME_RE = /^[\w][\w.-]*$/;
+
+/** Returns an error message for invalid names, or null when valid. */
+export function validateWorkspaceName(name: string): string | null {
+	// The name becomes both a directory and a git branch; anything outside
+	// word characters, dots and dashes is rejected rather than escaped.
+	if (!WORKSPACE_NAME_RE.test(name)) {
+		return (
+			`Invalid workspace name "${name}". ` +
+			"Use letters, digits, '.', '_' or '-' (e.g. feature-chat-ui)."
+		);
+	}
+	return null;
+}
 
 function readRegistry(): Record<string, PortEntry> {
 	try {
@@ -83,6 +99,12 @@ Examples:
 		process.exit(1);
 	}
 
+	const nameError = validateWorkspaceName(name);
+	if (nameError) {
+		console.error(`Error: ${nameError}`);
+		process.exit(1);
+	}
+
 	const projectRoot = process.cwd();
 	const workspaceDir = resolve(projectRoot, ".workspace", name);
 
@@ -101,7 +123,7 @@ Examples:
 	mkdirSync(resolve(projectRoot, ".workspace"), { recursive: true });
 
 	try {
-		execSync(`git worktree add "${workspaceDir}" -b ${branchName} ${baseArg}`, {
+		execFileSync("git", ["worktree", "add", workspaceDir, "-b", branchName, baseArg], {
 			cwd: projectRoot,
 			stdio: "pipe",
 		});
@@ -119,7 +141,7 @@ Examples:
 	console.log("");
 	console.log("Installing dependencies...");
 	try {
-		execSync("bun install", { cwd: workspaceDir, stdio: "pipe" });
+		execFileSync("bun", ["install"], { cwd: workspaceDir, stdio: "pipe" });
 	} catch {
 		console.log("(bun install skipped)");
 	}
@@ -131,6 +153,4 @@ Examples:
 	console.log(`  cd .workspace/${name}`);
 	console.log(`  PORT=${ports.backend} VITE_PORT=${ports.vite} bun run dev:web`);
 	console.log("");
-	console.log("Or start from project root:");
-	console.log(`  PORT=${ports.backend} VITE_PORT=${ports.vite} bun run dev:web`);
 }

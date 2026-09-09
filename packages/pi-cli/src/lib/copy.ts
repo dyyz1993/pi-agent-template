@@ -6,12 +6,48 @@ import {
 	readdirSync,
 	unlinkSync,
 	chmodSync,
+	rmSync,
 } from "fs";
-import { join, resolve } from "path";
-import { execSync } from "child_process";
+import { join, resolve, extname } from "path";
+import { homedir } from "os";
+import { execFileSync } from "child_process";
+import { getRootDir } from "./templates.js";
 
 const SKIP_DIRS = new Set(["node_modules", "build", "dist", ".git", ".husky", ".trae"]);
-const SKIP_FILES = new Set(["bun.lock", "rpc-browser.js"]);
+const SKIP_FILES = new Set(["bun.lock"]);
+
+const BINARY_EXTENSIONS = new Set([
+	".png",
+	".jpg",
+	".jpeg",
+	".gif",
+	".webp",
+	".ico",
+	".icns",
+	".ttf",
+	".otf",
+	".woff",
+	".woff2",
+	".mp3",
+	".mp4",
+	".wav",
+	".pdf",
+	".zip",
+	".gz",
+]);
+
+export function expandTilde(targetPath: string): string {
+	if (targetPath === "~") return homedir();
+	if (targetPath.startsWith("~/")) return join(homedir(), targetPath.slice(2));
+	return targetPath;
+}
+
+function isBinaryFile(filePath: string, buffer: Buffer): boolean {
+	if (BINARY_EXTENSIONS.has(extname(filePath).toLowerCase())) return true;
+	// A NUL byte in the first 8KB almost certainly means binary content;
+	// reading such a file as utf-8 would silently corrupt it.
+	return buffer.subarray(0, 8192).includes(0);
+}
 
 export interface CopyOptions {
 	projectName: string;
@@ -43,14 +79,20 @@ export function copyAndReplace(srcDir: string, destDir: string, projectName: str
 		} else {
 			if (SKIP_FILES.has(entry.name)) continue;
 
-			let content = readFileSync(srcPath, "utf-8");
+			const raw = readFileSync(srcPath);
+
+			if (isBinaryFile(entry.name, raw)) {
+				writeFileSync(destPath, raw);
+				continue;
+			}
+
+			let content = raw.toString("utf-8");
 
 			content = content.replace(/pi-agent-template/g, projectName);
 			content = content.replace(/Pi Agent Template/g, pascalName);
 			content = content.replace(/Pi Agent/g, pascalName);
 			content = content.replace(/com\.piagent\.template/g, identifier);
 			content = content.replace(/com\.piagent/g, shortId);
-			content = content.replace(/@pi-agent\//g, `@${projectName}/`);
 
 			writeFileSync(destPath, content);
 		}
@@ -74,8 +116,8 @@ function copyTraeRules(monorepoRoot: string, targetDir: string, projectName: str
 	}
 }
 
-function copySharedModules(monorepoRoot: string, targetDir: string, projectName: string): void {
-	const sharedDir = resolve(monorepoRoot, "templates", "shared");
+function copySharedModules(sourceRoot: string, targetDir: string, projectName: string): void {
+	const sharedDir = resolve(sourceRoot, "templates", "shared");
 	if (!existsSync(sharedDir)) return;
 
 	const destSharedDir = join(targetDir, "shared");
@@ -145,31 +187,41 @@ function cleanSharedViteConfig(sharedDir: string): void {
 	}
 }
 
-function resolvePackageVersion(packageName: string): string {
+function resolvePackageVersion(packageName: string, fallbackRange?: string): string {
 	try {
-		return execSync(`npm view ${packageName} version`, { encoding: "utf-8" }).trim();
+		const version = execFileSync("npm", ["view", packageName, "version"], {
+			encoding: "utf-8",
+		}).trim();
+		return `^${version}`;
 	} catch {
-		return "1.0.0";
+		// Offline / registry failure: keep a usable range instead of silently
+		// downgrading the project to an ancient version.
+		if (fallbackRange && fallbackRange !== "workspace:*") {
+			console.warn(`(Could not look up latest ${packageName}; keeping ${fallbackRange})`);
+			return fallbackRange;
+		}
+		console.warn(`(Could not look up latest ${packageName}; falling back to ^2.2.0)`);
+		return "^2.2.0";
 	}
 }
 
 const WORKSPACE_PACKAGES = ["@dyyz1993/rpc-core", "@dyyz1993/eslint-plugin-rpc"];
 
-function updatePackageJson(targetDir: string, _projectName: string): void {
+function updatePackageJson(targetDir: string, projectName: string): void {
 	const rootPkgPath = join(targetDir, "package.json");
 	if (!existsSync(rootPkgPath)) return;
 
 	const rootPkg = JSON.parse(readFileSync(rootPkgPath, "utf-8"));
 
 	delete rootPkg.workspaces;
+	rootPkg.name = projectName;
 
 	for (const depKey of ["dependencies", "devDependencies"] as const) {
 		if (!rootPkg[depKey]) continue;
 		for (const pkgName of WORKSPACE_PACKAGES) {
 			if (!rootPkg[depKey][pkgName]) continue;
 			if (pkgName === "@dyyz1993/rpc-core") {
-				const version = resolvePackageVersion(pkgName);
-				rootPkg[depKey][pkgName] = `^${version}`;
+				rootPkg[depKey][pkgName] = resolvePackageVersion(pkgName, rootPkg[depKey][pkgName]);
 			} else {
 				delete rootPkg[depKey][pkgName];
 			}
@@ -183,28 +235,33 @@ function updatePackageJson(targetDir: string, _projectName: string): void {
 		const lines = readFileSync(eslintConfigPath, "utf-8").split("\n");
 		const filteredLines: string[] = [];
 
-		let inRpcSection = false;
 		for (let i = 0; i < lines.length; i++) {
 			const line = lines[i];
 			if (line === undefined) continue;
 
-			if (line.includes("import rpcPlugin") && line.includes("@dyyz1993/eslint-plugin-rpc")) {
+			// Covers both the npm-package import and the vendored copy
+			// (./eslint-plugin-rpc/index.js) that post-sync leaves behind.
+			if (line.includes("import rpcPlugin") && line.includes("eslint-plugin-rpc")) {
 				continue;
 			}
 
+			// rpc/* rule lines only exist because of the plugin; strip them
+			// unconditionally so the removal survives format/comment changes.
+			if (line.trim().startsWith("'rpc/") || line.trim().startsWith('"rpc/')) {
+				continue;
+			}
+
+			// section comment that only labelled the rpc rules block
 			if (line.includes("RPC") && line.includes("规范规则")) {
-				inRpcSection = true;
 				continue;
-			}
-
-			if (inRpcSection) {
-				if (line.trim().startsWith("'rpc/") || line.trim().startsWith('"rpc/')) {
-					continue;
-				}
-				inRpcSection = false;
 			}
 
 			if (line.includes("rpc: rpcPlugin")) {
+				continue;
+			}
+
+			// ignore entry for the vendored plugin dir we remove below
+			if (line.trim() === "'eslint-plugin-rpc/**',") {
 				continue;
 			}
 
@@ -215,6 +272,37 @@ function updatePackageJson(targetDir: string, _projectName: string): void {
 		content = content.replace(/\n\s+plugins:\s*\{\s*\},?\s*\n/g, "\n");
 
 		writeFileSync(eslintConfigPath, content);
+	}
+
+	// With the rules stripped, the vendored plugin copy is dead weight.
+	rmSync(join(targetDir, "eslint-plugin-rpc"), { recursive: true, force: true });
+}
+
+/**
+ * Shared post-processing after raw template files land in the target project.
+ * Used by both `create` and `update --force`; skipping it used to leave
+ * `workspace:*` deps and `../shared` imports in user projects.
+ */
+export function postProcessTemplate(targetDir: string, projectName: string): void {
+	copySharedModules(getRootDir(), targetDir, projectName);
+	cleanViteConfig(targetDir);
+	updatePackageJson(targetDir, projectName);
+}
+
+function precheckExternalTools(): void {
+	const missing: string[] = [];
+	for (const tool of ["git", "bun"]) {
+		try {
+			execFileSync(tool, ["--version"], { stdio: "pipe" });
+		} catch {
+			missing.push(tool);
+		}
+	}
+	if (missing.length > 0) {
+		throw new Error(
+			`Required tools not found: ${missing.join(", ")}. ` +
+				`Install them before creating a project (bun: https://bun.sh).`
+		);
 	}
 }
 
@@ -227,6 +315,8 @@ export async function copyTemplate(options: CopyOptions): Promise<void> {
 		throw new Error(`Directory "${targetDir}" already exists.`);
 	}
 
+	precheckExternalTools();
+
 	const { identifier } = deriveNames(projectName);
 
 	console.log(`Creating project: ${projectName}`);
@@ -237,37 +327,18 @@ export async function copyTemplate(options: CopyOptions): Promise<void> {
 	copyAndReplace(templateDir, targetDir, projectName);
 	if (isMonorepo) {
 		copyTraeRules(localRoot, targetDir, projectName);
-		copySharedModules(localRoot, targetDir, projectName);
-	} else {
-		const publishedShared = resolve(import.meta.dir, "..", "..", "templates", "shared");
-		if (existsSync(publishedShared)) {
-			copyAndReplace(publishedShared, join(targetDir, "shared"), projectName);
-			for (const f of ["http-routes.ts", "logger.ts"]) {
-				const p = join(targetDir, "shared", f);
-				if (existsSync(p)) unlinkSync(p);
-			}
-			const tsconfigPath = join(targetDir, "tsconfig.json");
-			if (existsSync(tsconfigPath)) {
-				let tsconfig = readFileSync(tsconfigPath, "utf-8");
-				tsconfig = tsconfig.replace(/"\.\.\/shared\/\*"/g, '"./shared/*"');
-				tsconfig = tsconfig.replace(/"\.\.\/shared"/g, '"./shared"');
-				writeFileSync(tsconfigPath, tsconfig);
-			}
-			cleanSharedViteConfig(join(targetDir, "shared"));
-		}
 	}
-	cleanViteConfig(targetDir);
-	updatePackageJson(targetDir, projectName);
+	postProcessTemplate(targetDir, projectName);
 
 	console.log("Initializing git...");
-	execSync("git init", { cwd: targetDir, stdio: "pipe" });
+	execFileSync("git", ["init"], { cwd: targetDir, stdio: "pipe" });
 
 	console.log("Installing dependencies...");
-	execSync("bun install", { cwd: targetDir, stdio: "inherit" });
+	execFileSync("bun", ["install"], { cwd: targetDir, stdio: "inherit" });
 
 	console.log("Building browser bundle...");
 	try {
-		execSync("bun run build:browser", { cwd: targetDir, stdio: "pipe" });
+		execFileSync("bun", ["run", "build:browser"], { cwd: targetDir, stdio: "pipe" });
 	} catch {
 		console.log("(build:browser skipped - script not found)");
 	}
@@ -284,7 +355,7 @@ export async function copyTemplate(options: CopyOptions): Promise<void> {
 	hook(
 		"pre-commit",
 		`#!/bin/sh
-npx lint-staged
+bunx lint-staged
 
 STAGED_TS=$(git diff --cached --name-only --diff-filter=ACMR | grep -c '\\.tsx\\?$' || true)
 
@@ -300,7 +371,7 @@ echo "✅ Pre-commit checks passed"
 	hook(
 		"commit-msg",
 		`#!/bin/sh
-npx --no -- commitlint --edit "$1"
+bunx commitlint --edit "$1"
 `
 	);
 
@@ -311,7 +382,7 @@ echo "⏳ Linting..."
 bun run lint || { echo "❌ Lint failed."; exit 1; }
 
 echo "⏳ Checking lockfile sync..."
-git diff --name-only HEAD -- pnpm-lock.yaml | grep -q . && { echo "⚠️  pnpm-lock.yaml has uncommitted changes."; exit 1; }
+git diff --name-only HEAD -- bun.lock | grep -q . && { echo "⚠️  bun.lock has uncommitted changes."; exit 1; }
 
 echo "✅ Pre-push checks passed (full tests run in CI). Pushing..."
 `
@@ -356,9 +427,9 @@ fi
 echo "⏳ Checking for dependency changes..."
 CHANGED=$(git diff HEAD@{1} --name-only HEAD)
 
-if echo "$CHANGED" | grep -q "pnpm-lock.yaml\\|package.json"; then
-  echo "📦 Dependencies changed, running pnpm install..."
-  pnpm install
+if echo "$CHANGED" | grep -q "bun.lock\\|package.json"; then
+  echo "📦 Dependencies changed, running bun install..."
+  bun install
 fi
 `
 	);
@@ -372,26 +443,31 @@ IS_BRANCH="$3"
 
 if [ "$IS_BRANCH" = "1" ]; then
   CHANGED=$(git diff --name-only "$PREV_HEAD" "$NEW_HEAD" 2>/dev/null)
-  if echo "$CHANGED" | grep -q "pnpm-lock.yaml\\|package.json"; then
-    echo "📦 Dependencies changed between branches, running pnpm install..."
-    pnpm install
+  if echo "$CHANGED" | grep -q "bun.lock\\|package.json"; then
+    echo "📦 Dependencies changed between branches, running bun install..."
+    bun install
   fi
 fi
 `
 	);
 
 	console.log("Initializing husky...");
-	execSync("pnpm run prepare", { cwd: targetDir, stdio: "pipe" });
+	try {
+		execFileSync("bun", ["run", "prepare"], { cwd: targetDir, stdio: "pipe" });
+	} catch {
+		console.warn("(husky init skipped - prepare script failed; git hooks not installed)");
+	}
 
-	execSync("git add -A", { cwd: targetDir, stdio: "pipe" });
+	execFileSync("git", ["add", "-A"], { cwd: targetDir, stdio: "pipe" });
 
 	try {
-		execSync(`git commit --no-verify -m "feat: init ${projectName} from pi-agent-template"`, {
-			cwd: targetDir,
-			stdio: "pipe",
-		});
+		execFileSync(
+			"git",
+			["commit", "--no-verify", "-m", `feat: init ${projectName} from pi-agent-template`],
+			{ cwd: targetDir, stdio: "pipe" }
+		);
 	} catch {
-		console.log("(git commit skipped - no files to commit)");
+		console.log("(git commit skipped - check git user.name / user.email config)");
 	}
 
 	console.log("");
