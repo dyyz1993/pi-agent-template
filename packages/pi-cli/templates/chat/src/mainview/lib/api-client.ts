@@ -9,12 +9,13 @@ import type {
 import type { RPCMethods, RPCEvents } from "../../shared/rpc-schema";
 
 /** Keep the subscribe filter as strict as the typed client's (metadata keys). */
-type SubscribeFilter<K extends keyof RPCEvents = keyof RPCEvents> =
-	RPCEvents[K] extends { metadata: infer M }
-		? Partial<M>
-		: RPCEvents[K] extends { metadata?: infer M }
-			? Partial<NonNullable<M>>
-			: Record<string, unknown>;
+type SubscribeFilter<K extends keyof RPCEvents = keyof RPCEvents> = RPCEvents[K] extends {
+	metadata: infer M;
+}
+	? Partial<M>
+	: RPCEvents[K] extends { metadata?: infer M }
+		? Partial<NonNullable<M>>
+		: Record<string, unknown>;
 import { rpcCache, CACHEABLE_METHODS } from "./rpc-cache";
 
 /**
