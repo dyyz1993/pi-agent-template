@@ -7,6 +7,18 @@ type MethodResult<M, K extends keyof M> = M[K] extends { result: infer R } ? R :
 type EventPayloadType<Events, K extends keyof Events> = EventPayload<Events[K]>;
 type EventMetadataType<Events, K extends keyof Events> = EventMetadata<Events[K]>;
 
+/**
+ * Filter keys are constrained to the event's metadata type when the event
+ * declares one, so a typo like `Role` vs `role` fails at compile time instead
+ * of silently matching nothing at runtime. Events without metadata keep the
+ * loose Record<string, unknown>.
+ */
+type EventFilterType<Events, K extends keyof Events> = Events[K] extends { metadata: infer M }
+	? Partial<M>
+	: Events[K] extends { metadata?: infer M }
+		? Partial<NonNullable<M>>
+		: Record<string, unknown>;
+
 export interface TypedServer<Methods, Events> {
 	handle: <K extends keyof Methods>(
 		method: K,
@@ -54,7 +66,7 @@ export interface TypedClient<Methods, Events> {
 	subscribe: <K extends keyof Events>(
 		event: K,
 		handler: (payload: EventPayloadType<Events, K>, metadata: EventMetadataType<Events, K>) => void,
-		filter?: Record<string, unknown>
+		filter?: EventFilterType<Events, K>
 	) => string;
 
 	unsubscribe: (subscriptionId: string) => void;
@@ -83,7 +95,7 @@ export function createTypedClient<Methods, Events>(
 				payload: EventPayloadType<Events, K>,
 				metadata: EventMetadataType<Events, K>
 			) => void,
-			filter: Record<string, unknown> = {}
+			filter: EventFilterType<Events, K> = {} as EventFilterType<Events, K>
 		): string => {
 			return client.subscribe(
 				event as string,
@@ -93,7 +105,7 @@ export function createTypedClient<Methods, Events>(
 						e.metadata as EventMetadataType<Events, K>
 					);
 				},
-				filter
+				filter as Record<string, unknown>
 			);
 		},
 

@@ -39,6 +39,9 @@ export class WebSocketTransport implements Transport {
 	private lastPongTime: number = 0;
 	private reconnectAttempts: number = 0;
 	private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+	private reconnectHandlers: Set<() => void> = new Set();
+	private hasConnectedOnce: boolean = false;
+	private connectReject: ((error: Error) => void) | null = null;
 
 	constructor(urlOrOptions: string | WebSocketTransportOptions) {
 		const opts = typeof urlOrOptions === "object" ? urlOrOptions : {};
@@ -60,6 +63,13 @@ export class WebSocketTransport implements Transport {
 	private startHeartbeat(): void {
 		this.stopHeartbeat();
 		this.lastPongTime = Date.now();
+
+		if (this.ws && typeof this.ws.ping !== "function") {
+			// Browser WebSocket has no ping()/onpong; a pong-timeout check would
+			// misjudge every cycle as a disconnect, so heartbeat stays off.
+			this.logger?.warn?.("WebSocket does not support ping/pong; heartbeat disabled");
+			return;
+		}
 
 		if (this.ws) {
 			this.ws.onpong = () => {
@@ -108,6 +118,10 @@ export class WebSocketTransport implements Transport {
 			this.logger?.error?.("Max reconnect attempts reached");
 			return;
 		}
+		// A failed connect triggers both onerror and onclose; without this guard
+		// each failure schedules two timers and only the last one is tracked,
+		// leaving orphan timers that keep reconnecting even after close().
+		if (this.reconnectTimer) return;
 
 		const delay = Math.min(
 			this.reconnectInterval * Math.pow(2, this.reconnectAttempts),
@@ -116,6 +130,8 @@ export class WebSocketTransport implements Transport {
 
 		this.reconnectAttempts++;
 		this.reconnectTimer = setTimeout(async () => {
+			this.reconnectTimer = null;
+			if (!this.reconnect) return;
 			try {
 				await this.connect();
 				this.reconnectAttempts = 0;
@@ -143,6 +159,7 @@ export class WebSocketTransport implements Transport {
 		}
 
 		return new Promise((resolve, reject) => {
+			this.connectReject = reject;
 			this.logger?.info?.("Creating new WebSocket to:", this.url);
 			const protocols = this.authToken ? [this.authToken] : undefined;
 			this.ws = Object.assign(new WebSocket(this.url, protocols), {
@@ -153,18 +170,25 @@ export class WebSocketTransport implements Transport {
 				this._isConnected = true;
 				this._isConnecting = false;
 				this.reconnectAttempts = 0;
+				this.connectReject = null;
 				this.logger?.info?.("Connected, messageHandlers:", this.messageHandlers.size);
 				if (this.heartbeatIntervalMs > 0) {
 					this.startHeartbeat();
 				}
 				resolve();
+				if (this.hasConnectedOnce) {
+					for (const handler of this.reconnectHandlers) {
+						handler();
+					}
+				}
+				this.hasConnectedOnce = true;
 			};
 
 			this.ws.onmessage = (event) => {
-				this.logger?.info?.("onmessage triggered, data length:", event.data?.length);
+				this.logger?.debug?.("onmessage triggered, data length:", event.data?.length);
 				try {
 					const message = JSON.parse(event.data);
-					this.logger?.info?.("Parsed message:", message.type, "id:", message.id);
+					this.logger?.debug?.("Parsed message:", message.type, "id:", message.id);
 					if (this.messageHandlers.size === 0) {
 						this.logger?.error?.("WARNING: No message handlers registered!");
 					}
@@ -178,6 +202,7 @@ export class WebSocketTransport implements Transport {
 
 			this.ws!.onerror = (error) => {
 				this._isConnecting = false;
+				this.connectReject = null;
 				this.logger?.error?.("Error:", error);
 				reject(new Error("WebSocket connection failed"));
 				for (const handler of this.errorHandlers) {
@@ -211,9 +236,9 @@ export class WebSocketTransport implements Transport {
 	}
 
 	onMessage(handler: MessageHandler): () => void {
-		this.logger?.info?.("Adding message handler, current count:", this.messageHandlers.size);
+		this.logger?.debug?.("Adding message handler, current count:", this.messageHandlers.size);
 		this.messageHandlers.add(handler);
-		this.logger?.info?.("After adding, count:", this.messageHandlers.size);
+		this.logger?.debug?.("After adding, count:", this.messageHandlers.size);
 		return () => {
 			this.messageHandlers.delete(handler);
 		};
@@ -233,6 +258,13 @@ export class WebSocketTransport implements Transport {
 		};
 	}
 
+	onReconnect(handler: () => void): () => void {
+		this.reconnectHandlers.add(handler);
+		return () => {
+			this.reconnectHandlers.delete(handler);
+		};
+	}
+
 	isConnected(): boolean {
 		return this._isConnected;
 	}
@@ -245,6 +277,11 @@ export class WebSocketTransport implements Transport {
 			clearTimeout(this.reconnectTimer);
 			this.reconnectTimer = null;
 		}
+		if (this.connectReject) {
+			const reject = this.connectReject;
+			this.connectReject = null;
+			reject(new Error("WebSocket transport closed during connect"));
+		}
 		if (this.ws) {
 			this.ws.onopen = null;
 			this.ws.onmessage = null;
@@ -256,9 +293,12 @@ export class WebSocketTransport implements Transport {
 		}
 		this._isConnected = false;
 		this._isConnecting = false;
+		this.reconnectAttempts = 0;
+		this.hasConnectedOnce = false;
 		this.messageHandlers.clear();
 		this.errorHandlers.clear();
 		this.disconnectHandlers.clear();
+		this.reconnectHandlers.clear();
 	}
 
 	private setupMock(ws: ExtendedWebSocket, isConnected: boolean): void {

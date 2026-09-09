@@ -103,7 +103,12 @@ export class RPCServer {
 
 	private handleSubscribe(message: RPCMessage): void {
 		const subscriptionId = message.id;
-		const eventType = message.eventType!;
+		const eventType = message.eventType;
+
+		if (typeof subscriptionId !== "string" || typeof eventType !== "string" || !eventType) {
+			this.logger?.warn?.("Ignored malformed subscribe message", { subscriptionId, eventType });
+			return;
+		}
 		const filter = message.filter || {};
 
 		this.subscriptions.set(subscriptionId, { eventType, filter });
@@ -117,7 +122,11 @@ export class RPCServer {
 	}
 
 	private handleUnsubscribe(message: RPCMessage): void {
-		const subscriptionId = message.subscriptionId!;
+		const subscriptionId = message.subscriptionId;
+		if (typeof subscriptionId !== "string") {
+			this.logger?.warn?.("Ignored malformed unsubscribe message", { subscriptionId });
+			return;
+		}
 		this.subscriptions.delete(subscriptionId);
 
 		this.logger?.debug?.("Subscription removed", { subscriptionId });
@@ -145,7 +154,7 @@ export class RPCServer {
 			timestamp: Date.now(),
 		};
 
-		this.logger?.info?.("Emitting event", {
+		this.logger?.debug?.("Emitting event", {
 			eventType,
 			metadata,
 			subscriptionCount: this.subscriptions.size,
@@ -172,9 +181,9 @@ export class RPCServer {
 		}
 
 		if (hasMatchingSubscription) {
-			this.logger?.info?.("Sending event to client", { eventType });
+			this.logger?.debug?.("Sending event to client", { eventType });
 			await this.transport.send(event);
-		} else {
+		} else if (this.logger?.warn) {
 			const activeEventTypes = [
 				...new Set([...this.subscriptions.values()].map((s) => s.eventType)),
 			];
@@ -187,7 +196,7 @@ export class RPCServer {
 				),
 			];
 
-			this.logger?.warn?.(`No matching subscription for event "${eventType}"`, {
+			this.logger.warn(`No matching subscription for event "${eventType}"`, {
 				activeEventTypes,
 				metadataKeys,
 				filterKeys,

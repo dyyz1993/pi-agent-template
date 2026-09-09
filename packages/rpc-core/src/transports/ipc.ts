@@ -1,70 +1,73 @@
-import { BaseTransport } from './base-transport';
-import type { Transport, MessageHandler, ErrorHandler } from '../core/transport';
-import type { RPCLogger } from '../core/types';
+import { BaseTransport } from "./base-transport";
+import type { Transport, MessageHandler, ErrorHandler } from "../core/transport";
+import type { RPCLogger } from "../core/types";
 
 export interface IPCTransportOptions {
-  logger?: RPCLogger;
+	logger?: RPCLogger;
 }
 
 export class IPCTransport extends BaseTransport implements Transport {
-  private logger?: IPCTransportOptions['logger'];
-  private peer: IPCTransport | null = null;
+	private logger?: IPCTransportOptions["logger"];
+	private peer: IPCTransport | null = null;
 
-  constructor(options?: IPCTransportOptions) {
-    super();
-    this.logger = options?.logger;
-  }
+	constructor(options?: IPCTransportOptions) {
+		super();
+		this.logger = options?.logger;
+	}
 
-  static createPair(options?: IPCTransportOptions): { client: IPCTransport; server: IPCTransport } {
-    const client = new IPCTransport(options);
-    const server = new IPCTransport(options);
+	static createPair(options?: IPCTransportOptions): { client: IPCTransport; server: IPCTransport } {
+		const client = new IPCTransport(options);
+		const server = new IPCTransport(options);
 
-    client.peer = server;
-    server.peer = client;
-    client._isConnected = true;
-    server._isConnected = true;
+		client.peer = server;
+		server.peer = client;
+		client._isConnected = true;
+		server._isConnected = true;
 
-    return { client, server };
-  }
+		return { client, server };
+	}
 
-  async send(message: unknown): Promise<void> {
-    if (!this._isConnected) {
-      throw new Error('Transport is not connected');
-    }
+	async send(message: unknown): Promise<void> {
+		if (!this._isConnected) {
+			throw new Error("Transport is not connected");
+		}
 
-    if (!this.peer) {
-      throw new Error('No peer connected');
-    }
+		if (!this.peer) {
+			throw new Error("No peer connected");
+		}
 
-    this.logger?.debug?.('IPC send', message);
+		this.logger?.debug?.("IPC send", message);
 
-    for (const handler of this.peer.messageHandlers) {
-      handler(message);
-    }
-  }
+		for (const handler of this.peer.messageHandlers) {
+			handler(message);
+		}
+	}
 
-  onMessage(handler: MessageHandler): () => void {
-    return super.onMessage(handler);
-  }
+	onMessage(handler: MessageHandler): () => void {
+		return super.onMessage(handler);
+	}
 
-  onError(handler: ErrorHandler): () => void {
-    return super.onError(handler);
-  }
+	onError(handler: ErrorHandler): () => void {
+		return super.onError(handler);
+	}
 
-  isConnected(): boolean {
-    return super.isConnected();
-  }
+	isConnected(): boolean {
+		return super.isConnected();
+	}
 
-  close(): void {
-    this._isConnected = false;
-    if (this.peer) {
-      this.peer._isConnected = false;
-      this.peer = null;
-    }
-    this.clearHandlers();
-  }
+	close(): void {
+		this._isConnected = false;
+		if (this.peer) {
+			this.peer._isConnected = false;
+			const peer = this.peer;
+			this.peer = null;
+			peer.emitDisconnect();
+		}
+		this.emitDisconnect();
+		this.clearHandlers();
+	}
 
-  simulateMessage(message: unknown): void {
-    this.emitMessage(message);
-  }
+	simulateMessage(message: unknown): void {
+		this.emitMessage(message);
+	}
 }

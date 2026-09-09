@@ -3,6 +3,8 @@ export {
 	RPCTimeoutError,
 	RPCAbortError,
 	RPCTransportError,
+	RPCServerError,
+	RPCDisconnectError,
 	type RPCClientOptions,
 	type RPCCallOptions,
 	type RPCRetryOptions,
@@ -31,7 +33,13 @@ export {
 	type ExtractMethods,
 	type FnsToMethods,
 } from "./typed";
-export type { Transport, MessageHandler, ErrorHandler, DisconnectHandler } from "./core/transport";
+export type {
+	Transport,
+	MessageHandler,
+	ErrorHandler,
+	DisconnectHandler,
+	ReconnectHandler,
+} from "./core/transport";
 export type {
 	RPCMessage,
 	RPCRequest,

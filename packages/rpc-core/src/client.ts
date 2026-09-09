@@ -43,10 +43,48 @@ export class RPCTransportError extends Error {
 	}
 }
 
+export class RPCServerError extends Error {
+	code: number | undefined;
+
+	constructor(message: string, code?: number) {
+		super(message);
+		this.name = "RPCServerError";
+		this.code = code;
+	}
+}
+
+export class RPCDisconnectError extends Error {
+	constructor(method: string) {
+		super(`Transport disconnected while request was pending: ${method}`);
+		this.name = "RPCDisconnectError";
+	}
+}
+
 interface PendingRequest {
 	resolve: (value: unknown) => void;
 	reject: (error: Error) => void;
 	cleanup: () => void;
+	method: string;
+}
+
+interface SubscriptionEntry {
+	key: string;
+	eventType: string;
+	filter: Record<string, unknown>;
+	handler: EventHandler;
+}
+
+/**
+ * Multiple client-side subscriptions that share the same eventType + filter are
+ * grouped: the server only sees one subscription (identified by serverId) and
+ * events are dispatched to every handler in the group. The server-side
+ * subscription is torn down when the last local handler unsubscribes.
+ */
+interface SubscriptionGroup {
+	serverId: string;
+	eventType: string;
+	filter: Record<string, unknown>;
+	handles: Set<string>;
 }
 
 export class RPCClient {
@@ -56,11 +94,8 @@ export class RPCClient {
 	}
 	private timeout: number;
 	private pendingRequests: Map<string, PendingRequest> = new Map();
-	private subscriptions: Map<
-		string,
-		{ eventType: string; filter: Record<string, unknown>; handler: EventHandler }
-	> = new Map();
-	private subscriptionKeys: Map<string, string> = new Map();
+	private subscriptions: Map<string, SubscriptionEntry> = new Map();
+	private subscriptionGroups: Map<string, SubscriptionGroup> = new Map();
 	private logger?: RPCClientOptions["logger"];
 	private onError?: (error: Error, context: string) => void;
 
@@ -78,6 +113,12 @@ export class RPCClient {
 			const msg = message as RPCMessage;
 			this.logger?.debug?.("Received message in handler:", msg.type, "id:", msg.id);
 			this.handleMessage(msg);
+		});
+		this._transport.onDisconnect?.(() => {
+			this.failPendingRequests();
+		});
+		this._transport.onReconnect?.(() => {
+			this.resubscribeAll();
 		});
 	}
 
@@ -100,7 +141,7 @@ export class RPCClient {
 		this.pendingRequests.delete(message.id);
 
 		if (message.error) {
-			pending.reject(new Error(message.error.message));
+			pending.reject(new RPCServerError(message.error.message, message.error.code));
 		} else {
 			pending.resolve(message.result);
 		}
@@ -115,25 +156,14 @@ export class RPCClient {
 			"subscriptions:",
 			this.subscriptions.size
 		);
-		for (const [subId, sub] of this.subscriptions) {
-			this.logger?.debug?.(
-				"Checking subscription:",
-				subId,
-				"eventType:",
-				sub.eventType,
-				"filter:",
-				sub.filter
-			);
+		for (const [, sub] of this.subscriptions) {
 			if (sub.eventType !== event.eventType) continue;
 			if (matchFilter(event, sub.filter)) {
-				this.logger?.debug?.("Matched! Calling handler for:", subId);
 				try {
 					sub.handler(event);
 				} catch (err) {
 					this.onError?.(err instanceof Error ? err : new Error(String(err)), "handleEvent");
 				}
-			} else {
-				this.logger?.debug?.("Filter not matched");
 			}
 		}
 	}
@@ -215,6 +245,7 @@ export class RPCClient {
 					reject(error);
 				},
 				cleanup,
+				method,
 			});
 
 			if (options.signal?.aborted) {
@@ -251,6 +282,8 @@ export class RPCClient {
 		attempt: number,
 		retry: Required<RPCRetryOptions> | null
 	): boolean {
+		// Disconnect errors are deliberately not retried: the server may have
+		// already processed the request before the connection dropped.
 		return Boolean(retry && attempt < retry.maxAttempts && error instanceof RPCTransportError);
 	}
 
@@ -291,12 +324,65 @@ export class RPCClient {
 		});
 	}
 
+	private failPendingRequests(): void {
+		if (this.pendingRequests.size === 0) return;
+		const pending = [...this.pendingRequests.values()];
+		this.pendingRequests.clear();
+		for (const request of pending) {
+			request.cleanup();
+			request.reject(new RPCDisconnectError(request.method));
+		}
+	}
+
+	private resubscribeAll(): void {
+		if (this.subscriptionGroups.size === 0) return;
+		this.logger?.info?.(
+			"Transport reconnected, resubscribing",
+			this.subscriptionGroups.size,
+			"subscription groups"
+		);
+		// The server clears its subscriptions on disconnect; re-register each
+		// group with its original id so existing unsubscribe handles stay valid.
+		for (const group of this.subscriptionGroups.values()) {
+			this.sendSubscribe(group.serverId, group.eventType, group.filter);
+		}
+	}
+
 	private generateSubscriptionKey(eventType: string, filter: Record<string, unknown>): string {
 		const filterStr =
 			Object.keys(filter).length > 0
 				? JSON.stringify(Object.entries(filter).sort(([a], [b]) => a.localeCompare(b)))
 				: "";
 		return `${eventType}:${filterStr}`;
+	}
+
+	private sendSubscribe(
+		serverId: string,
+		eventType: string,
+		filter: Record<string, unknown>
+	): void {
+		const message: RPCMessage = {
+			id: serverId,
+			type: "subscribe",
+			eventType,
+			filter,
+		};
+		this.logger?.debug?.("Sending subscribe message:", message, "serverId:", serverId);
+		this._transport.send(message).catch((error) => {
+			this.logger?.error?.("Subscribe error:", error);
+			this.onError?.(error, "subscribe");
+		});
+	}
+
+	private sendUnsubscribe(serverId: string): void {
+		const message: RPCMessage = {
+			id: generateId(),
+			type: "unsubscribe",
+			subscriptionId: serverId,
+		};
+		this._transport.send(message).catch((error) => {
+			this.onError?.(error, "unsubscribe");
+		});
 	}
 
 	subscribe(
@@ -306,59 +392,39 @@ export class RPCClient {
 	): string {
 		const subscriptionKey = this.generateSubscriptionKey(eventType, filter);
 
-		const existingSubId = this.subscriptionKeys.get(subscriptionKey);
-		if (existingSubId) {
-			this.logger?.debug?.(
-				"Reusing existing subscription:",
-				existingSubId,
-				"for key:",
-				subscriptionKey
-			);
-			const existing = this.subscriptions.get(existingSubId);
-			if (existing) {
-				this.subscriptions.set(existingSubId, { ...existing, handler });
-				return existingSubId;
-			}
+		let group = this.subscriptionGroups.get(subscriptionKey);
+		if (!group) {
+			group = { serverId: generateId(), eventType, filter, handles: new Set() };
+			this.subscriptionGroups.set(subscriptionKey, group);
+			this.sendSubscribe(group.serverId, eventType, filter);
 		}
 
 		const subscriptionId = generateId();
-
-		this.subscriptions.set(subscriptionId, { eventType, filter, handler });
-		this.subscriptionKeys.set(subscriptionKey, subscriptionId);
-
-		const message: RPCMessage = {
-			id: subscriptionId,
-			type: "subscribe",
+		this.subscriptions.set(subscriptionId, {
+			key: subscriptionKey,
 			eventType,
 			filter,
-		};
-
-		this.logger?.debug?.("Sending subscribe message:", message, "key:", subscriptionKey);
-		this._transport.send(message).catch((error) => {
-			this.logger?.error?.("Subscribe error:", error);
-			this.onError?.(error, "subscribe");
+			handler,
 		});
+		group.handles.add(subscriptionId);
 
 		return subscriptionId;
 	}
 
 	unsubscribe(subscriptionId: string): void {
 		const sub = this.subscriptions.get(subscriptionId);
-		if (sub) {
-			const key = this.generateSubscriptionKey(sub.eventType, sub.filter);
-			this.subscriptionKeys.delete(key);
-		}
+		if (!sub) return;
+
 		this.subscriptions.delete(subscriptionId);
 
-		const message: RPCMessage = {
-			id: generateId(),
-			type: "unsubscribe",
-			subscriptionId,
-		};
+		const group = this.subscriptionGroups.get(sub.key);
+		if (!group) return;
 
-		this._transport.send(message).catch((error) => {
-			this.onError?.(error, "unsubscribe");
-		});
+		group.handles.delete(subscriptionId);
+		if (group.handles.size === 0) {
+			this.subscriptionGroups.delete(sub.key);
+			this.sendUnsubscribe(group.serverId);
+		}
 	}
 
 	close(): void {
@@ -367,7 +433,7 @@ export class RPCClient {
 		}
 		this.pendingRequests.clear();
 		this.subscriptions.clear();
-		this.subscriptionKeys.clear();
+		this.subscriptionGroups.clear();
 		this._transport.close();
 	}
 
