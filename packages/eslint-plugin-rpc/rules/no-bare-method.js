@@ -3,11 +3,23 @@
  */
 "use strict";
 
+// Object names whose .register/.call/.subscribe/.emitEvent are RPC entry
+// points. Prefix matching covers numbered test doubles (serverA, apiClient2).
+const DEFAULT_OBJECT_NAMES = [
+  "server",
+  "rpcServer",
+  "apiClient",
+  "rpcClient",
+  "client",
+  "api",
+  "rpc",
+];
+
 const METHOD_CALL_PATTERNS = [
-  { calleePattern: /^register$/, argIndex: 0 },
-  { calleePattern: /\.call$/, argIndex: 0 },
-  { calleePattern: /\.subscribe$/, argIndex: 0 },
-  { calleePattern: /\.emitEvent$/, argIndex: 0 },
+  { methodName: "register", argIndex: 0 },
+  { methodName: "call", argIndex: 0 },
+  { methodName: "subscribe", argIndex: 0 },
+  { methodName: "emitEvent", argIndex: 0 },
 ];
 
 function isModuleMethodName(name) {
@@ -29,7 +41,18 @@ module.exports = {
       invalidFormat:
         'RPC 方法名 "{{name}}" 格式错误。必须使用 "module.action" 格式（单一 "." 分隔）。',
     },
-    schema: [],
+    schema: [
+      {
+        type: "object",
+        properties: {
+          objectNames: {
+            type: "array",
+            items: { type: "string" },
+          },
+        },
+        additionalProperties: false,
+      },
+    ],
   },
 
   create(context) {
@@ -37,40 +60,50 @@ module.exports = {
 
     if (!/\.[jt]sx?$/.test(filename)) return {};
 
+    const options = context.options[0] || {};
+    const objectNames = options.objectNames || DEFAULT_OBJECT_NAMES;
+
+    const isRpcObject = (name) => objectNames.some((known) => name.startsWith(known));
+
     return {
       CallExpression(node) {
         const { callee, arguments: args } = node;
 
-        let calleeText = "";
-        if (callee.type === "Identifier") {
-          calleeText = callee.name;
-        } else if (callee.type === "MemberExpression" && callee.property.type === "Identifier") {
-          calleeText = `.${callee.property.name}`;
+        // Only member calls (obj.register / obj.call / ...). Bare register()
+        // and Function.prototype.call are not RPC entry points.
+        if (
+          callee.type !== "MemberExpression" ||
+          callee.property.type !== "Identifier" ||
+          callee.object.type !== "Identifier"
+        ) {
+          return;
         }
 
-        for (const pattern of METHOD_CALL_PATTERNS) {
-          if (!pattern.calleePattern.test(calleeText)) continue;
-          if (args.length <= pattern.argIndex) continue;
+        const pattern = METHOD_CALL_PATTERNS.find(
+          (p) => p.methodName === callee.property.name
+        );
+        if (!pattern) return;
+        if (!isRpcObject(callee.object.name)) return;
+        if (args.length <= pattern.argIndex) return;
 
-          const arg = args[pattern.argIndex];
-          if (arg.type !== "Literal" || typeof arg.value !== "string") continue;
+        const arg = args[pattern.argIndex];
+        if (arg.type !== "Literal" || typeof arg.value !== "string") return;
 
-          const methodName = arg.value;
+        const methodName = arg.value;
 
-          if (!methodName.includes(".")) {
-            const suggestion = `module.${methodName}`;
-            context.report({
-              node: arg,
-              messageId: "bareMethod",
-              data: { name: methodName, suggestion },
-            });
-          } else if (!isModuleMethodName(methodName)) {
-            context.report({
-              node: arg,
-              messageId: "invalidFormat",
-              data: { name: methodName },
-            });
-          }
+        if (!methodName.includes(".")) {
+          const suggestion = `module.${methodName}`;
+          context.report({
+            node: arg,
+            messageId: "bareMethod",
+            data: { name: methodName, suggestion },
+          });
+        } else if (!isModuleMethodName(methodName)) {
+          context.report({
+            node: arg,
+            messageId: "invalidFormat",
+            data: { name: methodName },
+          });
         }
       },
     };

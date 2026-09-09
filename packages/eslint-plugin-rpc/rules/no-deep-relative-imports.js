@@ -50,25 +50,36 @@ module.exports = {
     const options = context.options[0] || {};
     const maxDepth = options.maxDepth || 2;
 
+    function checkSource(sourceNode) {
+      const source = sourceNode.value;
+      if (typeof source !== "string") return;
+
+      const match = source.match(/^(\.\.\/)+/);
+      if (!match) return;
+
+      const depth = match[0].split("/").filter(Boolean).length;
+      if (depth > maxDepth) {
+        context.report({
+          node: sourceNode,
+          messageId: "deepRelative",
+          data: {
+            depth: String(depth),
+            path: source,
+          },
+        });
+      }
+    }
+
     return {
       ImportDeclaration(node) {
-        const source = node.source.value;
-        if (typeof source !== "string") return;
-
-        const match = source.match(/^(\.\.\/)+/);
-        if (!match) return;
-
-        const depth = match[0].split("/").filter(Boolean).length;
-        if (depth > maxDepth) {
-          context.report({
-            node: node.source,
-            messageId: "deepRelative",
-            data: {
-              depth: String(depth),
-              path: source,
-            },
-          });
-        }
+        checkSource(node.source);
+      },
+      // barrel-file re-exports are a common home for deep ../ paths
+      ExportNamedDeclaration(node) {
+        if (node.source) checkSource(node.source);
+      },
+      ExportAllDeclaration(node) {
+        checkSource(node.source);
       },
     };
   },

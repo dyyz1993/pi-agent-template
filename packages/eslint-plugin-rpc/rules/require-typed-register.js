@@ -3,6 +3,8 @@
  */
 "use strict";
 
+const DEFAULT_ENTRY_FILES = ["bun/index.ts", "gateway/ws-handler.ts"];
+
 module.exports = {
   meta: {
     type: "problem",
@@ -17,18 +19,30 @@ module.exports = {
       missingRegisterAllHandlersCall:
         "已导入 registerAllHandlers 但未调用。请在创建 server 后调用 registerAllHandlers(server)。",
     },
-    schema: [],
+    schema: [
+      {
+        type: "object",
+        properties: {
+          entryFiles: {
+            type: "array",
+            items: { type: "string" },
+          },
+        },
+        additionalProperties: false,
+      },
+    ],
   },
 
   create(context) {
     const filename = context.getFilename();
+    const options = context.options[0] || {};
+    const entryFiles = options.entryFiles || DEFAULT_ENTRY_FILES;
 
-    const isEntryPoint =
-      filename.endsWith("bun/index.ts") || filename.endsWith("gateway/ws-handler.ts");
+    const isEntryPoint = entryFiles.some((entry) => filename.endsWith(entry));
 
     if (!isEntryPoint) return {};
 
-    let hasRegisterAllHandlersImport = false;
+    let localName = null;
     let hasRegisterAllHandlersCall = false;
     let importNode = null;
 
@@ -44,7 +58,9 @@ module.exports = {
               specifier.type === "ImportSpecifier" &&
               specifier.imported.name === "registerAllHandlers"
             ) {
-              hasRegisterAllHandlersImport = true;
+              // Track the local alias so `import { registerAllHandlers as reg }`
+              // counts when invoked as reg(server).
+              localName = specifier.local.name;
               importNode = node;
             }
           }
@@ -52,16 +68,13 @@ module.exports = {
       },
 
       CallExpression(node) {
-        if (
-          node.callee.type === "Identifier" &&
-          node.callee.name === "registerAllHandlers"
-        ) {
+        if (node.callee.type === "Identifier" && localName && node.callee.name === localName) {
           hasRegisterAllHandlersCall = true;
         }
       },
 
       "Program:exit"() {
-        if (!hasRegisterAllHandlersImport) {
+        if (!localName) {
           context.report({
             loc: { line: 1, column: 0 },
             messageId: "missingRegisterAllHandlersImport",

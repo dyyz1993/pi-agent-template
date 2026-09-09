@@ -3,6 +3,11 @@
  */
 "use strict";
 
+// Exact (case-insensitive) variable names treated as raw transports; a
+// substring test would flag unrelated names like `browse` while missing
+// `socket`.
+const DEFAULT_TRANSPORT_NAMES = ["ws", "websocket", "socket"];
+
 module.exports = {
   meta: {
     type: "problem",
@@ -15,7 +20,18 @@ module.exports = {
       useApiClient:
         "前端 RPC 调用必须通过 apiClient.call() / apiClient.subscribe()。禁止直接操作 WebSocket 或其他传输层。",
     },
-    schema: [],
+    schema: [
+      {
+        type: "object",
+        properties: {
+          transportNames: {
+            type: "array",
+            items: { type: "string" },
+          },
+        },
+        additionalProperties: false,
+      },
+    ],
   },
 
   create(context) {
@@ -23,16 +39,25 @@ module.exports = {
 
     if (!/mainview\/.*\.[jt]sx?$/.test(filename)) return {};
 
+    const options = context.options[0] || {};
+    const transportNames = (options.transportNames || DEFAULT_TRANSPORT_NAMES).map((n) =>
+      n.toLowerCase()
+    );
+
+    const isWebSocketCallee = (callee) => {
+      if (callee.type === "Identifier") return callee.name === "WebSocket";
+      // window.WebSocket / globalThis.WebSocket
+      return (
+        callee.type === "MemberExpression" &&
+        callee.property.type === "Identifier" &&
+        callee.property.name === "WebSocket"
+      );
+    };
+
     return {
       NewExpression(node) {
-        if (
-          node.callee.type === "Identifier" &&
-          node.callee.name === "WebSocket"
-        ) {
-          context.report({
-            node,
-            messageId: "useApiClient",
-          });
+        if (isWebSocketCallee(node.callee)) {
+          context.report({ node, messageId: "useApiClient" });
         }
       },
 
@@ -40,17 +65,11 @@ module.exports = {
         if (
           node.callee.type === "MemberExpression" &&
           node.callee.property.type === "Identifier" &&
-          node.callee.property.name === "send"
+          node.callee.property.name === "send" &&
+          node.callee.object.type === "Identifier" &&
+          transportNames.includes(node.callee.object.name.toLowerCase())
         ) {
-          if (node.callee.object.type === "Identifier") {
-            const objName = node.callee.object.name.toLowerCase();
-            if (objName.includes("websocket") || objName.includes("ws")) {
-              context.report({
-                node,
-                messageId: "useApiClient",
-              });
-            }
-          }
+          context.report({ node, messageId: "useApiClient" });
         }
       },
     };

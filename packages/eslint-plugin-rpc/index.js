@@ -8,6 +8,7 @@
  *   - rpc/module-file-naming      : 模块文件命名、导出、方法前缀强制规范
  *   - rpc/require-typed-register  : 入口文件必须导入 registerAllHandlers
  *   - rpc/require-api-client      : 前端必须通过 apiClient 调用 RPC
+ *   - rpc/no-hardcoded-strings    : JSX 禁止硬编码英文字符串（走 i18n t()）
  *   - rpc/no-deep-relative-imports : 禁止超过 2 层 ../ 的相对路径导入
  */
 "use strict";
@@ -21,10 +22,10 @@ const requireApiClient = require("./rules/require-api-client");
 const noHardcodedStrings = require("./rules/no-hardcoded-strings");
 const noDeepRelativeImports = require("./rules/no-deep-relative-imports");
 
-module.exports = {
+const plugin = {
   meta: {
     name: "eslint-plugin-rpc",
-    version: "1.0.0",
+    version: require("./package.json").version,
   },
   rules: {
     "no-bare-method": noBareMethod,
@@ -36,19 +37,31 @@ module.exports = {
     "no-hardcoded-strings": noHardcodedStrings,
     "no-deep-relative-imports": noDeepRelativeImports,
   },
-  configs: {
-    recommended: {
-      plugins: ["rpc"],
-      rules: {
-        "rpc/no-bare-method": "error",
-        "rpc/no-direct-register": "error",
-        "rpc/schema-merge-only": "error",
-        "rpc/module-file-naming": "error",
-        "rpc/require-typed-register": "error",
-        "rpc/require-api-client": "error",
-        "rpc/no-hardcoded-strings": "warn",
-        "rpc/no-deep-relative-imports": "error",
-      },
-    },
+};
+
+const recommendedRules = {
+  "rpc/no-bare-method": "error",
+  "rpc/no-direct-register": "error",
+  "rpc/schema-merge-only": "error",
+  "rpc/module-file-naming": "error",
+  "rpc/require-typed-register": "error",
+  "rpc/require-api-client": "error",
+  "rpc/no-hardcoded-strings": "warn",
+  "rpc/no-deep-relative-imports": "error",
+};
+
+plugin.configs = {
+  // Legacy (eslintrc) format
+  recommended: {
+    plugins: ["rpc"],
+    rules: { ...recommendedRules },
+  },
+  // Flat config (eslint.config.mjs): plugins: { rpc: plugin }
+  "flat/recommended": {
+    name: "rpc/flat/recommended",
+    plugins: { rpc: plugin },
+    rules: { ...recommendedRules },
   },
 };
+
+module.exports = plugin;

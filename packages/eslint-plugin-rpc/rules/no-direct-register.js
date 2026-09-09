@@ -3,6 +3,8 @@
  */
 "use strict";
 
+const DEFAULT_SERVER_NAMES = ["server", "rpcServer", "rpc", "rpc_server"];
+
 module.exports = {
   meta: {
     type: "problem",
@@ -18,18 +20,44 @@ module.exports = {
       noDirectRegisterGeneral:
         "禁止直接调用 server.register()。Handler 注册只能在 shared/handlers/ 目录内的文件中进行。",
     },
-    schema: [],
+    schema: [
+      {
+        type: "object",
+        properties: {
+          serverNames: {
+            type: "array",
+            items: { type: "string" },
+          },
+          entryFiles: {
+            type: "array",
+            items: { type: "string" },
+          },
+          handlersDirs: {
+            type: "array",
+            items: { type: "string" },
+          },
+        },
+        additionalProperties: false,
+      },
+    ],
   },
 
   create(context) {
     const filename = context.getFilename();
 
-    if (!/src\/.*\.[jt]sx?$/.test(filename)) return {};
+    if (!/[/\\]src[/\\].*\.[jt]sx?$/.test(filename)) return {};
 
-    if (filename.includes("shared/handlers/")) return {};
+    const options = context.options[0] || {};
+    const serverNames = options.serverNames || DEFAULT_SERVER_NAMES;
+    const entryFiles = options.entryFiles || ["bun/index.ts", "server.ts"];
+    const handlersDirs = options.handlersDirs || ["shared/handlers"];
 
-    const isEntryPoint =
-      filename.endsWith("bun/index.ts") || filename.endsWith("server.ts");
+    const isInHandlersDir = handlersDirs.some((dir) =>
+      filename.includes(`/${dir}/`)
+    );
+    if (isInHandlersDir) return {};
+
+    const isEntryPoint = entryFiles.some((entry) => filename.endsWith(entry));
 
     return {
       CallExpression(node) {
@@ -39,25 +67,13 @@ module.exports = {
           callee.type === "MemberExpression" &&
           callee.property.type === "Identifier" &&
           callee.property.name === "register" &&
-          callee.object.type === "Identifier"
+          callee.object.type === "Identifier" &&
+          serverNames.includes(callee.object.name)
         ) {
-          const objectName = callee.object.name;
-
-          const serverVarNames = [
-            "server",
-            "rpcServer",
-            "rpc",
-            "rpc_server",
-          ];
-
-          if (serverVarNames.includes(objectName)) {
-            context.report({
-              node,
-              messageId: isEntryPoint
-                ? "noDirectRegisterInEntry"
-                : "noDirectRegisterGeneral",
-            });
-          }
+          context.report({
+            node,
+            messageId: isEntryPoint ? "noDirectRegisterInEntry" : "noDirectRegisterGeneral",
+          });
         }
       },
     };

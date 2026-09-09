@@ -3,8 +3,11 @@
  */
 "use strict";
 
+// Matches both modules/<name>.ts and modules/<name>/index.ts layouts.
+const MODULE_FILE_RE = /[/\\]modules[/\\]([^/\\]+)(?:[/\\]index)?\.[jt]sx?$/;
+
 function getModuleName(filename) {
-  const match = filename.match(/\/modules\/([^/]+)\.[jt]sx?$/);
+  const match = filename.match(MODULE_FILE_RE);
   return match ? match[1] : null;
 }
 
@@ -39,46 +42,42 @@ module.exports = {
 
     let hasMethodsExport = false;
 
+    const checkPrefixes = (node, messageId) => {
+      if (!node.body || !node.body.body) return;
+      for (const member of node.body.body) {
+        if (member.type !== "TSPropertySignature" || !member.key) continue;
+        const key =
+          member.key.type === "Literal"
+            ? String(member.key.value)
+            : member.key.type === "Identifier"
+              ? member.key.name
+              : null;
+        if (key && !key.startsWith(`${moduleName}.`)) {
+          context.report({
+            node: member,
+            messageId,
+            data: { [messageId === "methodPrefixMismatch" ? "method" : "event"]: key, module: moduleName },
+          });
+        }
+      }
+    };
+
     return {
       TSInterfaceDeclaration(node) {
         const name = node.id.name;
 
         if (name === `${moduleNamePascal}Methods`) {
-          hasMethodsExport = true;
-
-          if (node.body && node.body.body) {
-            for (const member of node.body.body) {
-              if (member.type === "TSPropertySignature" && member.key) {
-                const key =
-                  member.key.type === "Literal" ? String(member.key.value) : null;
-                if (key && !key.startsWith(`${moduleName}.`)) {
-                  context.report({
-                    node: member,
-                    messageId: "methodPrefixMismatch",
-                    data: { method: key, module: moduleName },
-                  });
-                }
-              }
-            }
+          // Only an exported interface satisfies the schema merge contract.
+          const isExported =
+            node.parent && node.parent.type === "ExportNamedDeclaration";
+          if (isExported) {
+            hasMethodsExport = true;
           }
+          checkPrefixes(node, "methodPrefixMismatch");
         }
 
         if (name === `${moduleNamePascal}Events`) {
-          if (node.body && node.body.body) {
-            for (const member of node.body.body) {
-              if (member.type === "TSPropertySignature" && member.key) {
-                const key =
-                  member.key.type === "Literal" ? String(member.key.value) : null;
-                if (key && !key.startsWith(`${moduleName}.`)) {
-                  context.report({
-                    node: member,
-                    messageId: "eventPrefixMismatch",
-                    data: { event: key, module: moduleName },
-                  });
-                }
-              }
-            }
-          }
+          checkPrefixes(node, "eventPrefixMismatch");
         }
       },
 
@@ -88,7 +87,7 @@ module.exports = {
             loc: { line: 1, column: 0 },
             messageId: "missingMethodsExport",
             data: {
-              file: filename.split("/").pop(),
+              file: filename.split(/[/\\]/).pop(),
               ModuleName: moduleNamePascal,
             },
           });

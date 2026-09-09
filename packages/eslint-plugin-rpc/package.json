@@ -1,6 +1,14 @@
 {
-  "name": "@dyyz1993/eslint-plugin-rpc",
-  "version": "1.0.0",
-  "private": true,
-  "main": "index.js"
+	"name": "@dyyz1993/eslint-plugin-rpc",
+	"version": "1.0.0",
+	"description": "ESLint rules for @dyyz1993/rpc-core usage conventions",
+	"private": true,
+	"main": "index.js",
+	"scripts": {
+		"test": "bun test tests/"
+	},
+	"peerDependencies": {
+		"eslint": ">=8.0.0"
+	},
+	"license": "MIT"
 }

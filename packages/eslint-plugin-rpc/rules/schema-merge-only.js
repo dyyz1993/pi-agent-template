@@ -20,35 +20,52 @@ module.exports = {
 
   create(context) {
     const filename = context.getFilename();
+    const basename = filename.split(/[/\\]/).pop();
 
-    if (!filename.endsWith("rpc-schema.ts") && !filename.endsWith("rpc-schema.tsx")) return {};
+    if (basename !== "rpc-schema.ts" && basename !== "rpc-schema.tsx") return {};
 
     const schemaInterfaces = new Set(["RPCMethods", "RPCEvents"]);
+
+    const reportPropertyMembers = (typeNode) => {
+      if (!typeNode) return;
+      if (typeNode.type === "TSTypeLiteral" || typeNode.type === "TSInterfaceBody") {
+        // TSTypeLiteral keeps members in .members, TSInterfaceBody in .body
+        const members =
+          typeNode.type === "TSTypeLiteral" ? typeNode.members : typeNode.body;
+        for (const member of members ?? []) {
+          if (member.type === "TSPropertySignature" && member.key) {
+            const keyName =
+              member.key.type === "Identifier"
+                ? member.key.name
+                : member.key.type === "Literal"
+                  ? String(member.key.value)
+                  : null;
+            if (keyName) {
+              context.report({
+                node: member,
+                messageId: "noDirectDefinition",
+                data: { key: keyName },
+              });
+            }
+          }
+        }
+      } else if (typeNode.type === "TSIntersectionType") {
+        for (const part of typeNode.types) {
+          reportPropertyMembers(part);
+        }
+      }
+    };
 
     return {
       TSInterfaceDeclaration(node) {
         if (!schemaInterfaces.has(node.id.name)) return;
-
-        if (node.body && node.body.body) {
-          for (const member of node.body.body) {
-            if (member.type === "TSPropertySignature" && member.key) {
-              const keyName =
-                member.key.type === "Identifier"
-                  ? member.key.name
-                  : member.key.type === "Literal"
-                    ? String(member.key.value)
-                    : null;
-
-              if (keyName) {
-                context.report({
-                  node: member,
-                  messageId: "noDirectDefinition",
-                  data: { key: keyName },
-                });
-              }
-            }
-          }
-        }
+        reportPropertyMembers(node.body);
+      },
+      // `type RPCMethods = FeedMethods & { "x.y": ... }` must not sneak in
+      // direct definitions either.
+      TSTypeAliasDeclaration(node) {
+        if (!schemaInterfaces.has(node.id.name)) return;
+        reportPropertyMembers(node.typeAnnotation);
       },
     };
   },
