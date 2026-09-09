@@ -13,25 +13,25 @@
 
 ## 核心工具
 
-| 场景 | 命令 |
-|------|------|
-| 打开网页 | `goto <url>` |
-| 页面标题 | `title` |
-| 当前 URL | `url` |
-| 页面文本 | `text` |
-| 截图 | `screenshot` |
-| 执行 JS | `eval "<expression>"` |
-| 点击元素 | `click <selector>` |
-| 输入内容 | `fill <selector> <value>` |
-| 滚动 | `scroll down --distance 800` |
-| 列出标签页 | `tab list` |
-| 页面快照（带 ref） | `snapshot` |
-| 采集页面转 Markdown | `scrape <url>` |
-| 爬取网站 | `crawl <url> --limit N` |
-| 搜索引擎 | `search "<query>"` |
-| 发现网站 URL | `map <url>` |
-| 列出插件 | `plugin list` |
-| 插件详情 | `plugin info <name>` |
+| 场景                | 命令                         |
+| ------------------- | ---------------------------- |
+| 打开网页            | `goto <url>`                 |
+| 页面标题            | `title`                      |
+| 当前 URL            | `url`                        |
+| 页面文本            | `text`                       |
+| 截图                | `screenshot`                 |
+| 执行 JS             | `eval "<expression>"`        |
+| 点击元素            | `click <selector>`           |
+| 输入内容            | `fill <selector> <value>`    |
+| 滚动                | `scroll down --distance 800` |
+| 列出标签页          | `tab list`                   |
+| 页面快照（带 ref）  | `snapshot`                   |
+| 采集页面转 Markdown | `scrape <url>`               |
+| 爬取网站            | `crawl <url> --limit N`      |
+| 搜索引擎            | `search "<query>"`           |
+| 发现网站 URL        | `map <url>`                  |
+| 列出插件            | `plugin list`                |
+| 插件详情            | `plugin info <name>`         |
 
 ## 录制能力
 
@@ -56,13 +56,13 @@
 
 涉及文件/路径/URL 时，**直接渲染给用户**，不执行打开：
 
-| 类型 | 方式 |
-|------|------|
-| 文件路径 | `📄 /path/to/file` |
-| URL | `[打开](https://...)` |
+| 类型     | 方式                         |
+| -------- | ---------------------------- |
+| 文件路径 | `📄 /path/to/file`           |
+| URL      | `[打开](https://...)`        |
 | 下载结果 | `✅ 已保存 file.csv (2.3MB)` |
-| 数据表格 | Markdown 表格 |
-| 截图 | 直接显示 |
+| 数据表格 | Markdown 表格                |
+| 截图     | 直接显示                     |
 
 ## 操作流程
 
@@ -255,15 +255,16 @@ Desktop 单机运行隔离：
 
 ### 响应式面板
 
-| 断点 | 侧栏 | 资源面板 |
-|------|------|---------|
-| wide ≥1280px | 固定展开 | 固定展开 |
-| desktop 1024-1279px | 固定展开 | 抽屉 |
-| tablet/mobile <1024px | 抽屉 | 抽屉 |
+| 断点                  | 侧栏     | 资源面板 |
+| --------------------- | -------- | -------- |
+| wide ≥1280px          | 固定展开 | 固定展开 |
+| desktop 1024-1279px   | 固定展开 | 抽屉     |
+| tablet/mobile <1024px | 抽屉     | 抽屉     |
 
 ## RPC 方法清单
 
 ### Browser 模块
+
 - `browser.checkConnection` — 检测 Chrome 连接状态
 - `browser.getConnectionGuide` — 用户视角连接状态（不暴露技术细节）
 - `browser.listTabs` — Chrome 标签页列表
@@ -277,11 +278,13 @@ Desktop 单机运行隔离：
 - `browser.getSystemInfo` — 系统信息
 
 ### Session 模块
+
 - `session.create` / `session.list` / `session.get` — 会话 CRUD
 - `session.addMessage` / `session.updateLastMessage` — 消息管理
 - `session.setStatus` / `session.disposeAgent` — 状态控制
 
 ### 其他模块
+
 - `chat.list` / `chat.send` — 聊天历史
 - `system.ping` / `system.hello` / `system.echo` — 系统测试
 - `timer.start` / `timer.stop` — 计时器
@@ -291,16 +294,16 @@ Desktop 单机运行隔离：
 
 Agent 执行时通过 SSE 推送以下事件：
 
-| 事件 | 作用 |
-|------|------|
+| 事件                 | 作用                       |
+| -------------------- | -------------------------- |
 | `browser.agentStart` | Agent 开始（含 messageId） |
-| `browser.toolCall` | 工具调用开始 |
-| `browser.toolResult` | 工具调用结果 |
-| `browser.thinking` | 思考增量 |
-| `browser.textDelta` | 文本增量 |
-| `browser.turn` | 轮次切换 |
-| `browser.done` | 完成（含最终文本） |
-| `browser.progress` | 采集进度 |
+| `browser.toolCall`   | 工具调用开始               |
+| `browser.toolResult` | 工具调用结果               |
+| `browser.thinking`   | 思考增量                   |
+| `browser.textDelta`  | 文本增量                   |
+| `browser.turn`       | 轮次切换                   |
+| `browser.done`       | 完成（含最终文本）         |
+| `browser.progress`   | 采集进度                   |
 
 > ⚠️ **messageId 规则**：后端生成 `msg_${Date.now().toString(36)}`，前端必须等 `browser.agentStart` 事件获取真实 messageId，不能自己生成。
 
@@ -339,28 +342,35 @@ Agent 执行时通过 SSE 推送以下事件：
 > 重要需求和设计决策记录在此，方便后续追溯。
 
 #### 2026-06-26 禁止桌面命令
+
 Web 模式下 `open`/`xdg-open`/`mkdir` 等命令无意义且危险。通过 AGENTS.md 提示词约束 + 后端 `BLOCKED_XBROWSER_COMMANDS` 双重拦截。录制相关命令（record/replay/convert/extract）已解禁。
 
 #### 2026-06-26 录制与加工分离
+
 录制和会话是两种心智模型（录制=我做给 Agent 看，会话=我问 Agent 做），不能混在一起。加工过程独立展示在「⚙️ 加工」Tab。
 
 #### 2026-06-26 SSE 替代 WebSocket
+
 WebSocket 通讯对用户不可见、调试困难。改为 HTTP POST + SSE 后，DevTools Network 可直接看到请求，且加了网络通讯面板可视化。
 
 #### 2026-06-26 默认空会话
+
 打开页面就有空会话占位，用户可直接输入。加号按钮智能创建——当前空会话没消息时不重复创建。
 
 #### 2026-06-26 模板体系作为主线
+
 `/tmp/ba-demo` 和 `pi-agent-template/templates/browser-agent` 是标准基线。`study-web/browser-agent-product` 中的手写 Web UI 不再作为主线继续演进，只迁移其中已经验证过的 Web gateway、插件专属包、连接检测和 Cloud runtime adapter 能力。
 
 ## 开发规范
 
 ### 端口
+
 - 后端：5200
 - 前端（Vite）：7200
 - cdp-tunnel：9221
 
 ### 环境变量
+
 ```
 PORT=5200
 VITE_PORT=7200
@@ -372,6 +382,7 @@ CDP_TUNNEL_EXT=/path/to/cdp-tunnel2/extension-new
 ```
 
 ### 新增功能时的检查清单
+
 1. 在 `src/shared/modules/*.ts` 定义 RPC 类型
 2. 在 `src/shared/handlers/*.ts` 实现 handler
 3. 在 `src/shared/handlers/index.ts` 注册 barrel export
