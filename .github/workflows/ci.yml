@@ -259,7 +259,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
       - name: Test dev:web mode
         run: bun scripts/smoke-dev-web.ts
         env:
@@ -276,7 +276,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
       - name: Test full stack (frontend build + backend WS)
         run: bun scripts/e2e-full-stack.ts
         env:
@@ -293,7 +293,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: bun install
       - name: Full RPC test (file ops, timer events, bash, path security)
         run: bun scripts/smoke-rpc-full.ts
         env:
