@@ -1,6 +1,6 @@
 {
 	"name": "@dyyz1993/eslint-plugin-rpc",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"description": "ESLint rules enforcing @dyyz1993/rpc-core usage conventions",
 	"repository": {
 		"type": "git",

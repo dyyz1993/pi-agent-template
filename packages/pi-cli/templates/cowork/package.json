@@ -1,6 +1,6 @@
 {
 	"name": "cowork-app",
-	"version": "1.0.0",
+	"version": "1.0.2",
 	"description": "Cowork task collaboration agent: AI-powered task orchestration with progress tracking, artifacts, and context management (Desktop + Web)",
 	"author": {
 		"name": "xuyingzhou",
@@ -27,7 +27,7 @@
 		"prepare": "husky"
 	},
 	"dependencies": {
-		"@dyyz1993/rpc-core": "^2.2.0",
+		"@dyyz1993/rpc-core": "^2.2.1",
 		"@tanstack/react-virtual": "^3.13.24",
 		"electrobun": "1.18.1",
 		"lucide-react": "^1.9.0",
@@ -41,7 +41,7 @@
 		"zustand": "^5.0.12"
 	},
 	"devDependencies": {
-		"@dyyz1993/eslint-plugin-rpc": "^1.0.0",
+		"@dyyz1993/eslint-plugin-rpc": "^1.1.0",
 		"@eslint/js": "^9.0.0",
 		"@testing-library/jest-dom": "^6.9.1",
 		"@testing-library/react": "^16.3.2",
