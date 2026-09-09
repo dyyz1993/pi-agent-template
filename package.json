@@ -11,6 +11,7 @@
 		"prepare": "husky",
 		"test": "cd packages/rpc-core && bun test tests/",
 		"test:rpc": "cd packages/rpc-core && bun test tests/",
+		"test:plugin": "cd packages/eslint-plugin-rpc && bun test tests/",
 		"test:agent": "cd templates/agent && npx vitest run",
 		"test:chat": "cd templates/chat && npx vitest run",
 		"test:general": "cd templates/general && npx vitest run",

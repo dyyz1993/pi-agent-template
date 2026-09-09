@@ -85,7 +85,30 @@ jobs:
         run: bun run test:rpc
 
       - name: Run create-agent tests
-        run: cd packages/pi-cli && bun test src/__tests__/
+        run: cd packages/pi-cli && bun run test
+
+      - name: Run eslint-plugin-rpc tests
+        run: cd packages/eslint-plugin-rpc && bun run test
+
+  template-sync-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Validate bundled templates
+        run: node packages/pi-cli/scripts/verify-templates.mjs
+
+      - name: Fail if bundled templates drifted from source templates
+        run: |
+          node packages/pi-cli/scripts/sync-templates.mjs
+          if ! git diff --exit-code -- packages/pi-cli/templates; then
+            echo "❌ pi-cli bundled templates are stale."
+            echo "   Run: pnpm sync-templates  (or: node packages/pi-cli/scripts/sync-templates.mjs)"
+            echo "   and commit the result."
+            exit 1
+          fi
+          echo "✅ bundled templates in sync"
 
   template-test:
     runs-on: ubuntu-latest
@@ -370,13 +393,13 @@ jobs:
 
   notify-result:
     runs-on: ubuntu-latest
-    needs: [lint, type-check, test, template-test, smoke-test, build-verify, integration-test, rpc-api-test, e2e-ui, smoke-dev-web, e2e-full-stack, smoke-rpc-full, husky-verify]
+    needs: [lint, type-check, test, template-sync-check, template-test, smoke-test, build-verify, integration-test, rpc-api-test, e2e-ui, smoke-dev-web, e2e-full-stack, smoke-rpc-full, husky-verify]
     if: always()
     steps:
       - name: Check CI result
         id: check
         run: |
-          if echo "${{ needs.lint.result }} ${{ needs.type-check.result }} ${{ needs.test.result }} ${{ needs.template-test.result }} ${{ needs.smoke-test.result }} ${{ needs.build-verify.result }} ${{ needs.integration-test.result }} ${{ needs.rpc-api-test.result }} ${{ needs.e2e-ui.result }} ${{ needs.smoke-dev-web.result }} ${{ needs.e2e-full-stack.result }} ${{ needs.smoke-rpc-full.result }} ${{ needs.husky-verify.result }}" | grep -q "failure"; then
+          if echo "${{ needs.lint.result }} ${{ needs.type-check.result }} ${{ needs.test.result }} ${{ needs.template-sync-check.result }} ${{ needs.template-test.result }} ${{ needs.smoke-test.result }} ${{ needs.build-verify.result }} ${{ needs.integration-test.result }} ${{ needs.rpc-api-test.result }} ${{ needs.e2e-ui.result }} ${{ needs.smoke-dev-web.result }} ${{ needs.e2e-full-stack.result }} ${{ needs.smoke-rpc-full.result }} ${{ needs.husky-verify.result }}" | grep -q "failure"; then
             echo "status=FAILED" >> $GITHUB_OUTPUT
           else
             echo "status=PASSED" >> $GITHUB_OUTPUT
@@ -398,10 +421,10 @@ jobs:
   feishu-notify:
     name: Feishu Notification
     if: always()
-    needs: [lint, type-check, test, template-test, smoke-test, build-verify, integration-test, rpc-api-test, e2e-ui, smoke-dev-web, e2e-full-stack, smoke-rpc-full, husky-verify, notify-result]
+    needs: [lint, type-check, test, template-sync-check, template-test, smoke-test, build-verify, integration-test, rpc-api-test, e2e-ui, smoke-dev-web, e2e-full-stack, smoke-rpc-full, husky-verify, notify-result]
     uses: dyyz1993/ci-tools/.github/workflows/feishu-notify.yml@main
     with:
-      jobs: '{"lint":"${{ needs.lint.result }}","type-check":"${{ needs.type-check.result }}","test":"${{ needs.test.result }}","template-test":"${{ needs.template-test.result }}","smoke-test":"${{ needs.smoke-test.result }}","build-verify":"${{ needs.build-verify.result }}","integration-test":"${{ needs.integration-test.result }}","rpc-api-test":"${{ needs.rpc-api-test.result }}","e2e-ui":"${{ needs.e2e-ui.result }}","smoke-dev-web":"${{ needs.smoke-dev-web.result }}","e2e-full-stack":"${{ needs.e2e-full-stack.result }}","smoke-rpc-full":"${{ needs.smoke-rpc-full.result }}","husky-verify":"${{ needs.husky-verify.result }}","notify-result":"${{ needs.notify-result.result }}"}'
+      jobs: '{"lint":"${{ needs.lint.result }}","type-check":"${{ needs.type-check.result }}","test":"${{ needs.test.result }}","template-sync-check":"${{ needs.template-sync-check.result }}","template-test":"${{ needs.template-test.result }}","smoke-test":"${{ needs.smoke-test.result }}","build-verify":"${{ needs.build-verify.result }}","integration-test":"${{ needs.integration-test.result }}","rpc-api-test":"${{ needs.rpc-api-test.result }}","e2e-ui":"${{ needs.e2e-ui.result }}","smoke-dev-web":"${{ needs.smoke-dev-web.result }}","e2e-full-stack":"${{ needs.e2e-full-stack.result }}","smoke-rpc-full":"${{ needs.smoke-rpc-full.result }}","husky-verify":"${{ needs.husky-verify.result }}","notify-result":"${{ needs.notify-result.result }}"}'
       sha: ${{ github.sha }}
       ref: ${{ github.ref_name }}
       actor: ${{ github.actor }}

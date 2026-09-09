@@ -13,6 +13,8 @@ export default tseslint.config(
       'templates/**',
       'packages/pi-cli/templates/**',
       'packages/eslint-plugin-rpc/**',
+      'ba-create-test/**',
+      '-tmp-pi-isolation-test/**',
       '!eslint.config.mjs',
       '!**/.eslintrc*',
     ],
@@ -40,6 +42,7 @@ export default tseslint.config(
       globals: {
         console: 'readonly',
         module: 'readonly',
+        process: 'readonly',
         require: 'readonly',
       },
     },

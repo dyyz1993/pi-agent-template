@@ -7,6 +7,9 @@ bun.lockb
 *.tsbuildinfo
 *.log
 pnpm-debug.log
+# 本地脚手架测试产物（create CLI 的临时输出）
+ba-create-test/
+-tmp-pi-isolation-test/
 .env
 .env.local
 .env.*.local
