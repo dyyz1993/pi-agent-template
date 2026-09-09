@@ -15,8 +15,8 @@ for (const name of templates) {
     errors.push(`templates/${name}/src missing — run "pnpm sync-templates" first`);
   }
 
-  if (!existsSync(join(dir, 'eslint-plugin-rpc', 'index.js'))) {
-    errors.push(`templates/${name}/eslint-plugin-rpc not vendored`);
+  if (existsSync(join(dir, 'eslint-plugin-rpc'))) {
+    errors.push(`templates/${name}/eslint-plugin-rpc vendored copy still present (plugin ships on npm now)`);
   }
 
   const pkgPath = join(dir, 'package.json');
@@ -25,6 +25,9 @@ for (const name of templates) {
     if (pkg.includes('workspace:*')) {
       errors.push(`templates/${name}/package.json still references workspace:*`);
     }
+    if (!pkg.includes('"@dyyz1993/eslint-plugin-rpc"')) {
+      errors.push(`templates/${name}/package.json missing @dyyz1993/eslint-plugin-rpc dependency`);
+    }
   } else {
     errors.push(`templates/${name}/package.json missing`);
   }
@@ -32,10 +35,13 @@ for (const name of templates) {
   const eslintPath = join(dir, 'eslint.config.mjs');
   if (existsSync(eslintPath)) {
     const eslint = readFileSync(eslintPath, 'utf-8');
-    if (eslint.includes("'@dyyz1993/eslint-plugin-rpc'")) {
+    if (eslint.includes("'./eslint-plugin-rpc/index.js'")) {
       errors.push(
-        `templates/${name}/eslint.config.mjs imports the npm package instead of the vendored copy`
+        `templates/${name}/eslint.config.mjs imports the vendored copy instead of the npm package`
       );
+    }
+    if (!eslint.includes("'@dyyz1993/eslint-plugin-rpc'")) {
+      errors.push(`templates/${name}/eslint.config.mjs does not import @dyyz1993/eslint-plugin-rpc`);
     }
   } else {
     errors.push(`templates/${name}/eslint.config.mjs missing`);

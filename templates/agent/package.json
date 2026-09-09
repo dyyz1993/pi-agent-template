@@ -75,7 +75,7 @@
 		"prepare": "husky"
 	},
 	"dependencies": {
-		"@dyyz1993/rpc-core": "^1.2.0",
+		"@dyyz1993/rpc-core": "workspace:*",
 		"@tanstack/react-virtual": "^3.13.24",
 		"electrobun": "1.18.1",
 		"lucide-react": "^1.9.0",

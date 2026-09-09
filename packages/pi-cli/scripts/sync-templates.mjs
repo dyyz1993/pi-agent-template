@@ -45,18 +45,8 @@ for (const name of TEMPLATES) {
 // configs); forgetting it used to produce scaffolds that cannot build.
 rsync(join(repoRoot, 'templates', 'shared'), join(pkgTemplatesDir, 'shared'), EXCLUDES);
 
-// Vendor the shared eslint plugin into each template (post-sync rewrites the
-// import path to this copy). Excludes matter here too: a local node_modules
-// in packages/eslint-plugin-rpc would otherwise be published wholesale, and
-// tests/README are not needed by generated projects.
-for (const name of TEMPLATES) {
-  rsync(
-    join(repoRoot, 'packages', 'eslint-plugin-rpc'),
-    join(pkgTemplatesDir, name, 'eslint-plugin-rpc'),
-    ['node_modules', '.DS_Store', 'tests', 'README.md']
-  );
-}
-
+// The eslint plugin ships on npm (@dyyz1993/eslint-plugin-rpc); no vendored
+// copy is bundled. post-sync pins its workspace reference to a real version.
 execFileSync('node', [join(import.meta.dirname, 'post-sync-templates.mjs')], {
   stdio: 'inherit',
 });

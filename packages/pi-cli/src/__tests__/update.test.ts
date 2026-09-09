@@ -69,7 +69,7 @@ describe("detectTemplateMeta", () => {
 });
 
 describe("postProcessTemplate", () => {
-	test("removes workspace deps, rewrites name, strips vendored eslint config", () => {
+	test("resolves workspace deps to npm ranges and rewrites package name", () => {
 		const dir = makeTmp();
 		writeFileSync(
 			join(dir, "package.json"),
@@ -77,7 +77,7 @@ describe("postProcessTemplate", () => {
 				{
 					name: "pi-general-app",
 					workspaces: ["packages/*"],
-					dependencies: { "@dyyz1993/rpc-core": "^1.2.0" },
+					dependencies: { "@dyyz1993/rpc-core": "workspace:*" },
 					devDependencies: { "@dyyz1993/eslint-plugin-rpc": "workspace:*" },
 				},
 				null,
@@ -87,10 +87,9 @@ describe("postProcessTemplate", () => {
 		writeFileSync(
 			join(dir, "eslint.config.mjs"),
 			[
-				"import rpcPlugin from './eslint-plugin-rpc/index.js';",
+				"import rpcPlugin from '@dyyz1993/eslint-plugin-rpc';",
 				"export default [",
 				"  {",
-				"    // RPC 规范规则",
 				"    plugins: { rpc: rpcPlugin },",
 				"    rules: {",
 				"      'rpc/no-bare-method': 'error',",
@@ -104,22 +103,19 @@ describe("postProcessTemplate", () => {
 		postProcessTemplate(dir, "my-app");
 
 		const pkg = JSON.parse(readFileSync(join(dir, "package.json"), "utf-8"));
-		// workspace:* 必须被移除，且不允许写回（update --force 的回归测试）
-		expect(pkg.devDependencies?.["@dyyz1993/eslint-plugin-rpc"]).toBeUndefined();
+		// workspace:* 必须被解析成 npm 版本 range，且不允许写回（update --force 的回归测试）
 		expect(JSON.stringify(pkg)).not.toContain("workspace:");
 		expect(pkg.workspaces).toBeUndefined();
-		// rpc-core 版本必须仍然是一个合法 semver range（在线取最新，离线保留原值）
 		expect(pkg.dependencies?.["@dyyz1993/rpc-core"]).toMatch(/^\^?\d+\.\d+\.\d+/);
+		// 插件现在从 npm 安装，依赖保留而不是删除
+		expect(pkg.devDependencies?.["@dyyz1993/eslint-plugin-rpc"]).toMatch(/^\^?\d+\.\d+\.\d+/);
 		// 项目名写回（此前模板 name 永远不会被替换）
 		expect(pkg.name).toBe("my-app");
 
+		// RPC lint 规则在生成项目中保持启用
 		const eslint = readFileSync(join(dir, "eslint.config.mjs"), "utf-8");
-		expect(eslint).not.toContain("rpcPlugin");
-		expect(eslint).not.toContain("rpc/");
-		expect(eslint).toContain("export default");
-
-		// 规则剥离后 vendored 插件目录不应再进入用户项目
-		expect(existsSync(join(dir, "eslint-plugin-rpc"))).toBe(false);
+		expect(eslint).toContain("import rpcPlugin from '@dyyz1993/eslint-plugin-rpc'");
+		expect(eslint).toContain("'rpc/no-bare-method': 'error'");
 	});
 
 	test("copies shared/ into the project", () => {

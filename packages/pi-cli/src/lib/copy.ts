@@ -6,7 +6,6 @@ import {
 	readdirSync,
 	unlinkSync,
 	chmodSync,
-	rmSync,
 } from "fs";
 import { join, resolve, extname } from "path";
 import { homedir } from "os";
@@ -200,10 +199,22 @@ function resolvePackageVersion(packageName: string, fallbackRange?: string): str
 			console.warn(`(Could not look up latest ${packageName}; keeping ${fallbackRange})`);
 			return fallbackRange;
 		}
-		console.warn(`(Could not look up latest ${packageName}; falling back to ^2.2.0)`);
-		return "^2.2.0";
+		const fallback = NPM_FALLBACK_VERSIONS[packageName];
+		if (fallback) {
+			console.warn(`(Could not look up latest ${packageName}; falling back to ${fallback})`);
+			return fallback;
+		}
+		console.warn(`(Could not look up latest ${packageName}; keeping ${String(fallbackRange)})`);
+		return fallbackRange ?? "*";
 	}
 }
+
+// Only used when the registry is unreachable AND no usable range is present;
+// bundled templates carry pinned versions via post-sync-templates.mjs.
+const NPM_FALLBACK_VERSIONS: Record<string, string> = {
+	"@dyyz1993/rpc-core": "^2.2.0",
+	"@dyyz1993/eslint-plugin-rpc": "^1.1.0",
+};
 
 const WORKSPACE_PACKAGES = ["@dyyz1993/rpc-core", "@dyyz1993/eslint-plugin-rpc"];
 
@@ -220,62 +231,11 @@ function updatePackageJson(targetDir: string, projectName: string): void {
 		if (!rootPkg[depKey]) continue;
 		for (const pkgName of WORKSPACE_PACKAGES) {
 			if (!rootPkg[depKey][pkgName]) continue;
-			if (pkgName === "@dyyz1993/rpc-core") {
-				rootPkg[depKey][pkgName] = resolvePackageVersion(pkgName, rootPkg[depKey][pkgName]);
-			} else {
-				delete rootPkg[depKey][pkgName];
-			}
+			rootPkg[depKey][pkgName] = resolvePackageVersion(pkgName, rootPkg[depKey][pkgName]);
 		}
 	}
 
 	writeFileSync(rootPkgPath, JSON.stringify(rootPkg, null, "\t") + "\n");
-
-	const eslintConfigPath = join(targetDir, "eslint.config.mjs");
-	if (existsSync(eslintConfigPath)) {
-		const lines = readFileSync(eslintConfigPath, "utf-8").split("\n");
-		const filteredLines: string[] = [];
-
-		for (let i = 0; i < lines.length; i++) {
-			const line = lines[i];
-			if (line === undefined) continue;
-
-			// Covers both the npm-package import and the vendored copy
-			// (./eslint-plugin-rpc/index.js) that post-sync leaves behind.
-			if (line.includes("import rpcPlugin") && line.includes("eslint-plugin-rpc")) {
-				continue;
-			}
-
-			// rpc/* rule lines only exist because of the plugin; strip them
-			// unconditionally so the removal survives format/comment changes.
-			if (line.trim().startsWith("'rpc/") || line.trim().startsWith('"rpc/')) {
-				continue;
-			}
-
-			// section comment that only labelled the rpc rules block
-			if (line.includes("RPC") && line.includes("规范规则")) {
-				continue;
-			}
-
-			if (line.includes("rpc: rpcPlugin")) {
-				continue;
-			}
-
-			// ignore entry for the vendored plugin dir we remove below
-			if (line.trim() === "'eslint-plugin-rpc/**',") {
-				continue;
-			}
-
-			filteredLines.push(line);
-		}
-
-		let content = filteredLines.join("\n");
-		content = content.replace(/\n\s+plugins:\s*\{\s*\},?\s*\n/g, "\n");
-
-		writeFileSync(eslintConfigPath, content);
-	}
-
-	// With the rules stripped, the vendored plugin copy is dead weight.
-	rmSync(join(targetDir, "eslint-plugin-rpc"), { recursive: true, force: true });
 }
 
 /**

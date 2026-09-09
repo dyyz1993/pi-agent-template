@@ -1,6 +1,6 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
-import rpcPlugin from './eslint-plugin-rpc/index.js';
+import rpcPlugin from '@dyyz1993/eslint-plugin-rpc';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
@@ -11,7 +11,6 @@ export default tseslint.config(
   {
     ignores: [
       'node_modules/**',
-      'eslint-plugin-rpc/**',
       'build/**',
       'dist/**',
       'postcss.config.js',

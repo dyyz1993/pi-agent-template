@@ -26,7 +26,7 @@
 		"type-check": "bunx tsc --noEmit",
 		"changeset": "changeset",
 		"version-packages": "changeset version",
-		"release": "pnpm run build && changeset publish",
+		"release": "pnpm -C packages/rpc-core build && changeset publish",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"analyze": "ANALYZE=true pnpm -C templates/agent build",

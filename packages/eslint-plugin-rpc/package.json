@@ -1,14 +1,31 @@
 {
 	"name": "@dyyz1993/eslint-plugin-rpc",
 	"version": "1.0.0",
-	"description": "ESLint rules for @dyyz1993/rpc-core usage conventions",
-	"private": true,
+	"description": "ESLint rules enforcing @dyyz1993/rpc-core usage conventions",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/dyyz1993/pi-agent-template",
+		"directory": "packages/eslint-plugin-rpc"
+	},
 	"main": "index.js",
+	"files": [
+		"index.js",
+		"rules/"
+	],
 	"scripts": {
 		"test": "bun test tests/"
 	},
+	"keywords": [
+		"eslint",
+		"eslintplugin",
+		"eslint-plugin",
+		"rpc"
+	],
 	"peerDependencies": {
 		"eslint": ">=8.0.0"
+	},
+	"engines": {
+		"node": ">=18"
 	},
 	"license": "MIT"
 }
